@@ -1,0 +1,70 @@
+Part III ended with an SRE fleet you ran **from this page** — a ~130-line orchestrator embedded in the website, against an app you broke on purpose. The **Incident Desk** is the next step up: a real, standalone backend application with its own UI, running a **seven-agent governed fleet** through a proper incident lifecycle — **two human gates** and **two different remediation paths**, one of them full GitOps. Same governed-agent ideas, production shape.
+
+Open it live: <a href="/research-desk">the Incident Desk</a> (the `research-desk` route, part of this site).
+
+## How it differs from the Part III lab
+
+The [in-page lab](/learn/incident-lab) makes the point with the least possible machinery — four read-only specialists, an analyst, one fault, one fix, all driven by a small orchestrator living in the website. The Incident Desk keeps every governance property and adds the things a real tool needs:
+
+- **A real backend app**, not page code — an Express service (`research-desk/backend`) with a `Run` lifecycle, an event stream, PVC-backed run history, OpenTelemetry tracing, and a single-page UI ([`ResearchDeskApp`](/research-desk)).
+- **Seven agents, five roles** — a **coordinator** that triages, **four investigators** (logs / metrics / traces / changes), a **synthesizer** that writes the RCA + runbook, and a **sender** that emails it.
+- **Two human gates**, not one — you approve the **findings** before synthesis, and the **runbook** before anything is delivered or applied.
+- **Two remediation paths** — a **direct ConfigMap patch + roll**, *and* a **GitOps** path (open a PR → a human merges it → ArgoCD syncs → the app recovers).
+
+<IncidentDeskArchitecture />
+
+## The per-agent seal
+
+Every agent is a sealed OpenShell sandbox (gVisor pod, deny-by-default egress) — but each role's policy is scoped to exactly what that role needs and nothing else:
+
+- **Investigators** each get egress to **one** telemetry backend, plus `inference.local`. The `logs` agent may reach **only** `loki.monitoring.svc.cluster.local:3100`; `metrics` only Prometheus; `traces` only Tempo; `changes` only the Kubernetes API + (for the GitOps incident) the Git server. The `logs` agent literally cannot read metrics.
+- **Coordinator** and **synthesizer** get **inference only** — no telemetry egress at all. They reason; they don't fetch.
+- **Sender** gets **mail only** — `mailpit … :1025`, read-write — and nothing else.
+
+That mapping lives in [`policies.ts`](https://github.com/ansjindal/openshell-on-k8s/blob/main/incident-desk/backend/src/policies.ts): a `SYSTEM` table maps each source to its one allowed host, and `applyInvestigatorPolicy` / `applyRolePolicy` write those rules onto the live sandbox before the agent runs. The UI shows each agent's exact allow/deny rules, and every egress decision is logged — so the seal is something you can *watch*, not just trust.
+
+<Callout type="note" title="Inference is still credential-isolated">
+Like every sandbox in this stack, each agent calls <code>https://inference.local</code> and holds <strong>no</strong> API key. The gateway's privacy router injects the real credential on the way to LiteLLM. A compromised investigator can reach its one backend and the model proxy — that's the entire blast radius.
+</Callout>
+
+## The run lifecycle
+
+A run is an explicit state machine in [`orchestrator.ts`](https://github.com/ansjindal/openshell-on-k8s/blob/main/incident-desk/backend/src/orchestrator.ts), streamed to the UI as it happens:
+
+1. **Triage** — the coordinator reads the incident symptoms and emits one hypothesis per available evidence source (a compact JSON plan). No backend access; just the model.
+2. **Investigate** — one investigator per source spins up, each scoped to its single backend, and reports a finding. They run **sequentially by default** (`INFERENCE_PARALLEL=1`) because the upstream model rate-limits concurrent calls — one at a time keeps every finding reliable.
+3. **Findings gate ✋** — the run pauses at `awaiting-approval`. You read every investigator's finding and approve (or re-task an investigator, or hot-reload its egress posture) before anything is synthesized.
+4. **Synthesize** — the synthesizer correlates the approved findings into a Markdown RCA with fixed sections (Summary / Root cause / Evidence / Remediation runbook / Prevention), and the backend computes the concrete config **diff** the fix will apply.
+5. **Runbook gate ✋** — the sender appears, **blocked**, scoped to mail. The run pauses again. You approve the runbook before it's emailed and before any remediation is applied.
+6. **Remediate + deliver** — the approved fix is applied (one of the two paths below), and the runbook is mailed to <a href="/research-desk">on-call</a> (it lands in the in-cluster Mailpit inbox).
+
+<Callout type="rh" title="Two gates, made explicit">
+The agents <em>recommend</em>; a human <em>decides</em>; the platform <em>delivers</em>. The Incident Desk puts that gap on the record twice — once on the findings (before the model is even allowed to conclude) and once on the runbook (before the world changes). Approving is the only step that changes anything.
+</Callout>
+
+## Two incidents, two remediation paths
+
+The Desk ships scripted incidents ([`incidents.ts`](https://github.com/ansjindal/openshell-on-k8s/blob/main/incident-desk/backend/src/incidents.ts)). Two are **live** — their evidence is pulled in real time from Loki / Prometheus / Tempo / Kubernetes, and they're fixed for real:
+
+### `orders-pool` — direct ConfigMap fix
+
+The live `orders-api` (namespace `demo-shop`) has its DB connection pool starved (`DB_POOL_MAX=10`), so checkout p99 climbs and `/orders` returns 503. The fleet finds it across the four signals; the approved remediation is a **direct, in-cluster fix**: the backend **patches the `orders-config` ConfigMap** (`DB_POOL_MAX 10→50`, bumps the build) and **rolls the deployment**. Watch the error rate fall.
+
+### `gitops-oom` — PR → merge → ArgoCD → recover
+
+The live `catalog-api` (namespace `demo-shop-gitops`) is **ArgoCD-managed**: its config comes from Git, not a hand-edited ConfigMap. A committed `apps/catalog/config.env` set `CACHE_MB=400` — above the 256Mi memory limit — so pods OOM-crashloop. Here you **can't** just patch the cluster; that's exactly what GitOps forbids. Instead the approved remediation **opens a pull request** on the in-cluster Git server (a [Gitea](/gitea) repo, `gitops/incident-gitops`) with one of two fixes the fleet proposed:
+
+1. **Revert config** — shrink `CACHE_MB 400→64` back under the limit (recommended), or
+2. **Raise memory** — bump the container limit `256Mi→512Mi` so the larger cache fits.
+
+A **human reviews and merges** the PR on [Gitea](/gitea); [ArgoCD](/argocd) then syncs the merged change to the cluster and `catalog-api` recovers. The fleet's job and the human gate are identical to the direct path — only the delivery mechanism is GitOps.
+
+<Callout type="note" title="It stays inside the cluster">
+The GitOps path targets an <strong>in-cluster Gitea</strong> (GitHub-compatible API), not the public internet — so the whole loop, PR and all, lives on your box. The <strong>Re-trigger incident</strong> button in the UI re-injects the fault: for <code>orders-pool</code> it re-patches the ConfigMap, for <code>gitops-oom</code> it commits the bad config back to <code>main</code> — so you can run the whole drill again.
+</Callout>
+
+## Where to look next
+
+- **Run it:** open <a href="/research-desk">the Incident Desk</a>, pick `orders-pool` or `gitops-oom`, and walk the lifecycle. Watch each agent's policy chip and egress log as it goes.
+- **The GitOps loop:** open [Gitea](/gitea) to review/merge the fix PR and [ArgoCD](/argocd) to watch the sync.
+- **The mechanics:** the orchestrator's fixed-plan / scoped-exec / two-gate design is the same pattern the [Under the Hood](/learn/orchestration) chapter dissects for the in-page lab — the Incident Desk is that pattern, grown into a standalone governed app.

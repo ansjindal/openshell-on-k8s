@@ -1,0 +1,70 @@
+Most of this site drives agents through the CLI, the [Console](/learn/console), or a fleet orchestrator. This chapter is about the **interactive** one: a standalone, governed **OpenClaw Control UI** — the same chat-and-tools agent surface you'd use day to day — running inside its own sealed sandbox, reachable in the browser, with a real **device-pairing trust model** in front of it.
+
+Open it live: <a href="/openclaw">the OpenClaw Control UI</a>, and manage who's allowed in at <a href="/approvals">Approvals</a>.
+
+## A governed agent, not a privileged one
+
+The Control UI is served by an **OpenClaw gateway running inside the `openclaw-ui` sandbox** — a gVisor pod with the same deny-by-default seal as every other agent on this box. That matters: the interactive agent is **no more trusted** than a fleet specialist.
+
+- Its model calls go to `https://inference.local` — it holds **no** API key; the gateway's privacy router injects the credential on the way to LiteLLM.
+- Its egress is governed by the same L7 policy proxy. It can talk to the model (and whatever you've explicitly allowed); it **cannot** reach the in-cluster Kubernetes API. A chat agent you talk to in the browser is still a sealed, bounded process.
+
+<Callout type="note" title="Why it can't reach the cluster API">
+The whole point of the seal is that an autonomous agent — even one you're chatting with — is an untrusted process. Pairing protects the <em>front door</em> (who may talk to it); the egress policy protects the <em>back door</em> (what it may talk to). The agent never gets a path to <code>kubernetes.default.svc</code> unless you grant one, so a prompt-injected UI agent can't turn into cluster access.
+</Callout>
+
+## How it's reached at `/openclaw`
+
+A sandbox is **network-sealed**: the gateway it runs listens on a port inside the pod's private network namespace, so a normal Kubernetes `Service` / NodePort **can't** reach it — that's the same isolation that protects every agent. The one thing that bridges *into* a sandbox is the gateway's own port-forward, `openshell forward`.
+
+So the path to `/openclaw` is deliberately indirect:
+
+```text
+browser → Envoy /openclaw HTTPRoute → selector-less Service + manual Endpoints (pinned to the node IP)
+        → host `openshell forward` bridge (node:PORT) → gateway → supervisor → OpenClaw UI (in the sealed sandbox)
+```
+
+Because the in-sandbox gateway and the host forward are both un-supervised processes that die on a crash or reboot, a small **host systemd supervisor** ([`scripts/openclaw-ui-supervise.sh`](https://github.com/ansjindal/openshell-on-k8s/blob/main/scripts/openclaw-ui-supervise.sh)) reconciles all three every few seconds: it keeps the `openclaw-ui` sandbox Ready, (re)launches the in-sandbox gateway if it stops listening, and (re)starts the host forward bridge if it drops. That's what makes `/openclaw` restart-durable across node reboots.
+
+## The device-pairing trust model
+
+When you first open the Control UI, it asks for **one-time device pairing**. OpenClaw gives every browser a device identity (a keypair); a remote browser must be **approved once** by someone with operator access before the gateway trusts it. This site surfaces that flow at <a href="/approvals">Approvals</a> (backed by [`api/devices`](https://github.com/ansjindal/openshell-on-k8s/blob/main/web/src/app/api/devices/route.ts)), which runs `openclaw devices …` **inside** the `openclaw-ui` sandbox through the gateway exec path:
+
+- **Pending** — a browser that has asked to pair shows up here with a request id.
+- **Approve / Reject** — an operator with the right scope acts on it. Approve, reload the browser, and you're in.
+- **Paired** — approved devices, with the scopes they hold.
+
+## The "scope upgrade pending" deadlock
+
+There's a chicken-and-egg trap on a brand-new gateway, and it's worth understanding because the UI fixes it with one button. A password-paired operator starts with only the **`operator.pairing`** scope — it can *request* pairing but can't *approve* anyone. So the very first device's `devices approve` fails with **"scope upgrade pending approval"**: the only device that could approve it is itself, and it isn't allowed to yet. Classic *who approves the approver*.
+
+<Callout type="warn" title="First device can't approve itself">
+This isn't a bug — it's the trust model being strict by default. The fix isn't to weaken pairing; it's a one-time, <strong>host-privileged</strong> bootstrap that grants the operator the admin scopes, run from outside the OpenClaw scope system (so it isn't subject to the deadlock).
+</Callout>
+
+## Enable approvals — the one-click bootstrap
+
+The **Enable approvals** button on the <a href="/approvals">Approvals</a> page breaks the deadlock. It calls the `bootstrap-admin` action, which — through the **host** gateway-exec path, not an OpenClaw operator scope — does three things:
+
+1. **Grants the admin scopes.** It rewrites the gateway's `paired.json` so the operator device holds the full set: `operator.pairing`, `operator.admin`, `operator.approvals`, `operator.read`, `operator.write` — and clears the pending table.
+2. **Restarts the in-sandbox gateway** so it reloads the new scopes, re-binding on the **same port** the host `openshell forward` bridge points at (so `/openclaw` keeps working).
+3. **Confirms the listener is back** by polling the port, then reports success.
+
+After that, the operator can approve devices normally and the deadlock is gone for good. (The supervisor runs this at agent creation, so on a freshly provisioned box you usually don't need the button — it's there for an agent you built by hand, or if you ever hit the deadlock.)
+
+## Pair and approve a device — the flow
+
+1. Open <a href="/openclaw">the Control UI</a>. If it's a fresh browser it shows **"Device pairing required."**
+2. On <a href="/approvals">Approvals</a>, the request appears under **Pending**. If the operator doesn't yet hold admin (you'll see it isn't *admin-enabled*), click **Enable approvals** first.
+3. Click **Approve** on the pending request (or reject it).
+4. Reload the Control UI — you're in. The device now shows under **Paired** with its scopes.
+
+<Callout type="rh" title="The real-world posture">
+In production you keep pairing on and approve teammates deliberately — every browser that can drive the agent is one a human admitted on the record. The same model scales: the trust boundary is explicit, and the egress seal behind it means an approved device still only gets a <em>governed</em> agent, never a privileged one.
+</Callout>
+
+## Where to look next
+
+- **Use it:** open <a href="/openclaw">the Control UI</a>, pair your browser via <a href="/approvals">Approvals</a>, and chat with a fully sealed agent.
+- **The seal it shares:** the isolation and credential model are the same ones the [Security](/learn/security) chapter lays out — gVisor, the policy proxy, and inference with no key in the agent.
+- **The governed fleet:** for the multi-agent, human-gated counterpart, see [The Incident Desk](/learn/incident-desk).

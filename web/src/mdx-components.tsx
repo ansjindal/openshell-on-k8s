@@ -11,6 +11,7 @@ import { SecurityLayers } from "@/components/diagrams/SecurityLayers";
 import { SkillSupplyChain } from "@/components/diagrams/SkillSupplyChain";
 import { FleetOrchestration } from "@/components/diagrams/FleetOrchestration";
 import { DemoArchitecture } from "@/components/diagrams/DemoArchitecture";
+import { IncidentDeskArchitecture } from "@/components/diagrams/IncidentDeskArchitecture";
 import { Orchestrator } from "@/components/Orchestrator";
 import { IncidentLab } from "@/components/IncidentLab";
 import { FleetView } from "@/components/FleetView";
@@ -27,6 +28,7 @@ const components: MDXComponents = {
   SkillSupplyChain,
   FleetOrchestration,
   DemoArchitecture,
+  IncidentDeskArchitecture,
   Orchestrator,
   IncidentLab,
   FleetView,

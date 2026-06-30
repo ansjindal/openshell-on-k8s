@@ -48,8 +48,18 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
+    id: "production",
+    title: "Part IV · Production Patterns",
+    subtitle: "Real apps on the platform: a governed incident-response fleet and an interactive agent UI",
+    accent: "rh",
+    lessons: [
+      { slug: "incident-desk", title: "The Incident Desk", blurb: "A real backend app driving a 7-agent governed fleet — each sealed to one telemetry backend — through two human gates to one of two remediation paths, incl. GitOps.", minutes: 12 },
+      { slug: "openclaw-ui", title: "The Governed UI Agent & Approvals", blurb: "An interactive OpenClaw Control UI as a sealed agent, reached via an openshell-forward bridge; device pairing, the scope-upgrade deadlock, and the one-click Enable-approvals bootstrap.", minutes: 10 },
+    ],
+  },
+  {
     id: "next",
-    title: "Part IV · Going Further",
+    title: "Part V · Going Further",
     subtitle: "Where to take it next",
     lessons: [
       { slug: "next-steps", title: "Next Steps & Resources", blurb: "Multi-node, monitoring, other agents, and where to go deeper.", minutes: 6 },
