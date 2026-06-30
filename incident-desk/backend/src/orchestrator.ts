@@ -309,10 +309,18 @@ export class Orchestrator {
     const investigators = plan.map((p) => this.addAgent(run, "investigator", `${p.source} investigator`, {
       source: p.source, query: `Hypothesis: ${p.hypothesis}`,
     }));
-    await Promise.all(investigators.map(async (w, i) => {
-      try { await this.runInvestigator(run, w, plan[i].hypothesis); }
-      catch (err) { this.setAgent(run, w.name, { phase: "error", message: String((err as Error).message) }); }
-    }));
+    // Sequential, not Promise.all: the upstream NIM rate-limits CONCURRENT requests, so firing
+    // all investigators at once made the 3rd/4th (traces/changes) come back empty ("? tok").
+    // One at a time → each model call runs alone → reliable findings. (INFERENCE_PARALLEL=1 by
+    // default; set >1 only if your endpoint tolerates concurrency.)
+    const conc = Math.max(1, parseInt(process.env.INFERENCE_PARALLEL || "1", 10));
+    for (let i = 0; i < investigators.length; i += conc) {
+      await Promise.all(investigators.slice(i, i + conc).map(async (w, j) => {
+        try { await this.runInvestigator(run, w, plan[i + j].hypothesis); }
+        catch (err) { this.setAgent(run, w.name, { phase: "error", message: String((err as Error).message) }); }
+      }));
+      if (stop()) return;
+    }
     if (stop()) return;
 
     // 3) Human gate: review findings (approve → synthesize, or redirect/hot-reload then re-run)
