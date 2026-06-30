@@ -1,0 +1,56 @@
+# In-cluster Git (Gitea) — the GitOps source for the Incident Desk's catalog-api remediation
+# path. Replaces the external GitHub repo: the backend opens PRs against this via Gitea's
+# GitHub-compatible API (http://gitea.gitea.svc.cluster.local:3000/api/v1), a human merges, and
+# ArgoCD syncs the merge to demo-shop-gitops. Single replica + SQLite + a PVC — lab-scale.
+# ROOT_URL is set to the public /gitea sub-path so the browser UI works behind Envoy; the backend
+# uses the in-cluster Service for the API, which doesn't depend on ROOT_URL.
+apiVersion: v1
+kind: Namespace
+metadata: { name: gitea }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: gitea-data, namespace: gitea }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 5Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: gitea, namespace: gitea, labels: { app: gitea } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: gitea } }
+  strategy: { type: Recreate }
+  template:
+    metadata: { labels: { app: gitea } }
+    spec:
+      securityContext: { fsGroup: 1000 }
+      containers:
+        - name: gitea
+          image: gitea/gitea:1.22
+          env:
+            - { name: USER_UID, value: "1000" }
+            - { name: USER_GID, value: "1000" }
+            - { name: GITEA__database__DB_TYPE, value: sqlite3 }
+            - { name: GITEA__server__DOMAIN, value: gitea.gitea.svc.cluster.local }
+            - { name: GITEA__server__ROOT_URL, value: "https://openshell-lpwe6dek2.stg.apps.launchpad.nvidia.com/gitea/" }
+            - { name: GITEA__server__SSH_DOMAIN, value: gitea.gitea.svc.cluster.local }
+            - { name: GITEA__security__INSTALL_LOCK, value: "true" }
+            - { name: GITEA__service__DISABLE_REGISTRATION, value: "true" }
+            - { name: GITEA__server__OFFLINE_MODE, value: "true" }
+            - { name: GITEA__webhook__ALLOWED_HOST_LIST, value: "*" }
+          ports:
+            - { name: http, containerPort: 3000 }
+          volumeMounts: [{ name: data, mountPath: /data }]
+          readinessProbe: { httpGet: { path: /api/healthz, port: http }, initialDelaySeconds: 10, periodSeconds: 5 }
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: gitea-data } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: gitea, namespace: gitea, labels: { app: gitea } }
+spec:
+  selector: { app: gitea }
+  ports:
+    - { name: http, port: 3000, targetPort: http }
