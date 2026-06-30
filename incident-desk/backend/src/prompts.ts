@@ -35,7 +35,10 @@ function taskCall(opts: { thinking?: boolean } = {}): string {
     ].join("\n");
   }
   const think = opts.thinking ? "detailed thinking on" : "detailed thinking off";
-  const maxTokens = opts.thinking ? 3000 : 1500;
+  // Reasoning models (e.g. nemotron-super) spend most of the budget inside <think> before the
+  // answer; 3000/1500 leaves nothing for the final content on the bigger (synthesis) prompts →
+  // empty `content` → "model returned no content". Give generous headroom; env-tunable.
+  const maxTokens = parseInt(process.env.INFERENCE_MAX_TOKENS || (opts.thinking ? "8000" : "4000"), 10);
   return [
     `export MODEL="${INFERENCE_MODEL}"`,
     `export THINK="${think}"`,
