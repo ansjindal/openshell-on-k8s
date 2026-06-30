@@ -44,7 +44,7 @@ function taskCall(opts: { thinking?: boolean } = {}): string {
     `export THINK="${think}"`,
     `python3 -c "import json,os; src=open('/tmp/src.txt',encoding='utf-8',errors='ignore').read()[:6000] if os.path.exists('/tmp/src.txt') else ''; json.dump({'model':os.environ['MODEL'],'messages':[{'role':'system','content':os.environ['THINK']},{'role':'user','content':os.environ['PROMPT']+chr(10)+'EVIDENCE:'+chr(10)+src}],'max_tokens':${maxTokens},'temperature':0.2}, open('/tmp/req.json','w'))"`,
     'KEY="${OPENAI_API_KEY:-$CUSTOM_API_KEY}"',
-    `R=$(curl -sS -m 200 -k -o /tmp/resp.json -w "%{http_code} %{time_total}" ${INFERENCE_URL} -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d @/tmp/req.json 2>/dev/null || true)`,
+    `R=$(curl -sS -m 580 -k -o /tmp/resp.json -w "%{http_code} %{time_total}" ${INFERENCE_URL} -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d @/tmp/req.json 2>/dev/null || true)`,
     'CODE=$(echo "$R" | awk "{print \\$1}"); TT=$(echo "$R" | awk "{print \\$2}")',
     `echo "ALLOW ${INFERENCE_URL} curl POST \${CODE:-000}"`,
     'echo "=== USAGE ==="',

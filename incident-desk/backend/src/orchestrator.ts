@@ -297,7 +297,7 @@ export class Orchestrator {
     if (stop()) return;
     this.setAgent(run, coord.name, { phase: "running", message: "forming hypotheses…" });
     this.step(run, coord.name, "plan", "Reading symptoms, forming hypotheses");
-    const tr = parseSections((await this.gw.execScript(coord.name, buildTriageScript(incident.symptoms, incident.sources.map((s) => s.kind)), { timeoutSec: 180 })).stdout);
+    const tr = parseSections((await this.gw.execScript(coord.name, buildTriageScript(incident.symptoms, incident.sources.map((s) => s.kind)), { timeoutSec: 600 })).stdout);
     this.absorb(run, coord, tr);
     let plan = this.parsePlan(tr.result, incident.sources.map((s) => s.kind));
     this.setAgent(run, coord.name, { phase: "done", message: `assigned ${plan.length} investigators: ${plan.map((p) => p.source).join(", ")}` });
@@ -327,7 +327,7 @@ export class Orchestrator {
     const incident = getIncident(run.incidentId)!;
     const evidence = incident.live && incident.liveConfig ? await liveEvidenceFor(w.source!, incident.liveConfig) : (getSource(run.incidentId, w.source!)?.body ?? "(no evidence)");
     this.step(run, w.name, incident.live ? "fetch" : "note", incident.live ? `Pulled live ${w.source} (${w.source === "logs" ? "Loki" : w.source === "metrics" ? "Prometheus" : w.source === "traces" ? "Tempo" : "Kubernetes"})` : `Loaded ${w.source} evidence (authorized in-band)`, evidence.slice(0, 400), true);
-    const parsed = parseSections((await this.gw.execScript(w.name, buildInvestigatorScript(w.source!, hypothesis, evidence), { timeoutSec: 240 })).stdout);
+    const parsed = parseSections((await this.gw.execScript(w.name, buildInvestigatorScript(w.source!, hypothesis, evidence), { timeoutSec: 600 })).stdout);
     this.absorb(run, w, parsed);
     const result = parsed.result || "(no finding)";
     this.setAgent(run, w.name, { phase: "done", result, message: "finding ready" });
@@ -390,7 +390,7 @@ export class Orchestrator {
     const badReport = (s: string) => !s.trim() || /TASK_(ERROR|PARSE_ERROR)/.test(s) || !s.includes("#");
     let md = "";
     for (let attempt = 1; attempt <= 2; attempt++) {
-      const parsed = parseSections((await this.gw.execScript(synth.name, buildSynthScript(incident.title, incident.symptoms, findings), { timeoutSec: 240 })).stdout);
+      const parsed = parseSections((await this.gw.execScript(synth.name, buildSynthScript(incident.title, incident.symptoms, findings), { timeoutSec: 600 })).stdout);
       this.absorb(run, synth, parsed);
       md = parsed.result;
       if (!badReport(md)) break;
