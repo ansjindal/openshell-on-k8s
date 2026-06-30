@@ -1,0 +1,28 @@
+# {{ ansible_managed }}
+# OpenClaw Control UI supervisor — keeps the in-sandbox gateway + the host forward bridge
+# alive so the /openclaw route self-heals after a process death or node reboot. Mirrors the
+# openshell-workshop.service install convention (User=run_user, KUBECONFIG/HOME/PATH env,
+# After=k3s, Restart). The script (scripts/openclaw-ui-supervise.sh) is the long-running
+# foreground process; systemd's Restart=always is the backstop if it ever exits.
+[Unit]
+Description=OpenClaw Control UI supervisor (in-sandbox gateway + host forward bridge for /openclaw)
+After=network-online.target k3s.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ openclaw_ui_run_user }}
+Environment=HOME={{ openclaw_ui_run_home }}
+Environment=PATH={{ openclaw_ui_run_home }}/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+Environment=OPENCLAW_UI_SANDBOX={{ openclaw_ui_sandbox }}
+Environment=OPENCLAW_UI_GATEWAY={{ openclaw_ui_gateway }}
+Environment=OPENCLAW_UI_PORT={{ openclaw_ui_port }}
+Environment=OPENCLAW_UI_BIND={{ openclaw_ui_bind }}
+Environment=OPENCLAW_UI_PASSWORD={{ openclaw_ui_password }}
+ExecStart={{ openclaw_ui_supervisor_script }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

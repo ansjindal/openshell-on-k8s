@@ -305,6 +305,131 @@
       register: gitops_seed
       changed_when: "'POST apps/catalog' in gitops_seed.stdout"
 
+    # ---- 8. OpenClaw Control UI (the /openclaw route + its supervisor) ------
+    # A standalone OpenClaw gateway running INSIDE its own fleet sandbox (openclaw_ui_sandbox),
+    # served to the browser at /openclaw behind Envoy. The /approvals web page pairs devices
+    # against it. Unlike the agent fleet (real Pods), this gateway is reached over a HOST
+    # forward bridge → selector-less Service + manual Endpoints pinned to the NODE IP (the
+    # load-bearing trick; see the ingress template). A host systemd supervisor keeps both the
+    # in-sandbox gateway AND the forward bridge alive so /openclaw self-heals. Idempotent:
+    # the sandbox is created only if missing; manifests/config/unit are apply-or-update.
+
+    # Create the openclaw-ui sandbox from the OpenClaw image (skip if it already exists).
+    # Mirrors 16-sandboxes' create idiom (--no-tty -- true creates + detaches), but uses
+    # --from <image> (a standalone OpenClaw box) rather than --provider.
+    - name: Create the openclaw-ui sandbox (skip if it exists)
+      ansible.builtin.shell: |
+        set -e
+        openshell gateway add http://127.0.0.1:{{ gateway_nodeport }} --local --name {{ openclaw_ui_gateway }} 2>/dev/null || true
+        if openshell --gateway {{ openclaw_ui_gateway }} sandbox list 2>/dev/null | awk 'NR>1{print $1}' | grep -qx '{{ openclaw_ui_sandbox }}'; then
+          echo "{{ openclaw_ui_sandbox }} (already exists)"; exit 0
+        fi
+        timeout 120 openshell --gateway {{ openclaw_ui_gateway }} sandbox create \
+          --name '{{ openclaw_ui_sandbox }}' --from '{{ openclaw_ui_image }}' --no-tty -- true >/dev/null 2>&1 \
+          && echo "created {{ openclaw_ui_sandbox }}" || echo "created {{ openclaw_ui_sandbox }} (attach skipped)"
+      args: { executable: /bin/bash }
+      register: openclaw_ui_create
+      changed_when: "'created' in openclaw_ui_create.stdout"
+
+    - name: Wait for the openclaw-ui sandbox to be Ready
+      ansible.builtin.shell: |
+        openshell --gateway {{ openclaw_ui_gateway }} sandbox exec -n {{ openclaw_ui_sandbox }} -- true </dev/null >/dev/null 2>&1
+      args: { executable: /bin/bash }
+      register: openclaw_ui_ready
+      changed_when: false
+      retries: 36
+      delay: 5
+      until: openclaw_ui_ready.rc == 0
+
+    # Write /sandbox/.openclaw/openclaw.json (base64-piped — sandbox exec rejects newlines).
+    # Mirrors scripts/fleet.sh's config (custom provider on inference.local) PLUS the gateway
+    # auth+remote password fields the Control UI needs. Re-applied every run (idempotent).
+    - name: Write the openclaw-ui sandbox config (openclaw.json)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        CFG='{"agents":{"defaults":{"model":{"primary":"custom/{{ openclaw_ui_model }}"}}},"models":{"providers":{"custom":{"baseUrl":"https://inference.local/v1","apiKey":"openshell-router","api":"{{ openclaw_ui_inference_api }}","models":[{"id":"{{ openclaw_ui_model }}","name":"{{ openclaw_ui_model }}"}]}}},"gateway":{"mode":"local","auth":{"mode":"password","password":"{{ openclaw_ui_password }}"},"remote":{"password":"{{ openclaw_ui_password }}"}}}'
+        B64="$(printf '%s' "$CFG" | base64 | tr -d '\n')"
+        openshell --gateway {{ openclaw_ui_gateway }} sandbox exec -n {{ openclaw_ui_sandbox }} -- \
+          sh -c "mkdir -p /sandbox/.openclaw && echo ${B64} | base64 -d > /sandbox/.openclaw/openclaw.json" </dev/null
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+
+    - name: Ensure the openclaw-ui namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ openclaw_ui_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    # Derive the node InternalIP for the manual Endpoints — DO NOT hardcode it (it changes
+    # across a VM stop/relaunch). InternalIP is the address the cluster + the forward bridge
+    # actually use (same rationale as setup.sh's workshop EndpointSlice).
+    - name: Derive the node InternalIP for the openclaw-ui Endpoints
+      ansible.builtin.command: >-
+        kubectl get node -o jsonpath={.items[0].status.addresses[?(@.type=="InternalIP")].address}
+      register: openclaw_ui_node_ip_raw
+      changed_when: false
+
+    - name: Set the openclaw_ui_node_ip fact
+      ansible.builtin.set_fact:
+        openclaw_ui_node_ip: "{{ openclaw_ui_node_ip_raw.stdout | trim }}"
+
+    - name: Fail if the node InternalIP could not be derived
+      ansible.builtin.assert:
+        that: openclaw_ui_node_ip | length > 0
+        fail_msg: "Could not derive the node InternalIP — the openclaw-ui Endpoints would be empty and /openclaw would 503."
+
+    # Render the selector-less Service + manual Endpoints (NODE IP) + /openclaw HTTPRoute to a
+    # temp file, then apply it (more robust than heredoc-indenting a multi-doc manifest).
+    - name: Render the openclaw-ui ingress manifest
+      ansible.builtin.template:
+        src: openclaw-ui-ingress.yaml.j2
+        dest: /tmp/openclaw-ui-ingress.yaml
+        mode: "0644"
+
+    - name: Apply the openclaw-ui ingress (Service + Endpoints@nodeIP + HTTPRoute)
+      ansible.builtin.command: kubectl apply -f /tmp/openclaw-ui-ingress.yaml
+      register: openclaw_ui_ingress
+      changed_when: "'created' in openclaw_ui_ingress.stdout or 'configured' in openclaw_ui_ingress.stdout"
+
+    # Install the supervisor SCRIPT (the reconcile loop — keeps both gateway + forward up).
+    - name: Install the openclaw-ui supervisor script
+      ansible.builtin.copy:
+        src: "{{ incident_desk_repo_root }}/scripts/openclaw-ui-supervise.sh"
+        dest: "{{ openclaw_ui_supervisor_script }}"
+        mode: "0755"
+      become: true
+
+    # Install + enable the supervisor UNIT (mirrors how setup.sh installs openshell-workshop).
+    - name: Install the openclaw-ui.service systemd unit
+      ansible.builtin.template:
+        src: openclaw-ui.service.j2
+        dest: "{{ openclaw_ui_unit_path }}"
+        mode: "0644"
+      become: true
+      register: openclaw_ui_unit
+
+    - name: Reload systemd, enable + (re)start openclaw-ui.service
+      ansible.builtin.systemd:
+        name: openclaw-ui.service
+        daemon_reload: true
+        enabled: true
+        state: restarted
+      become: true
+
+    - name: Wait for /openclaw to serve through Envoy
+      ansible.builtin.shell: |
+        curl -s -o /dev/null -w '%{http_code}' \
+          {% if (keycloak_base_url | default('') | length) > 0 %}-H "Host: {{ keycloak_base_url | regex_replace('^https?://', '') }}"{% endif %} \
+          http://127.0.0.1:{{ envoy_web_nodeport }}/openclaw/
+      args: { executable: /bin/bash }
+      register: openclaw_ui_probe
+      changed_when: false
+      failed_when: false
+      retries: 12
+      delay: 5
+      until: openclaw_ui_probe.stdout == "200"
+
     - name: Incident Desk summary
       ansible.builtin.debug:
         msg:
@@ -313,4 +438,5 @@
           - "Mailpit: {{ (keycloak_base_url ~ mailpit_path) if (keycloak_base_url | length) > 0 else 'svc mailpit.research-desk:8025' }}"
           - "ArgoCD: {{ (keycloak_base_url ~ argocd_path) if (keycloak_base_url | length) > 0 else 'svc argocd-server.argocd' }}"
           - "Research Desk UI: {{ (keycloak_base_url ~ '/') if (keycloak_base_url | length) > 0 else '<site>/' }} (Incident Lab, via the teaching site)"
+          - "OpenClaw Control UI: {{ (keycloak_base_url ~ '/openclaw') if (keycloak_base_url | length) > 0 else '<site>/openclaw' }} (sandbox {{ openclaw_ui_sandbox }} @ node {{ openclaw_ui_node_ip }}:{{ openclaw_ui_port }}; supervised by openclaw-ui.service; probe={{ openclaw_ui_probe.stdout | default('n/a') }})"
           - "FAULT catalog seeded → catalog-api OOM/CrashLoopBackOff in demo-shop-gitops; the fleet investigates + opens the PR."

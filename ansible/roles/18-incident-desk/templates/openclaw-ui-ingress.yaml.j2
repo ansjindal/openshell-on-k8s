@@ -1,0 +1,64 @@
+# {{ ansible_managed }}
+# Ingress for the OpenClaw Control UI (the /openclaw route).
+#
+# The gateway runs INSIDE the openclaw-ui sandbox and is bridged onto the HOST node IP
+# at :{{ openclaw_ui_port }} by `openshell forward` (the openclaw-ui.service supervisor owns
+# that bridge). So there is no Pod to select — we wire Envoy to that host socket with a
+# SELECTOR-LESS Service + a MANUAL Endpoints object pinned to the NODE IP. kube-proxy then
+# auto-generates an EndpointSlice from the Endpoints, and Envoy routes /openclaw to it.
+#
+# LOAD-BEARING: the Endpoints address MUST be the node InternalIP (derived at apply time,
+# NOT hardcoded — see openclaw_ui_node_ip in tasks/main.yml), and the forward bridge MUST
+# stay bound to that same IP:port. If either drifts, Envoy 503s the route.
+apiVersion: v1
+kind: Service
+metadata:
+  name: openclaw-ui-host
+  namespace: {{ openclaw_ui_namespace }}
+spec:
+  ports:
+    - name: http
+      port: {{ openclaw_ui_port }}
+      targetPort: {{ openclaw_ui_port }}
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: openclaw-ui-host
+  namespace: {{ openclaw_ui_namespace }}
+subsets:
+  - addresses:
+      - ip: {{ openclaw_ui_node_ip }}
+    ports:
+      - name: http
+        port: {{ openclaw_ui_port }}
+        protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: openclaw
+  namespace: {{ openclaw_ui_namespace }}
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: fleet-gw
+      namespace: {{ envoy_gateway_ns }}
+      sectionName: web
+  rules:
+    # No URLRewrite: the OpenClaw gateway owns the /openclaw base path itself, so the prefix
+    # is passed through unchanged. timeouts.request "0s" disables the route-level timeout
+    # (the Control UI holds long-lived connections; Envoy's 15s default would cut them).
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /openclaw
+      timeouts:
+        request: "0s"
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: openclaw-ui-host
+          port: {{ openclaw_ui_port }}

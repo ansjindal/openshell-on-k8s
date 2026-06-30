@@ -23,3 +23,27 @@ incident_desk_seed_script: "scripts/seed-gitops-catalog.sh"
 gitea_token_scopes: "write:repository,write:user"
 # Keycloak OAuth2 discovery URL Gitea uses (in-cluster, back-channel).
 gitea_oidc_discovery_url: "http://keycloak.{{ keycloak_namespace }}.svc.cluster.local:8080{{ keycloak_relative_path }}/realms/{{ keycloak_realm }}/.well-known/openid-configuration"
+
+# ---- OpenClaw Control UI (the /openclaw route) -----------------------------------
+# A standalone OpenClaw gateway running INSIDE its own fleet sandbox (openclaw_ui_sandbox),
+# served to the browser at /openclaw behind Envoy. The web /approvals page pairs devices
+# against it (web reads OPENCLAW_UI_* from the workshop unit). Provisioned + supervised by
+# this role: sandbox + openclaw.json + ns Service/Endpoints/HTTPRoute + the host supervisor.
+# The password is CONFIG (gateway auth + remote), not a secret-of-record — override per deploy.
+openclaw_ui_sandbox: openclaw-ui
+openclaw_ui_namespace: openclaw-ui
+openclaw_ui_gateway: fleet                 # the openshell NAMED gateway (--gateway fleet)
+openclaw_ui_port: 18789
+openclaw_ui_bind: "0.0.0.0"
+openclaw_ui_password: "openclaw-ui-ctl"
+openclaw_ui_image: "{{ openclaw_sandbox_image | default('ghcr.io/ansjindal/openclaw-sandbox:2026.6.10') }}"
+# The gateway forces this model for inference.local; the sandbox config points at it via
+# the custom provider on https://inference.local/v1 (mirrors scripts/fleet.sh).
+openclaw_ui_model: "{{ inference_model }}"
+openclaw_ui_inference_api: "{{ openshell_inference_api | default('openai-completions') }}"
+# Host paths for the supervisor (mirrors how setup.sh installs openshell-workshop.service).
+openclaw_ui_supervisor_script: /usr/local/bin/openclaw-ui-supervise.sh
+openclaw_ui_unit_path: /etc/systemd/system/openclaw-ui.service
+# Account the openshell CLI is configured under on the box (HOME/.local/bin/openshell).
+openclaw_ui_run_user: "{{ lab_user | default(ansible_user_id | default('ubuntu')) }}"
+openclaw_ui_run_home: "/home/{{ openclaw_ui_run_user }}"

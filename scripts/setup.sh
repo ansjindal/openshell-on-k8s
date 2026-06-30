@@ -301,6 +301,26 @@ if [[ "${ENABLE_INCIDENT_DESK}" == "true" ]]; then
     || warn "GitOps catalog seed failed (non-fatal). See scripts/seed-gitops-catalog.sh."
 fi
 
+# ---- OpenClaw Control UI supervisor (safety net) ---------------------------
+# The 18-incident-desk Ansible role provisions the openclaw-ui sandbox + /openclaw
+# ingress AND installs/enables the openclaw-ui.service supervisor (keeps the in-sandbox
+# gateway + host forward bridge alive so /openclaw self-heals). This post-playbook call is
+# a best-effort safety net for a TARGETED re-run (ANSIBLE_TAGS that skipped the desk role):
+# (re)install the script + unit from the repo and (re)enable it. Idempotent. Non-fatal.
+if [[ "${ENABLE_INCIDENT_DESK}" == "true" ]]; then
+  if [[ -n "${ANSIBLE_TAGS:-}" ]]; then
+    log "Ensuring the openclaw-ui.service supervisor (targeted re-run safety net)"
+    $SUDO install -m 0755 "$ROOT/scripts/openclaw-ui-supervise.sh" /usr/local/bin/openclaw-ui-supervise.sh || true
+    if [[ ! -f /etc/systemd/system/openclaw-ui.service ]]; then
+      warn "openclaw-ui.service not installed (run the full play / desk role to template it) — supervisor not started."
+    else
+      $SUDO systemctl daemon-reload || true
+      $SUDO systemctl enable openclaw-ui.service >/dev/null 2>&1 || true
+      $SUDO systemctl restart openclaw-ui.service || warn "openclaw-ui.service restart failed — see: journalctl -u openclaw-ui"
+    fi
+  fi
+fi
+
 # ---- teaching website (optional) -------------------------------------------
 # A Next.js site with lessons + a live in-browser terminal wired to this VM's
 # cluster. Best-effort: a failure here must NOT fail the provision — the stack
