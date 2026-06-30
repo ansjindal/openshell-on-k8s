@@ -1,0 +1,25 @@
+---
+# Incident Desk role defaults. Most config lives in group_vars/all.yml (so it can
+# be overridden per-environment); these are role-local knobs + paths.
+#
+# Repo root on the box (the launchable checks the repo out here / runs setup.sh
+# from it). The role shells out to scripts/ under this root for image builds + the
+# GitOps seed, and applies the committed manifests under incident-desk/.
+incident_desk_repo_root: "{{ playbook_dir | dirname }}"
+
+# Committed manifests the role applies as-is (relative to the repo root).
+incident_desk_manifests:
+  gitea: "incident-desk/deploy/gitea.yaml"
+  mailpit: "incident-desk/deploy/mailpit.yaml"
+  backend: "incident-desk/deploy/backend.yaml"
+  demo_shop: "incident-desk/demo-shop/deploy/demo-shop.yaml"
+  rbac: "incident-desk/demo-shop/deploy/rbac.yaml"
+
+# Helper scripts (relative to the repo root).
+incident_desk_build_script: "scripts/build-incident-desk-images.sh"
+incident_desk_seed_script: "scripts/seed-gitops-catalog.sh"
+
+# Gitea PAT scopes for the gitops admin user (backend opens PRs via the API).
+gitea_token_scopes: "write:repository,write:user"
+# Keycloak OAuth2 discovery URL Gitea uses (in-cluster, back-channel).
+gitea_oidc_discovery_url: "http://keycloak.{{ keycloak_namespace }}.svc.cluster.local:8080{{ keycloak_relative_path }}/realms/{{ keycloak_realm }}/.well-known/openid-configuration"

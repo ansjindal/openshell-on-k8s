@@ -1,0 +1,316 @@
+---
+# =============================================================================
+# Incident Desk — the full demo stack the OpenClaw agent fleet investigates.
+#
+# Brings up (idempotently, safe to re-run):
+#   1. The two :local images (build + import into k3s containerd).
+#   2. Gitea (committed manifest) + imperative bootstrap: gitops admin user, PAT
+#      into research-desk/gitea-token, Keycloak OAuth source, gitops org, OIDC
+#      client-secret mirror.
+#   3. research-desk/research-desk-secrets (rendered from vars).
+#   4. Mailpit + the research-desk backend (committed manifests).
+#   5. demo-shop + its RBAC (committed manifests; demo-shop-gitops ns ensured).
+#   6. ArgoCD (pinned upstream install + insecure/sub-path patch).
+#   7. The GitOps catalog seed (FAULT config → catalog-api incident live).
+#
+# Runs only when incident_desk_enabled. Must run AFTER keycloak (the gitea realm
+# client), inference routing (the fleet provider), envoy (the ingress + /gitea
+# /mailpit/argocd routes), and the sandbox fleet (warm agent-0..7 the backend
+# reuses). Needs keycloak_enabled + envoy_gateway_enabled.
+# =============================================================================
+- name: Incident Desk
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Require the prerequisites the Incident Desk depends on
+      ansible.builtin.assert:
+        that:
+          - keycloak_enabled | bool
+          - envoy_gateway_enabled | bool
+        fail_msg: >-
+          The Incident Desk needs keycloak_enabled (the gitea OIDC client + demo
+          user) and envoy_gateway_enabled (the /gitea, /mailpit, /argocd routes).
+          Enable SSO (ENABLE_SSO=true) alongside ENABLE_INCIDENT_DESK=true.
+
+    - name: Require the Incident Desk secrets
+      ansible.builtin.assert:
+        that:
+          - gitea_client_secret is defined and (gitea_client_secret | string | length) > 0
+          - gitea_admin_password is defined and (gitea_admin_password | string | length) > 0
+          - keycloak_demo_password is defined and (keycloak_demo_password | string | length) > 0
+        fail_msg: >-
+          Set gitea_client_secret, gitea_admin_password and keycloak_demo_password
+          in inventory/group_vars/secrets.yml (scripts/setup.sh generates + caches
+          them in .sso-secrets.env when ENABLE_INCIDENT_DESK=true).
+
+    # ---- 1. Images ----------------------------------------------------------
+    # Both deploys use imagePullPolicy: Never, so the images MUST exist in the k3s
+    # image store first. The helper script is idempotent (skips images already
+    # imported) and does the build + `k3s ctr images import`.
+    - name: Build + import the Incident Desk :local images (idempotent)
+      ansible.builtin.command: "bash {{ incident_desk_repo_root }}/{{ incident_desk_build_script }}"
+      register: id_images
+      changed_when: "'Imported' in id_images.stdout"
+
+    # ---- 2. Gitea -----------------------------------------------------------
+    - name: Apply Gitea (ns + pvc + deploy + svc + /gitea route)
+      ansible.builtin.command: "kubectl apply -f {{ incident_desk_repo_root }}/{{ incident_desk_manifests.gitea }}"
+      register: gitea_apply
+      changed_when: "'created' in gitea_apply.stdout or 'configured' in gitea_apply.stdout"
+
+    # The committed gitea.yaml bakes a public ROOT_URL for one specific Brev host.
+    # Patch it to THIS launch's public host so the browser UI + OAuth redirects work
+    # behind Envoy. No-op when keycloak_base_url is empty (in-cluster API still works).
+    - name: Point Gitea ROOT_URL at this launch's public host
+      ansible.builtin.shell: |
+        kubectl -n {{ gitea_namespace }} set env deploy/gitea \
+          GITEA__server__ROOT_URL='{{ keycloak_base_url }}{{ gitea_path }}/'
+      args: { executable: /bin/bash }
+      when: (keycloak_base_url | default('') | length) > 0
+      changed_when: true
+
+    - name: Wait for Gitea to be ready
+      ansible.builtin.command: kubectl -n {{ gitea_namespace }} rollout status deploy/gitea --timeout=300s
+      changed_when: false
+
+    - name: Wait for the Gitea API health endpoint
+      ansible.builtin.shell: |
+        IP="$(kubectl -n {{ gitea_namespace }} get svc gitea -o jsonpath='{.spec.clusterIP}')"
+        curl -sf "http://${IP}:3000/api/healthz" >/dev/null
+      args: { executable: /bin/bash }
+      register: gitea_health
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: gitea_health.rc == 0
+
+    # ---- 2a. Gitea admin user (idempotent: create only if missing) ----------
+    - name: Check whether the Gitea admin user exists
+      ansible.builtin.shell: |
+        # `user list` columns vary by version, so match the username anywhere on a row.
+        kubectl -n {{ gitea_namespace }} exec deploy/gitea -- \
+          su-exec git gitea admin user list 2>/dev/null | grep -qw '{{ gitea_admin_user }}' \
+          && echo exists || echo missing
+      args: { executable: /bin/bash }
+      register: gitea_user_check
+      changed_when: false
+
+    # Create only when missing; also tolerate a concurrent/duplicate "already exists"
+    # (defensive — keeps the step idempotent even if the list parse missed the user).
+    - name: Create the Gitea admin user (gitops)
+      ansible.builtin.shell: |
+        out="$(kubectl -n {{ gitea_namespace }} exec deploy/gitea -- \
+          su-exec git gitea admin user create \
+            --username '{{ gitea_admin_user }}' \
+            --password '{{ gitea_admin_password }}' \
+            --email '{{ gitea_admin_email }}' \
+            --admin --must-change-password=false 2>&1)"; rc=$?
+        echo "$out"
+        if [ $rc -ne 0 ] && echo "$out" | grep -qi 'already exist'; then exit 0; fi
+        exit $rc
+      args: { executable: /bin/bash }
+      no_log: true
+      when: "'missing' in gitea_user_check.stdout"
+      changed_when: true
+
+    # ---- 2b. PAT → research-desk/gitea-token (create-or-keep) ---------------
+    # The backend reads this token to open PRs. Generate it ONCE: if the secret
+    # already exists, keep it (regenerating would orphan the live token + isn't
+    # idempotent). Ensure the research-desk namespace exists first.
+    - name: Ensure the research-desk namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ research_desk_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Check whether research-desk/gitea-token already exists
+      ansible.builtin.shell: |
+        kubectl -n {{ research_desk_namespace }} get secret gitea-token >/dev/null 2>&1 && echo yes || echo no
+      args: { executable: /bin/bash }
+      register: gitea_token_secret
+      changed_when: false
+
+    - name: Generate a Gitea PAT for gitops and store it in research-desk/gitea-token
+      ansible.builtin.shell: |
+        set -euo pipefail
+        TOKEN="$(kubectl -n {{ gitea_namespace }} exec deploy/gitea -- \
+          su-exec git gitea admin user generate-access-token \
+            --username '{{ gitea_admin_user }}' \
+            --scopes '{{ gitea_token_scopes }}' --raw)"
+        [ -n "$TOKEN" ] || { echo "empty PAT from gitea" >&2; exit 1; }
+        kubectl -n {{ research_desk_namespace }} create secret generic gitea-token \
+          --from-literal=token="$TOKEN" \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      no_log: true
+      when: gitea_token_secret.stdout == "no"
+      changed_when: true
+
+    # ---- 2c. Keycloak OAuth2 source (idempotent: skip if named keycloak) ----
+    - name: Check whether the Gitea keycloak auth source exists
+      ansible.builtin.shell: |
+        kubectl -n {{ gitea_namespace }} exec deploy/gitea -- \
+          su-exec git gitea admin auth list 2>/dev/null | grep -qw keycloak \
+          && echo exists || echo missing
+      args: { executable: /bin/bash }
+      register: gitea_auth_check
+      changed_when: false
+
+    - name: Register the Keycloak OAuth2 source in Gitea
+      ansible.builtin.shell: |
+        kubectl -n {{ gitea_namespace }} exec deploy/gitea -- \
+          su-exec git gitea admin auth add-oauth \
+            --name keycloak \
+            --provider openidConnect \
+            --key gitea \
+            --secret '{{ gitea_client_secret }}' \
+            --auto-discover-url '{{ gitea_oidc_discovery_url }}'
+      args: { executable: /bin/bash }
+      no_log: true
+      when: "'missing' in gitea_auth_check.stdout"
+      changed_when: true
+
+    # ---- 2d. gitops org (Gitea API; idempotent on already-exists) -----------
+    - name: Ensure the gitops org exists (Gitea API)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        TOKEN="$(kubectl -n {{ research_desk_namespace }} get secret gitea-token -o jsonpath='{.data.token}' | base64 -d)"
+        IP="$(kubectl -n {{ gitea_namespace }} get svc gitea -o jsonpath='{.spec.clusterIP}')"
+        API="http://${IP}:3000/api/v1"
+        code="$(curl -s -o /dev/null -w '%{http_code}' \
+          -H "Authorization: token ${TOKEN}" "${API}/orgs/{{ gitea_org }}")"
+        if [ "$code" = "200" ]; then echo "org exists"; exit 0; fi
+        # POST /orgs creates it; 201 = created, 422 = already exists (race). Both OK.
+        create="$(curl -s -o /dev/null -w '%{http_code}' \
+          -X POST -H "Authorization: token ${TOKEN}" -H 'Content-Type: application/json' \
+          -d '{"username":"{{ gitea_org }}"}' "${API}/orgs")"
+        case "$create" in 201|422) echo "org created/exists (HTTP ${create})";; *) echo "org create failed HTTP ${create}" >&2; exit 1;; esac
+      args: { executable: /bin/bash }
+      register: gitea_org_create
+      changed_when: "'created' in gitea_org_create.stdout"
+
+    # ---- 2e. mirror the OIDC client secret into gitea/gitea-oidc ------------
+    - name: Mirror gitea_client_secret into gitea/gitea-oidc
+      ansible.builtin.shell: |
+        kubectl -n {{ gitea_namespace }} create secret generic gitea-oidc \
+          --from-literal=client-secret='{{ gitea_client_secret }}' \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+
+    # ---- 3. research-desk-secrets (12 keys, rendered from vars) -------------
+    # Backend reuses the public openshell-cli client via the password grant as the
+    # demo user (NO new client). Mirrors the litellm secret task (no_log).
+    - name: Create/update research-desk/research-desk-secrets
+      ansible.builtin.shell: |
+        kubectl -n {{ research_desk_namespace }} create secret generic research-desk-secrets \
+          --from-literal=OIDC_CLIENT_ID='{{ keycloak_client_id }}' \
+          --from-literal=OIDC_AUDIENCE='{{ keycloak_client_id }}' \
+          --from-literal=OIDC_ISSUER='{{ keycloak_internal_issuer_url }}' \
+          --from-literal=OIDC_GRANT='password' \
+          --from-literal=OIDC_USERNAME='{{ keycloak_demo_user | default("demo") }}' \
+          --from-literal=OIDC_PASSWORD='{{ keycloak_demo_password }}' \
+          --from-literal=MAIL_FROM='{{ research_desk_mail_from }}' \
+          --from-literal=MAIL_HOST='mailpit.{{ research_desk_namespace }}.svc.cluster.local' \
+          --from-literal=MAIL_PORT='1025' \
+          --from-literal=OPENSHELL_GATEWAY='research-desk' \
+          --from-literal=OPENSHELL_GATEWAY_ENDPOINT='openshell.{{ openshell_namespace }}.svc.cluster.local:8080' \
+          --from-literal=REPORT_TO='{{ research_desk_report_to }}' \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+
+    # ---- 4. Mailpit + backend ----------------------------------------------
+    - name: Apply Mailpit (research-desk ns + svc)
+      ansible.builtin.command: "kubectl apply -f {{ incident_desk_repo_root }}/{{ incident_desk_manifests.mailpit }}"
+      register: mailpit_apply
+      changed_when: "'created' in mailpit_apply.stdout or 'configured' in mailpit_apply.stdout"
+
+    - name: Wait for Mailpit to be ready
+      ansible.builtin.command: kubectl -n {{ research_desk_namespace }} rollout status deploy/mailpit --timeout=180s
+      changed_when: false
+      failed_when: false
+
+    - name: Apply the research-desk backend (deploy + pvc + svc + /research-desk route)
+      ansible.builtin.command: "kubectl apply -f {{ incident_desk_repo_root }}/{{ incident_desk_manifests.backend }}"
+      register: backend_apply
+      changed_when: "'created' in backend_apply.stdout or 'configured' in backend_apply.stdout"
+
+    - name: Wait for the research-desk backend rollout
+      ansible.builtin.command: kubectl -n {{ research_desk_namespace }} rollout status deploy/research-desk-backend --timeout=240s
+      changed_when: false
+      failed_when: false
+
+    # ---- 5. demo-shop + RBAC -----------------------------------------------
+    - name: Apply demo-shop (ns + postgres + orders-api + loadgen + ServiceMonitor)
+      ansible.builtin.command: "kubectl apply -f {{ incident_desk_repo_root }}/{{ incident_desk_manifests.demo_shop }}"
+      register: demo_shop_apply
+      changed_when: "'created' in demo_shop_apply.stdout or 'configured' in demo_shop_apply.stdout"
+
+    # The incident-reader Role/RoleBinding live in demo-shop-gitops, which ArgoCD
+    # creates lazily on first catalog sync (CreateNamespace=true). Ensure it now so
+    # the rbac.yaml apply doesn't fail when ArgoCD hasn't synced yet.
+    - name: Ensure the demo-shop-gitops namespace (ArgoCD catalog target)
+      ansible.builtin.shell: |
+        kubectl create namespace demo-shop-gitops --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Apply demo-shop RBAC (incident-remediator + incident-reader)
+      ansible.builtin.command: "kubectl apply -f {{ incident_desk_repo_root }}/{{ incident_desk_manifests.rbac }}"
+      register: rbac_apply
+      changed_when: "'created' in rbac_apply.stdout or 'configured' in rbac_apply.stdout"
+
+    # ---- 6. ArgoCD (pinned upstream install + sub-path patch) ---------------
+    - name: Ensure the argocd namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ argocd_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Install ArgoCD (pinned upstream manifest)
+      ansible.builtin.command: "kubectl apply -n {{ argocd_namespace }} -f {{ argocd_install_manifest_url }}"
+      register: argocd_apply
+      changed_when: "'created' in argocd_apply.stdout or 'configured' in argocd_apply.stdout"
+
+    # Serve argocd-server in INSECURE mode (no internal TLS / HTTP→HTTPS redirect)
+    # so the plain-HTTP /argocd Envoy route works, and under the /argocd sub-path so
+    # the UI assets resolve. The /argocd route does NOT strip the prefix (no
+    # URLRewrite — unlike /mailpit), so the server must own the rootpath.
+    - name: Patch argocd-cmd-params-cm (insecure + /argocd sub-path)
+      ansible.builtin.shell: |
+        kubectl -n {{ argocd_namespace }} patch configmap argocd-cmd-params-cm --type merge -p \
+          '{"data":{"server.insecure":"true","server.rootpath":"{{ argocd_path }}","server.basehref":"{{ argocd_path }}/"}}'
+      args: { executable: /bin/bash }
+      register: argocd_patch
+      changed_when: true
+
+    - name: Restart argocd-server to pick up the ConfigMap change
+      ansible.builtin.command: kubectl -n {{ argocd_namespace }} rollout restart deploy/argocd-server
+      changed_when: true
+
+    - name: Wait for the argocd-server rollout
+      ansible.builtin.command: kubectl -n {{ argocd_namespace }} rollout status deploy/argocd-server --timeout=300s
+      changed_when: false
+      failed_when: false
+
+    # ---- 7. GitOps catalog seed (FAULT config → incident live) --------------
+    # Pushes apps/catalog/* (CACHE_MB=400/DB_POOL_MAX=10/BUILD=v2.3.3) into Gitea +
+    # registers the ArgoCD `catalog` Application. The org (step 2d) + gitea-token
+    # (step 2b) exist by now. The script is idempotent (skips if already seeded).
+    - name: Seed the GitOps catalog (Gitea + ArgoCD)
+      ansible.builtin.command: "bash {{ incident_desk_repo_root }}/{{ incident_desk_seed_script }}"
+      register: gitops_seed
+      changed_when: "'POST apps/catalog' in gitops_seed.stdout"
+
+    - name: Incident Desk summary
+      ansible.builtin.debug:
+        msg:
+          - "Incident Desk up. Images: research-desk-backend:local, orders-api:local."
+          - "Gitea: {{ (keycloak_base_url ~ gitea_path) if (keycloak_base_url | length) > 0 else 'svc gitea.gitea:3000' }}  (admin: {{ gitea_admin_user }})"
+          - "Mailpit: {{ (keycloak_base_url ~ mailpit_path) if (keycloak_base_url | length) > 0 else 'svc mailpit.research-desk:8025' }}"
+          - "ArgoCD: {{ (keycloak_base_url ~ argocd_path) if (keycloak_base_url | length) > 0 else 'svc argocd-server.argocd' }}"
+          - "Research Desk UI: {{ (keycloak_base_url ~ '/') if (keycloak_base_url | length) > 0 else '<site>/' }} (Incident Lab, via the teaching site)"
+          - "FAULT catalog seeded → catalog-api OOM/CrashLoopBackOff in demo-shop-gitops; the fleet investigates + opens the PR."

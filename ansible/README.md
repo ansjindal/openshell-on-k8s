@@ -12,7 +12,8 @@ control:    03-k3s server → 03-k3s agents
 cluster:    gVisor RuntimeClass → 04-agent_sandbox → 05-litellm → 06-postgres*
             → 07-keycloak* → 08-apiserver_oidc* → 09-openshell_gateway
             → 10-inference_routing → 11-kyverno* → 12-monitoring*
-            → 13-headlamp* → 14-envoy_gateway* → 15-openshell_ui* → 16-sandboxes*
+            → 13-headlamp* → 14-envoy_gateway* → 15-openshell_ui* → 17-skill-registry*
+            → 16-sandboxes* → 18-incident-desk*
             (* optional / toggled)
 ```
 
@@ -72,7 +73,9 @@ ansible-playbook site.yml --tags monitoring -e upstream_api_key=...
 | `13-headlamp` | Kubernetes dashboard, OIDC SSO (optional) | server |
 | `14-envoy_gateway` | single-host path-routed ingress (optional) | server |
 | `15-openshell_ui` | OpenShell Console web UI (optional) | server |
+| `17-skill-registry` | private Verdaccio skill registry (optional) — when `skill_registry_enabled` | server |
 | `16-sandboxes` | create the initial sandbox fleet via the CLI — when `sandboxes_enabled` | server |
+| `18-incident-desk` | full Incident Desk demo (Gitea + ArgoCD + demo-shop + Mailpit + research-desk backend + FAULT GitOps catalog) — when `incident_desk_enabled` | server |
 
 After it completes, drive the fleet with [`../scripts/fleet`](../scripts/fleet) (run it on the
 server node, where kubectl + the openshell CLI are configured).

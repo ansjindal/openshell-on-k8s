@@ -1,0 +1,28 @@
+# /mailpit → Mailpit web UI (the Incident Desk's mail sink; svc mailpit:8025).
+# In the research-desk namespace (co-located with the Service) → no ReferenceGrant.
+# Strip the /mailpit prefix; Mailpit serves its UI from root. X-Forwarded-Proto=https
+# so links/assets are built for the https edge (TLS terminates at Envoy).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mailpit
+  namespace: {{ mailpit_namespace }}
+spec:
+  parentRefs:
+    - name: fleet-gw
+      namespace: {{ envoy_gateway_ns }}
+      sectionName: web
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: "{{ mailpit_path }}" }
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path: { type: ReplacePrefixMatch, replacePrefixMatch: / }
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - { name: X-Forwarded-Proto, value: "https" }
+      backendRefs:
+        - name: mailpit
+          port: {{ mailpit_ui_port }}

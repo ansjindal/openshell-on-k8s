@@ -1,0 +1,34 @@
+# /argocd → ArgoCD server UI/API (the GitOps remediation merge surface).
+# In the argocd namespace (co-located with the Service) → no ReferenceGrant.
+#
+# CAVEAT (see role README / report): argocd-server must run in INSECURE mode for
+# this plain-HTTP route to work. By default argocd-server serves HTTPS on :80 and
+# 301-redirects HTTP→HTTPS, which loops behind a TLS-terminating edge. Set
+# `server.insecure: "true"` in the argocd-cmd-params-cm ConfigMap (or pass
+# `--insecure` to argocd-server) and restart the deployment, then this route on
+# port 80 serves cleanly. ArgoCD also expects to be served under its rootpath when
+# behind a sub-path; if the UI assets 404 under /argocd, set `server.rootpath:
+# /argocd` and `server.basehref: /argocd/` in the same ConfigMap. This manifest is
+# applied as-is; the server-side ConfigMap change is NOT done here (it lives with
+# the ArgoCD install, which setup does not yet manage).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd
+  namespace: {{ argocd_namespace }}
+spec:
+  parentRefs:
+    - name: fleet-gw
+      namespace: {{ envoy_gateway_ns }}
+      sectionName: web
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: "{{ argocd_path }}" }
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - { name: X-Forwarded-Proto, value: "https" }
+      backendRefs:
+        - name: argocd-server
+          port: {{ argocd_server_port }}

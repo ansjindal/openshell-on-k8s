@@ -169,9 +169,22 @@
     - { role: "17-skill-registry", when: skill_registry_enabled | default(true) | bool }
 
 # Sandbox fleet — runtime objects, created last (needs the gateway + provider).
+# When the Incident Desk is enabled, fleet_size is forced to 8 (group_vars) so the
+# backend's reused agent-0..7 pool exists before the desk play below runs.
 - name: Sandboxes — create the initial fleet (optional)
   hosts: server
   become: true
   tags: [sandboxes, fleet]
   roles:
     - { role: "16-sandboxes", when: sandboxes_enabled | default(false) | bool }
+
+# Incident Desk — the full demo stack (Gitea, ArgoCD, demo-shop, Mailpit, the
+# research-desk backend + the FAULT GitOps catalog). Runs LAST: it needs the
+# keycloak gitea client, the inference route, the Envoy ingress, AND the warm
+# agent-0..7 sandbox fleet above. Default OFF.
+- name: Component — Incident Desk (research-desk + demo-shop + Gitea + ArgoCD)
+  hosts: server
+  become: true
+  tags: [incident-desk]
+  roles:
+    - { role: "18-incident-desk", when: incident_desk_enabled | default(false) | bool }

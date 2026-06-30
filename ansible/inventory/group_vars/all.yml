@@ -94,6 +94,9 @@ openshell_namespace: openshell
 gateway_nodeport: 30808
 # Model the gateway forces for inference.local (must be a litellm_models name).
 inference_model: "{{ litellm_models[0].name }}"
+# Per-request inference timeout (seconds) on the gateway route. Default is 60s,
+# too short for long reasoning/synthesis streams (Incident Desk) — raise to 600.
+inference_timeout: 600
 
 # ---- Gateway database backend ----------------------------------------------
 # sqlite (default): bundled per-pod SQLite -> single-replica StatefulSet.
@@ -158,6 +161,51 @@ envoy_gateway_ns: fleet-gateway          # holds the Gateway + EnvoyProxy CRs
 envoy_web_nodeport: 30080                # HTTP path-routing listener (the public host points here)
 envoy_grpc_nodeport: 30081               # OpenShell gateway (gRPC) via Envoy
 
+# ---- Incident Desk (research-desk backend, demo-shop, Gitea, Mailpit, ArgoCD) ----
+# The full Incident Desk demo: an instrumented demo-shop (orders-api + a GitOps
+# catalog-api with a baked-in fault), an in-cluster Gitea (the GitOps source +
+# PR/merge surface), ArgoCD (syncs the merged remediation), Mailpit (the mail
+# sink the `sender` agent delivers to), and the research-desk backend that drives
+# the OpenClaw agent fleet through the investigation. Deployed by the
+# 18-incident-desk role; default OFF (heavy + needs the warm agent-0..7 fleet).
+#
+# When enabled, the role builds the two :local images, applies the committed
+# manifests (gitea/mailpit/backend/demo-shop + RBAC + GitOps), does the imperative
+# Gitea/ArgoCD bootstrap, renders the research-desk-secrets, and seeds the FAULT
+# GitOps catalog. It also forces the warm agent-0..7 fleet (fleet_size 8) — see
+# the Sandbox fleet section below.
+incident_desk_enabled: false
+
+# Envoy ingress routes for the desk (/argocd, /mailpit; the /gitea + /research-desk
+# routes ship inside the committed manifests). These target the argocd +
+# research-desk namespaces; enabling the routes before those namespaces exist
+# fails the kubectl apply, so they are gated on the desk being enabled. Override
+# explicitly only if you applied the desk manifests out-of-band.
+incident_desk_routes_enabled: "{{ incident_desk_enabled | bool }}"
+argocd_namespace: argocd
+argocd_version: "v3.4.4"                   # pinned ArgoCD release (raw upstream install manifest)
+argocd_install_manifest_url: "https://raw.githubusercontent.com/argoproj/argo-cd/{{ argocd_version }}/manifests/install.yaml"
+argocd_path: "/argocd"                    # path under the single public host
+argocd_server_port: 80                    # argocd-server svc port (needs server.insecure=true; see template caveat)
+mailpit_namespace: research-desk          # Mailpit runs alongside the backend
+mailpit_path: "/mailpit"                  # path under the single public host
+mailpit_ui_port: 8025                     # Mailpit web UI port (1025 is SMTP)
+# Gitea OIDC redirect base (mirrors headlamp_url/grafana_url/console_url). Empty
+# when no public host is set (the realm client falls back to a wildcard redirect).
+gitea_path: "/gitea"
+gitea_url: "{{ (keycloak_base_url ~ gitea_path) if (keycloak_base_url | length) > 0 else '' }}"
+gitea_namespace: gitea
+gitea_admin_user: gitops
+gitea_admin_email: "gitops@openshell.local"
+gitea_org: gitops
+# Incident Desk app/secret defaults (research-desk-secrets). Sensible defaults;
+# kc_demo_password + gitea_client_secret/gitea_admin_password come from secrets.yml.
+research_desk_namespace: research-desk
+research_desk_mail_from: "incident-desk@openshell.local"
+research_desk_report_to: "incident-desk@openshell.local"
+# gitea_client_secret, gitea_admin_password, kc_demo_password: set in secrets.yml
+# (generated + cached in .sso-secrets.env by scripts/setup.sh).
+
 # ---- Kubernetes dashboard SSO (Headlamp) + apiserver OIDC (optional) -------
 # Makes a Keycloak token a kubectl identity: openshell-admin -> cluster-admin,
 # openshell-user -> view. Auto-on when keycloak_enabled.
@@ -196,5 +244,19 @@ console_url: "{{ (keycloak_base_url ~ openshell_ui_path) if (keycloak_base_url |
 # fleet_size sandboxes named agent-0..N. Used by scripts/fleet (runtime ops) and
 # by the optional 16-sandboxes role (declarative creation at the end of site.yml
 # when sandboxes_enabled). The role attaches each sandbox to sandbox_provider.
-fleet_size: 5
-sandboxes_enabled: false       # set true (or --tags sandboxes) to create the fleet via the playbook
+#
+# BASE default stays LEAN (5, off): a plain launch should not pay for 8 warm
+# sandboxes it won't use. The Incident Desk is the only consumer that NEEDS the
+# full agent-0..7 pool — its backend sets REUSE_SANDBOXES=agent-0..7 and the
+# orchestrator assigns coordinator + investigators + synthesizer + sender by
+# index, so a missing sandbox (e.g. agent-5, the synthesizer) hangs the run.
+# So fleet_size/sandboxes_enabled are DERIVED from incident_desk_enabled: the
+# desk forces 8 warm sandboxes; otherwise the base 5 (created only if you opt in
+# via sandboxes_enabled / --tags sandboxes). setup.sh wires the same coupling for
+# .env-driven launches (FLEET_SIZE forced to 8 when ENABLE_INCIDENT_DESK=true and
+# the user didn't override). Creating an existing sandbox is a tolerated no-op,
+# so this stays idempotent on re-run. Override fleet_size in secrets.yml / -e to
+# pin an explicit size regardless of the desk.
+fleet_base_size: 5
+fleet_size: "{{ 8 if (incident_desk_enabled | default(false) | bool) else fleet_base_size }}"
+sandboxes_enabled: "{{ incident_desk_enabled | default(false) | bool }}"

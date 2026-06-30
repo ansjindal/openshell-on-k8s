@@ -40,8 +40,11 @@
         # the route even if the upstream key cannot be verified now (placeholder
         # key or transient 403); otherwise inference set rejects the route and
         # agents hit "inference route not configured". Real calls need a valid key.
-        openshell --gateway fleet inference set          --provider fleet --model {{ inference_model }} --no-verify || true
-        openshell --gateway fleet inference set --system --provider fleet --model {{ inference_model }} --no-verify || true
+        # --timeout {{ inference_timeout }}: the default per-request inference timeout is 60s, which
+        # cuts the Incident Desk's long synthesis/investigation streams mid-flight
+        # (reasoning models spend most of the budget inside <think> before answering).
+        openshell --gateway fleet inference set          --provider fleet --model {{ inference_model }} --timeout {{ inference_timeout }} --no-verify || true
+        openshell --gateway fleet inference set --system --provider fleet --model {{ inference_model }} --timeout {{ inference_timeout }} --no-verify || true
       args: { executable: /bin/bash }
       no_log: true
       changed_when: true

@@ -49,7 +49,11 @@ spec:
   template:
     metadata: { labels: { app: orders-api } }
     spec:
-      imagePullSecrets: [{ name: nvcr-pull }]
+      # orders-api uses a locally-built image (incident-desk/orders-api:local) with
+      # imagePullPolicy: Never, so no registry pull happens — the previous
+      # `imagePullSecrets: [{ name: nvcr-pull }]` referenced a secret that does not
+      # exist and only worked because Never skips the pull. Dropped to keep the
+      # manifest self-consistent (no dangling secret reference).
       containers:
         - name: orders-api
           image: incident-desk/orders-api:local

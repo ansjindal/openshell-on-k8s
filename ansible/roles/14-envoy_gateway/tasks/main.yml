@@ -27,13 +27,18 @@
     # Only route to backends that actually exist: Keycloak (always, under SSO),
     # Grafana when monitoring is on, Headlamp when headlamp is on. Applying a
     # route into a missing namespace (e.g. headlamp off) fails the kubectl apply.
+    # The Incident Desk routes (argocd/mailpit) target the argocd + research-desk
+    # namespaces, which setup does NOT deploy — gate them on
+    # incident_desk_routes_enabled so a fresh launch without the Incident Desk
+    # doesn't fail the apply.
     - name: Build the Gateway API manifest list
       ansible.builtin.set_fact:
         eg_manifests: >-
           {{ ['gatewayclass.yaml', 'envoyproxy.yaml', 'gateway.yaml',
               'grpcroute-openshell.yaml', 'httproute-auth.yaml']
              + (['httproute-grafana.yaml'] if (monitoring_enabled | bool) else [])
-             + (['httproute-headlamp.yaml'] if (headlamp_enabled | bool) else []) }}
+             + (['httproute-headlamp.yaml'] if (headlamp_enabled | bool) else [])
+             + (['httproute-argocd.yaml', 'httproute-mailpit.yaml'] if (incident_desk_routes_enabled | default(false) | bool) else []) }}
 
     - name: Render Gateway API manifests
       ansible.builtin.template:
