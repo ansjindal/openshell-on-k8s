@@ -48,6 +48,27 @@ spec:
       namespace: {{ envoy_gateway_ns }}
       sectionName: web
   rules:
+    # BARE-PATH REDIRECT (load-bearing — fixes the "blank /openclaw" bug): the Control UI's
+    # index.html uses RELATIVE asset refs (`./assets/...`). At the bare URL `/openclaw` (no
+    # trailing slash) the browser's base is `/`, so `./assets/x.js` resolves to `/assets/x.js`
+    # — which does NOT match this /openclaw route → 404 → blank screen. At `/openclaw/` the
+    # base is `/openclaw/`, so assets resolve to `/openclaw/assets/...` and load. The gateway
+    # emits no base-path/rootpath config to make the hrefs absolute, so we 301-redirect the
+    # EXACT bare path to the trailing-slash form. An Exact match wins over the PathPrefix rule
+    # below, so only the bare `/openclaw` is redirected; `/openclaw/` + `/openclaw/assets/...`
+    # still hit the backend. (Verified: the gateway does NOT origin-check the WS — it accepts
+    # the public-host Origin with `--allow-unconfigured` — so allowedOrigins is NOT needed.)
+    - matches:
+        - path:
+            type: Exact
+            value: /openclaw
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /openclaw/
+            statusCode: 301
     # No URLRewrite: the OpenClaw gateway owns the /openclaw base path itself, so the prefix
     # is passed through unchanged. timeouts.request "0s" disables the route-level timeout
     # (the Control UI holds long-lived connections; Envoy's 15s default would cut them).

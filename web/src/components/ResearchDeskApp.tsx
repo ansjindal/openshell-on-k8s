@@ -557,7 +557,7 @@ function LiveHealth({ incidentId }: { incidentId: string }) {
         {h && <span className="pill" style={{ marginLeft: "auto", color: issue ? "var(--pink)" : "var(--teal)", borderColor: issue ? "rgba(247,37,133,.4)" : "rgba(6,214,160,.4)", background: issue ? "var(--pink-dim)" : "var(--teal-dim)" }}><span className="dotled" style={{ background: issue ? "var(--pink)" : "var(--teal)" }} />{issue ? "unhealthy" : "healthy"}</span>}</div>
       {triggering && !issue && (
         <div style={{ display: "flex", gap: 9, alignItems: "center", padding: "10px 12px", marginBottom: 12, borderRadius: "var(--r-md)", background: "var(--amber-dim)", border: "1px solid rgba(251,191,36,.35)", fontSize: 12.5 }}>
-          <span className="spinner" /><span>Fault injected — <b>orders-api</b> is rolling. The incident surfaces in <b>~30–45s</b> (pod restart → load saturates the pool → 10s metric scrape). This panel auto-refreshes every 5s.</span>
+          <span className="spinner" /><span>Fault injected — <b>{h?.app ?? "the app"}</b> is rolling. The incident surfaces in <b>~30–45s</b> (pod restart → load saturates the pool → 10s metric scrape). This panel auto-refreshes every 5s.</span>
         </div>
       )}
       {!h ? <div className="muted">checking live telemetry…</div> : (<>

@@ -36,3 +36,18 @@ metadata:
 spec:
   selector: { app: catalog-api }
   ports: [{ name: http, port: 8080, targetPort: http }]
+---
+# ServiceMonitor for catalog-api — without it Prometheus never scrapes catalog-api, so the
+# research-desk "Live system health" panel shows "—" for every metric even when faulted (the
+# orders-api equivalent lives in demo-shop/deploy/demo-shop.yaml). Mirrors that one exactly:
+# the `release: kps` label is what the kube-prometheus-stack Prometheus selects ServiceMonitors
+# by; it scrapes the `http` port's /metrics (the orders-api image catalog-api reuses exposes
+# Prometheus metrics there). Shipped via the catalog Kustomize app so ArgoCD syncs it AND a
+# fresh launch comes up with catalog-api scraped.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata: { name: catalog-api, labels: { release: kps } }
+spec:
+  namespaceSelector: { matchNames: [demo-shop-gitops] }
+  selector: { matchLabels: { app: catalog-api } }
+  endpoints: [{ port: http, path: /metrics, interval: 10s }]

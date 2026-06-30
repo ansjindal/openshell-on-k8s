@@ -14,7 +14,7 @@ type L = { name: string; href: string; desc: string; ext?: boolean; off?: boolea
 const platform: L[] = [
   { name: "OpenShell Console", href: "/console", desc: "Fleet & sandbox management — list/create sandboxes, view policy, logs, terminal. Part of this site." },
   { name: "Incident Desk", href: "/research-desk", desc: "The research-desk SPA: triage incidents, drive the agent fleet, deliver runbooks. Part of this site." },
-  { name: "OpenClaw Control UI", href: BASE ? `${BASE}/openclaw` : "/openclaw", desc: "The standalone OpenClaw agent's Control UI (the openclaw-ui sandbox). Pair a device, then manage pairings under /approvals.", ext: true, off: !BASE },
+  { name: "OpenClaw Control UI", href: BASE ? `${BASE}/openclaw/` : "/openclaw/", desc: "The standalone OpenClaw agent's Control UI (the openclaw-ui sandbox). Pair a device, then manage pairings under /approvals.", ext: true, off: !BASE },
   { name: "Grafana", href: BASE ? `${BASE}/grafana` : "/grafana", desc: "Dashboards & metrics (Prometheus + Loki + Tempo). Behind the Envoy ingress; SSO via Keycloak.", ext: true, off: !BASE },
   { name: "Gitea", href: BASE ? `${BASE}/gitea` : "/gitea", desc: "Self-hosted Git server holding the GitOps repos the remediation PRs land in.", ext: true, off: !BASE },
   { name: "ArgoCD", href: BASE ? `${BASE}/argocd` : "/argocd", desc: "GitOps delivery: syncs merged remediations from Git to the cluster.", ext: true, off: !BASE },
