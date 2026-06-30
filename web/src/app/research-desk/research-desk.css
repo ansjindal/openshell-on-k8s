@@ -4,7 +4,13 @@
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-:root {
+/* ── SCOPED to the Incident Desk SPA root (.app) ──
+   These were previously :root / body / * / ::-webkit-scrollbar GLOBAL rules,
+   which leaked onto the shared SiteHeader (rendered by the root layout, OUTSIDE
+   this page). They are now scoped to `.app` (the SPA root element) so the SPA
+   still themes correctly via inherited CSS custom properties, while SiteHeader
+   on /research-desk matches every other page. Do NOT re-globalize these. */
+.app {
   /* NVIDIA brand green on neutral near-black (lets the green read bright, not muddy) */
   --accent:#76b900; --accent-bright:#8fd400; --accent-dim:rgba(118,185,0,.16); --accent-glow:rgba(118,185,0,.45);
   --teal:#06d6a0; --teal-dim:rgba(6,214,160,.12);
@@ -22,9 +28,15 @@
   --sh-md:0 4px 16px rgba(0,0,0,.5); --sh-lg:0 12px 40px rgba(0,0,0,.6); --sh-accent:0 0 24px var(--accent-glow);
   --font:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono','Fira Code',monospace;
   --ease:cubic-bezier(.25,.1,.25,1);
+
+  /* was a bare `body { … }` rule — now the SPA root carries its own background/typography */
+  font-family:var(--font); background:var(--bg-base); color:var(--text); font-size:14px; line-height:1.55;
+  -webkit-font-smoothing:antialiased; min-height:100vh;
+  background-image:radial-gradient(1100px 600px at 78% -8%, rgba(118,185,0,.10), transparent 60%),
+    radial-gradient(900px 500px at 5% 0%, rgba(6,214,160,.06), transparent 55%); background-attachment:fixed;
 }
-/* light theme — toggled via [data-theme="light"] on <html> */
-:root[data-theme="light"] {
+/* light theme — toggled via [data-theme="light"] on <html> (scoped to the SPA root) */
+:root[data-theme="light"] .app {
   --accent:#5a8c00; --accent-bright:#4a7a00; --accent-dim:rgba(90,140,0,.10); --accent-glow:rgba(90,140,0,.22);
   --teal:#0a9d77; --teal-dim:rgba(10,157,119,.12); --pink:#d6336c; --pink-dim:rgba(214,51,108,.10);
   --amber:#b45309; --amber-dim:rgba(180,83,9,.12);
@@ -34,20 +46,17 @@
   --text:#0f172a; --text-2:#475569; --text-3:#94a3b8; --invert:#ffffff;
   --running:#0a9d77; --pending:#b45309; --failed:#d6336c; --creating:#5a8c00;
   --sh-md:0 4px 14px rgba(15,23,42,.09); --sh-lg:0 12px 36px rgba(15,23,42,.16); --sh-accent:0 0 18px var(--accent-glow);
+  background-image:radial-gradient(1100px 600px at 78% -8%, rgba(90,140,0,.07), transparent 60%), radial-gradient(900px 500px at 5% 0%, rgba(10,157,119,.05), transparent 55%);
 }
-:root[data-theme="light"] body { background-image:radial-gradient(1100px 600px at 78% -8%, rgba(90,140,0,.07), transparent 60%), radial-gradient(900px 500px at 5% 0%, rgba(10,157,119,.05), transparent 55%); }
-:root[data-theme="light"] .idesk-subbar { background:var(--bg-surface); }
-:root[data-theme="light"] pre.code { color:#1e293b; } :root[data-theme="light"] pre.code.yaml { color:#0a5e46; }
-:root[data-theme="light"] .step-detail { color:#334155; }
+:root[data-theme="light"] .app .idesk-subbar { background:var(--bg-surface); }
+:root[data-theme="light"] .app pre.code { color:#1e293b; } :root[data-theme="light"] .app pre.code.yaml { color:#0a5e46; }
+:root[data-theme="light"] .app .step-detail { color:#334155; }
 
-*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:var(--font); background:var(--bg-base); color:var(--text); font-size:14px; line-height:1.55;
-  -webkit-font-smoothing:antialiased;
-  background-image:radial-gradient(1100px 600px at 78% -8%, rgba(118,185,0,.10), transparent 60%),
-    radial-gradient(900px 500px at 5% 0%, rgba(6,214,160,.06), transparent 55%); background-attachment:fixed; }
-::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:4px; }
-.app { min-height:100vh; }
+/* box-sizing reset — scoped so it can't strip margin/padding off SiteHeader */
+.app, .app *, .app *::before, .app *::after { box-sizing:border-box; margin:0; padding:0; }
+/* scrollbars only inside the SPA */
+.app ::-webkit-scrollbar { width:8px; height:8px; } .app ::-webkit-scrollbar-track { background:transparent; }
+.app ::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:4px; }
 .mono { font-family:var(--mono); }
 
 /* ── in-page sub-toolbar ──
