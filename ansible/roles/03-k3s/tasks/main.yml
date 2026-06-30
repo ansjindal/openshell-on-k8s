@@ -1,0 +1,74 @@
+---
+# Install k3s as a server (control-plane) or agent (worker), depending on
+# k3s_role (set per play in site.yml). Mesh flags come from the mesh role facts.
+
+# Self-contained mesh detection so the k3s stage works even when run on its own
+# (the mesh role may not be in this invocation). If mesh facts already exist
+# (full run), this leaves them unchanged.
+- name: Detect mesh facts (if not already set by the mesh role)
+  ansible.builtin.set_fact:
+    mesh_ip: "{{ ansible_facts[mesh_iface].ipv4.address if (mesh_iface in ansible_facts and ansible_facts[mesh_iface].ipv4 is defined) else '' }}"
+    mesh_present: "{{ (mesh_iface in ansible_facts) and (ansible_facts[mesh_iface].ipv4 is defined) }}"
+  when: mesh_ip is not defined
+
+- name: Ensure k3s config dir
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: Write k3s config.yaml (disable flags + mesh pinning)
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0644"
+  notify: restart k3s
+
+# ---------- server ----------
+- name: Install k3s server
+  when: k3s_role == 'server'
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | {{ ('INSTALL_K3S_VERSION=' ~ k3s_version) if (k3s_version | default('') | length > 0) else (('INSTALL_K3S_CHANNEL=' ~ k3s_channel) if (k3s_channel | default('') | length > 0) else '') }} sh -
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/k3s
+
+# Retry, don't fast-fail: `kubectl wait` returns immediately (rc!=0) if it can't even connect
+# to the API, so a still-starting (or briefly-flapping) k3s would abort the playbook. Poll
+# until the node is actually Ready.
+- name: Wait for the control-plane node to be Ready
+  when: k3s_role == 'server'
+  ansible.builtin.command: k3s kubectl wait --for=condition=Ready node --all --timeout=30s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: _node_ready
+  changed_when: false
+  retries: 20
+  delay: 10
+  until: _node_ready.rc == 0
+
+- name: Read the cluster join token
+  when: k3s_role == 'server'
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_node_token
+
+- name: Publish join token as a host fact
+  when: k3s_role == 'server'
+  ansible.builtin.set_fact:
+    k3s_token: "{{ k3s_node_token.content | b64decode | trim }}"
+
+# ---------- agent ----------
+- name: Install k3s agent (join the server)
+  when: k3s_role == 'agent'
+  vars:
+    server_host: "{{ groups['server'][0] }}"
+    server_ip: "{{ hostvars[server_host].mesh_ip if (hostvars[server_host].mesh_present | default(false) | bool) else hostvars[server_host].ansible_default_ipv4.address }}"
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | \
+      {{ ('INSTALL_K3S_VERSION=' ~ k3s_version) if (k3s_version | default('') | length > 0) else (('INSTALL_K3S_CHANNEL=' ~ k3s_channel) if (k3s_channel | default('') | length > 0) else '') }} \
+      K3S_URL="https://{{ server_ip }}:6443" \
+      K3S_TOKEN="{{ hostvars[server_host].k3s_token }}" sh -
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/k3s

@@ -1,0 +1,49 @@
+# Unified "single pane" dashboard for the OpenShell Incident Desk (k8s edition):
+#   inference (LiteLLM/Prometheus) · per-sandbox fleet (cAdvisor, openshell-sandboxes ns)
+#   · live shop-app (demo ns: shop_requests_total) · logs (Loki) · traces (Tempo).
+# The demo app here is shop-app (namespace demo), instrumented with shop_requests_total{code,route}
+# and shop_request_duration_ms_{sum,count} — NOT the orders-api/db_pool/catalog-api app from the
+# sibling repo. Only the shop service emits traces (resource.service.name="shop").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-incident-desk
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  incident-desk.json: |
+    {
+      "uid": "incident-desk-unified",
+      "title": "OpenShell Incident Desk — Unified",
+      "tags": ["openshell", "incident-desk"],
+      "schemaVersion": 39, "version": 4, "refresh": "10s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": { "list": [] }, "annotations": { "list": [] },
+      "panels": [
+        { "id": 1, "type": "row", "title": "Inference (LiteLLM · Prometheus)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+        { "id": 2, "type": "timeseries", "title": "Request rate (req/s)", "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(litellm_proxy_total_requests_metric_total[5m]))" } ], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
+        { "id": 3, "type": "timeseries", "title": "Tokens/sec (in/out/total)", "gridPos": { "h": 6, "w": 8, "x": 8, "y": 1 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "legendFormat": "input", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(litellm_input_tokens_metric_total[5m]))" }, { "refId": "B", "legendFormat": "output", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(litellm_output_tokens_metric_total[5m]))" }, { "refId": "C", "legendFormat": "total", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(litellm_total_tokens_metric_total[5m]))" } ], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
+        { "id": 4, "type": "timeseries", "title": "Inference p99 (s)", "gridPos": { "h": 6, "w": 5, "x": 16, "y": 1 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.99, sum(rate(litellm_request_total_latency_metric_bucket[5m])) by (le))" } ], "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] } },
+        { "id": 5, "type": "stat", "title": "In-flight", "gridPos": { "h": 6, "w": 3, "x": 21, "y": 1 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(litellm_in_flight_requests)" } ], "options": { "colorMode": "background", "graphMode": "area" } },
+
+        { "id": 10, "type": "row", "title": "Agent fleet — per sandbox (openshell-sandboxes)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 } },
+        { "id": 11, "type": "timeseries", "title": "Sandbox CPU (cores) — per agent", "gridPos": { "h": 7, "w": 9, "x": 0, "y": 8 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "legendFormat": "{{pod}}", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"openshell-sandboxes\", pod!=\"\"}[5m]))" } ], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
+        { "id": 12, "type": "timeseries", "title": "Sandbox memory (working set) — per agent", "gridPos": { "h": 7, "w": 9, "x": 9, "y": 8 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "legendFormat": "{{pod}}", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"openshell-sandboxes\", pod!=\"\"})" } ], "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] } },
+        { "id": 13, "type": "table", "title": "Sandbox restarts", "gridPos": { "h": 7, "w": 6, "x": 18, "y": 8 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "format": "table", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (pod) (kube_pod_container_status_restarts_total{namespace=\"openshell-sandboxes\"})" } ] },
+
+        { "id": 20, "type": "row", "title": "Live app — shop-app (namespace demo)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 } },
+        { "id": 21, "type": "timeseries", "title": "shop-app requests by code (req/s)", "gridPos": { "h": 7, "w": 8, "x": 0, "y": 16 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "legendFormat": "{{code}}", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (code) (rate(shop_requests_total{namespace=\"demo\"}[2m]))" } ], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
+        { "id": 22, "type": "timeseries", "title": "shop-app error rate (%)", "gridPos": { "h": 7, "w": 5, "x": 8, "y": 16 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "100 * sum(rate(shop_requests_total{namespace=\"demo\", code=~\"5..\"}[2m])) / clamp_min(sum(rate(shop_requests_total{namespace=\"demo\"}[2m])), 0.0001)" } ], "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] } },
+        { "id": 23, "type": "timeseries", "title": "shop-app avg latency (ms)", "gridPos": { "h": 7, "w": 8, "x": 13, "y": 16 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "legendFormat": "avg", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(shop_request_duration_ms_sum{namespace=\"demo\"}[2m])) / clamp_min(sum(rate(shop_request_duration_ms_count{namespace=\"demo\"}[2m])), 0.0001)" } ], "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] } },
+        { "id": 24, "type": "stat", "title": "503 rate", "gridPos": { "h": 7, "w": 3, "x": 21, "y": 16 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(shop_requests_total{namespace=\"demo\", code=\"503\"}[2m]))" } ], "options": { "colorMode": "background" }, "fieldConfig": { "defaults": { "unit": "reqps", "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 0.1 } ] } }, "overrides": [] } },
+        { "id": 25, "type": "timeseries", "title": "shop-app CPU (cores)", "gridPos": { "h": 6, "w": 12, "x": 0, "y": 23 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "legendFormat": "{{pod}}", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"demo\"}[5m]))" } ], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
+        { "id": 26, "type": "timeseries", "title": "demo namespace memory (working set)", "gridPos": { "h": 6, "w": 12, "x": 12, "y": 23 }, "datasource": { "type": "prometheus", "uid": "prometheus" }, "targets": [ { "refId": "A", "legendFormat": "{{pod}}", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"demo\", pod!=\"\"})" } ], "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] } },
+
+        { "id": 30, "type": "row", "title": "Logs (Loki)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 } },
+        { "id": 31, "type": "logs", "title": "app + sandbox + k8s-event logs", "gridPos": { "h": 9, "w": 24, "x": 0, "y": 30 }, "datasource": { "type": "loki" }, "targets": [ { "refId": "A", "datasource": { "type": "loki" }, "expr": "{namespace=~\"demo|openshell-sandboxes|openshell\"} | __error__=\"\"" } ], "options": { "showTime": true, "wrapLogMessage": true, "dedupStrategy": "none", "enableLogDetails": true, "sortOrder": "Descending" } },
+
+        { "id": 40, "type": "row", "title": "Traces (Tempo) — shop service", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 } },
+        { "id": 41, "type": "table", "title": "Recent shop traces (TraceQL)", "gridPos": { "h": 9, "w": 24, "x": 0, "y": 40 }, "datasource": { "type": "tempo", "uid": "tempo" }, "targets": [ { "refId": "A", "datasource": { "type": "tempo", "uid": "tempo" }, "queryType": "traceql", "query": "{ resource.service.name = \"shop\" }", "limit": 20, "tableType": "traces" } ] }
+      ]
+    }

@@ -1,0 +1,200 @@
+---
+# ============================================================================
+# OpenShell Fleet — cluster + component configuration
+# Secrets (upstream_api_key) are NOT here. Pass at runtime:
+#   ansible-playbook site.yml -e upstream_api_key=nvapi-xxxx
+# or put them in inventory/group_vars/secrets.yml (gitignored) / ansible-vault.
+# ============================================================================
+
+# ---- Mesh networking (conditional) ----------------------------------------
+# Multi-node mesh pinning. This launchable is single-node (one Brev VM), so we
+# default to single-NIC mode: empty means the mesh role no-ops and k3s binds the
+# default interface (so the NodePort is reachable on the VM's primary IP / the
+# Brev port-forward). For a MULTI-node mesh deployment, set this to your mesh NIC
+# name (e.g. brev's `wt0`, 100.x CGNAT) and the mesh role pins flannel/node-ip
+# to it and installs an MSS clamp. If the iface is absent, the role no-ops.
+mesh_iface: ""
+
+# ---- gVisor (REQUIRED) -----------------------------------------------------
+# runsc is installed on every node and sandboxes are forced onto RuntimeClass
+# gvisor (gateway gVisor overlay + Kyverno require-gvisor rule).
+gvisor_enabled: true
+
+# ---- k3s -------------------------------------------------------------------
+# Pin the k3s/Kubernetes MINOR via a release channel (installs the latest patch of that
+# minor). Bleeding-edge minors break this stack at BOTH ends:
+#   - k8s 1.36 reproducibly fails the OpenShell supervisor's IssueSandboxToken bootstrap.
+#   - k8s 1.35.x crash-loops the control plane on fresh VMs: the cloud-controller-manager
+#     can't read the extension-apiserver-authentication configmap during RBAC bootstrap
+#     ("forbidden"), exits, and takes k3s down with it — systemd restarts it in a loop, the
+#     API only serves intermittently, and the playbook fails at whatever kubectl step the
+#     timing lands on (gVisor apply / node-Ready wait) with "connection refused".
+# v1.34 is the latest mature minor that avoids BOTH. Set k3s_version for an exact pin
+# (takes precedence over the channel); leave it empty to track the channel.
+k3s_channel: "v1.34"
+k3s_version: ""
+# Namespace where agent sandbox pods land — kept SEPARATE from the gateway's
+# namespace for isolation. The chart creates the sandbox ServiceAccount, Role,
+# RoleBinding and NetworkPolicy in this namespace (verified via `helm template`);
+# the gateway role creates the namespace before install. Set equal to
+# openshell_namespace if you'd rather co-locate them.
+k3s_sandbox_namespace: openshell-sandboxes
+
+# ---- agent-sandbox controller ----------------------------------------------
+# PIN the version — do NOT track "latest". The CRD's storage version + API
+# (v1alpha1 vs v1beta1) must match what the OpenShell gateway speaks, or the
+# gateway rejects every supervisor bootstrap and sandboxes never reach Ready.
+# v0.5.0 (v1beta1) is verified working with this repo's gateway (0.0.0-dev).
+# Re-validate before bumping; a future release may change the API again.
+agent_sandbox_version: "v0.5.0"
+agent_sandbox_manifest_url: "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/{{ agent_sandbox_version }}/manifest.yaml"
+
+# ---- LiteLLM (inference backend) -------------------------------------------
+litellm_chart: "oci://ghcr.io/berriai/litellm-helm"
+litellm_chart_version: ""        # "" = chart default
+litellm_namespace: litellm
+
+# Shared default endpoint each model entry falls back to. Point this at any
+# OpenAI-compatible API — the public NVIDIA API Catalog (build.nvidia.com),
+# OpenAI, a self-hosted vLLM/NIM, or an internal gateway. Override per
+# environment in secrets.yml / -e (don't hardcode private endpoints here).
+#   upstream_api_key: supplied via -e or secrets.yml (never commit it)
+upstream_base_url: "https://integrate.api.nvidia.com/v1"
+
+# LiteLLM can serve MANY models behind one endpoint. Each entry becomes a
+# model_list item; agents address it by `name`. Per-entry base_url/api_key_env
+# are optional and default to the shared values above + UPSTREAM_API_KEY.
+# Override this list in secrets.yml / -e to serve your own models.
+litellm_models:
+  - name: "meta/llama-3.3-70b-instruct"
+    model: "meta/llama-3.3-70b-instruct"
+  # Multi-model example — add as many as you like:
+  # - name: "nvidia/llama-3.3-nemotron-super-49b-v1"
+  #   model: "nvidia/llama-3.3-nemotron-super-49b-v1"
+  # - name: "gpt-4o-mini"
+  #   model: "gpt-4o-mini"
+  #   base_url: "https://api.openai.com/v1"
+  #   api_key_env: OPENAI_KEY                            # add to litellm_extra_credentials
+
+# Extra API keys referenced by api_key_env above (besides UPSTREAM_API_KEY).
+# Provide values via -e / secrets.yml; injected into the litellm-secrets Secret.
+litellm_extra_credentials: {}     # e.g. { OPENAI_KEY: "sk-..." }
+
+# ---- OpenShell gateway -----------------------------------------------------
+openshell_chart: "oci://ghcr.io/nvidia/openshell/helm-chart"
+# Chart version. "0.0.0-dev" matches the known-good reference deployment (it
+# pulls the gateway+supervisor :dev images, which work with plaintext on the
+# pinned k3s above). Released versions >= 0.0.71 enforce mandatory mTLS (see the
+# gateway values note). Keep chart + k3s versions tested together.
+openshell_chart_version: "0.0.0-dev"
+openshell_namespace: openshell
+# Pinned plaintext NodePort the gateway service is published on (see the gateway
+# values.yaml). The CLI/roles reach the gateway directly at 127.0.0.1:<this>,
+# so no kubectl port-forward is needed.
+gateway_nodeport: 30808
+# Model the gateway forces for inference.local (must be a litellm_models name).
+inference_model: "{{ litellm_models[0].name }}"
+
+# ---- Gateway database backend ----------------------------------------------
+# sqlite (default): bundled per-pod SQLite -> single-replica StatefulSet.
+# postgres: deploy PostgreSQL (06-postgres role) and run the gateway as a
+# multi-replica Deployment (HA). Requires postgres_password in secrets.yml.
+gateway_db_backend: sqlite
+gateway_replicas: 2            # gateway Deployment replicas when backend == postgres
+
+# ---- Authentication --------------------------------------------------------
+# unauthenticated = dev (no auth); oidc = validate Bearer tokens (production).
+# Enabling Keycloak below flips this to oidc automatically.
+auth_mode: "{{ 'oidc' if keycloak_enabled | bool else 'unauthenticated' }}"
+
+# ---- Keycloak (OIDC identity provider, optional) ---------------------------
+keycloak_enabled: false
+keycloak_namespace: keycloak
+keycloak_image: "quay.io/keycloak/keycloak:26.1"
+keycloak_realm: openshell
+keycloak_client_id: openshell-cli
+keycloak_admin_role: openshell-admin
+keycloak_user_role: openshell-user
+keycloak_admin_user: admin
+# Single public base URL (scheme + host, no path) that fronts ALL UIs via the
+# Envoy Gateway, path-routed. Set in secrets.yml, e.g.
+#   keycloak_base_url: "https://openshell-demo.example.com"
+# Everything below derives from it. When empty, falls back to the in-cluster
+# Service (gateway-side token validation only; browser login won't match).
+keycloak_base_url: ""
+keycloak_relative_path: "/auth"      # Keycloak served under this path (KC_HTTP_RELATIVE_PATH)
+keycloak_issuer_url: "{{ (keycloak_base_url ~ keycloak_relative_path ~ '/realms/' ~ keycloak_realm) if (keycloak_base_url | length) > 0 else ('http://keycloak.' ~ keycloak_namespace ~ '.svc.cluster.local:8080/realms/' ~ keycloak_realm) }}"
+# In-cluster Keycloak issuer — used for SERVER-SIDE back-channel calls (token/userinfo) from
+# in-cluster OAuth clients like Grafana. The public host is fronted by the launchpad Pomerium
+# proxy, which 302s server-side fetches (→ "Failed to get token from provider"); the in-cluster
+# Service bypasses it. The browser-facing auth_url still uses the public keycloak_issuer_url.
+keycloak_internal_issuer_url: "http://keycloak.{{ keycloak_namespace }}.svc.cluster.local:8080{{ keycloak_relative_path }}/realms/{{ keycloak_realm }}"
+# keycloak_admin_password + demo user creds: set in secrets.yml
+
+# ---- Optional components (chart versions current as of 2026-06) ------------
+kyverno_enabled: true
+kyverno_chart: "kyverno/kyverno"
+kyverno_chart_version: "3.8.1"
+# Default OFF for a lean, fast, reliable single-VM first boot. The full stack
+# (Prometheus + Grafana + Loki + Alloy) adds real load and pulls several images.
+# Flip to true (ENABLE_MONITORING=true in .env) once the core stack is up.
+monitoring_enabled: false
+kps_chart_version: "86.2.3"
+# Loki OSS Helm chart (single-binary). The OSS chart moved to grafana-community
+# around 6.55; grafana/loki >= 7.x is Grafana Enterprise Logs — keep 6.x for OSS.
+loki_chart_version: "6.55.0"
+alloy_chart_version: "1.10.0"
+# Grafana Tempo (monolithic) — distributed tracing backend (OTLP in, Grafana datasource out).
+tempo_chart_version: "1.24.4"
+
+# ---- Envoy Gateway (single-host, path-routed ingress) ----------------------
+# One public host (keycloak_base_url) → Envoy web listener (NodePort) → path
+# routes: /auth (Keycloak), /grafana, /headlamp. The OpenShell gateway is gRPC,
+# so it keeps its own GRPCRoute on a separate listener. ONLY auth-gated services
+# are exposed on the public host; Prometheus/Alertmanager/LiteLLM stay ClusterIP.
+envoy_gateway_enabled: false
+envoy_gateway_version: "1.4.6"
+envoy_gateway_ns: fleet-gateway          # holds the Gateway + EnvoyProxy CRs
+envoy_web_nodeport: 30080                # HTTP path-routing listener (the public host points here)
+envoy_grpc_nodeport: 30081               # OpenShell gateway (gRPC) via Envoy
+
+# ---- Kubernetes dashboard SSO (Headlamp) + apiserver OIDC (optional) -------
+# Makes a Keycloak token a kubectl identity: openshell-admin -> cluster-admin,
+# openshell-user -> view. Auto-on when keycloak_enabled.
+apiserver_oidc_enabled: "{{ keycloak_enabled }}"
+oidc_apiserver_client_id: headlamp     # apiserver validates id_token aud = this
+oidc_username_claim: preferred_username
+oidc_username_prefix: "oidc:"
+oidc_groups_claim: groups
+oidc_groups_prefix: "oidc:"
+
+headlamp_enabled: false
+headlamp_chart: "headlamp/headlamp"
+headlamp_namespace: headlamp
+headlamp_path: "/headlamp"      # path under the single public host (Envoy route + base-url)
+headlamp_url: "{{ (keycloak_base_url ~ headlamp_path) if (keycloak_base_url | length) > 0 else '' }}"
+# headlamp_client_secret: set in secrets.yml
+
+# ---- Grafana SSO (optional) ------------------------------------------------
+grafana_oidc_enabled: false
+grafana_path: "/grafana"        # path under the single public host (Envoy route + root_url)
+grafana_url: "{{ (keycloak_base_url ~ grafana_path) if (keycloak_base_url | length) > 0 else '' }}"
+# grafana_client_secret: set in secrets.yml
+
+# ---- OpenShell Console (web UI, optional) ----------------------------------
+# Minimal web console (github.com/ansjindal/openshell-ui): OIDC login, then
+# admin/user views of the fleet over the gateway's gRPC API via a Next.js BFF.
+# Exposed at openshell_ui_path on the single public host (Envoy route). Needs
+# keycloak_enabled + envoy_gateway_enabled.
+openshell_ui_enabled: false
+openshell_ui_path: "/console"   # path under the single public host (Envoy route + BASE_PATH)
+console_url: "{{ (keycloak_base_url ~ openshell_ui_path) if (keycloak_base_url | length) > 0 else '' }}"
+# openshell_ui_client_secret (= the openshell-ui realm client secret) and
+# openshell_ui_auth_secret (openssl rand -base64 32): set in secrets.yml
+
+# ---- Sandbox fleet ---------------------------------------------------------
+# fleet_size sandboxes named agent-0..N. Used by scripts/fleet (runtime ops) and
+# by the optional 16-sandboxes role (declarative creation at the end of site.yml
+# when sandboxes_enabled). The role attaches each sandbox to sandbox_provider.
+fleet_size: 5
+sandboxes_enabled: false       # set true (or --tags sandboxes) to create the fleet via the playbook

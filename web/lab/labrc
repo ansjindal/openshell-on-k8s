@@ -1,0 +1,39 @@
+# OpenShell on Kubernetes — lab shell, sourced by the in-browser terminal (server.mjs).
+export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+# /usr/local/bin (kubectl, openshell CLI) + the repo's scripts on PATH.
+export PATH="$PATH:/usr/local/bin:/usr/bin:$LAB_CWD/scripts"
+
+# `fleet ...` — drive the whole agent fleet from the repo's helper script.
+#   fleet up [N] | down | status | task "<prompt>" [agent-i|all] | shell <agent-i> | logs <agent-i>
+fleet() {
+  if [ -x "$LAB_CWD/scripts/fleet" ]; then
+    "$LAB_CWD/scripts/fleet" "$@"
+  elif command -v fleet >/dev/null 2>&1 && [ "$(command -v fleet)" != "$(declare -F fleet)" ]; then
+    command fleet "$@"
+  else
+    echo "✗ ./scripts/fleet not found (expected at $LAB_CWD/scripts/fleet)"
+  fi
+}
+
+# expose-agent <sandbox> [port=8000] — publish a sandbox's HTTP endpoint at a host port.
+# A sandbox is network-isolated by its supervisor (the agent's port lives in a private
+# netns), so a plain NodePort can't reach it — we use OpenShell's own `forward`, which
+# bridges the port through the gateway + supervisor.
+expose-agent() {
+  local sb="${1:?usage: expose-agent <sandbox> [port=8000]}" port="${2:-8000}"
+  openshell forward stop >/dev/null 2>&1
+  if openshell forward start "0.0.0.0:$port" "$sb" --background >/dev/null 2>&1; then
+    echo "✓ forwarding host :$port → $sb — open host port $port on your VM to reach it"
+    echo "  (stop with: openshell forward stop)"
+  else
+    echo "✗ forward failed — is $sb Ready and serving HTTP on :$port?"
+  fi
+}
+
+PS1='\[\e[1;32m\]openshell-lab\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]$ '
+
+echo -e "\e[1;32m🦞 OpenShell on Kubernetes — lab shell\e[0m"
+echo -e "  \e[2mcluster:\e[0m  kubectl get pods -A"
+echo -e "  \e[2msandboxes:\e[0m openshell sandbox list       (the OpenShell gateway, NodePort 30808)"
+echo -e "  \e[2mfleet:\e[0m    ./scripts/fleet status       (bring agents up/down, run tasks, exec in)"
+echo

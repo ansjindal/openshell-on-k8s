@@ -1,0 +1,105 @@
+---
+# Standard stack: kube-prometheus-stack (Prometheus + Alertmanager + Grafana +
+# node-exporter + kube-state-metrics) + Loki + Alloy, plus scrape config + dashboards.
+- name: Monitoring
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Add helm repos
+      ansible.builtin.shell: |
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        helm repo add grafana https://grafana.github.io/helm-charts
+        helm repo update prometheus-community grafana
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Ensure monitoring namespace
+      ansible.builtin.shell: |
+        kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Create Grafana OAuth secret (when grafana_oidc_enabled)
+      ansible.builtin.shell: |
+        kubectl -n monitoring create secret generic grafana-oauth \
+          --from-literal=GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET='{{ grafana_client_secret }}' \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+      when: grafana_oidc_enabled | bool
+
+    - name: Render kube-prometheus-stack values (Grafana sub-path + OIDC)
+      ansible.builtin.template:
+        src: kube-prometheus-stack.values.yaml.j2
+        dest: /tmp/mon-kube-prometheus-stack.values.yaml
+        mode: "0644"
+
+    - name: Copy values + manifests
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/tmp/mon-{{ item }}"
+        mode: "0644"
+      loop:
+        - loki.values.yaml
+        - alloy.values.yaml
+        - tempo.values.yaml
+        - litellm-servicemonitor.yaml
+        - litellm-dashboard.yaml
+        - fleet-dashboard.yaml
+        - incident-desk-dashboard.yaml
+        - grafana-datasource-tempo.yaml
+
+    - name: Install kube-prometheus-stack (release kps)
+      ansible.builtin.shell: |
+        helm upgrade --install kps prometheus-community/kube-prometheus-stack \
+          --version {{ kps_chart_version }} \
+          --namespace monitoring --create-namespace \
+          -f /tmp/mon-kube-prometheus-stack.values.yaml --wait --timeout 12m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Install Loki
+      ansible.builtin.shell: |
+        helm upgrade --install loki grafana/loki \
+          --version {{ loki_chart_version }} \
+          --namespace monitoring \
+          -f /tmp/mon-loki.values.yaml --wait --timeout 10m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Install Alloy (log shipper)
+      ansible.builtin.shell: |
+        helm upgrade --install alloy grafana/alloy \
+          --version {{ alloy_chart_version }} \
+          --namespace monitoring \
+          -f /tmp/mon-alloy.values.yaml --wait --timeout 8m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Install Tempo (tracing backend)
+      ansible.builtin.shell: |
+        helm upgrade --install tempo grafana/tempo \
+          --version {{ tempo_chart_version }} \
+          --namespace monitoring \
+          -f /tmp/mon-tempo.values.yaml --wait --timeout 8m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Apply scrape config + dashboards + Tempo datasource
+      ansible.builtin.command: kubectl apply -f /tmp/mon-{{ item }}
+      loop:
+        - litellm-servicemonitor.yaml
+        - litellm-dashboard.yaml
+        - fleet-dashboard.yaml
+        - incident-desk-dashboard.yaml
+        - grafana-datasource-tempo.yaml
+      register: mon_apply
+      changed_when: "'created' in mon_apply.stdout or 'configured' in mon_apply.stdout"
+
+    - name: Ship cluster events into Loki (kubernetes-event-exporter)
+      # The Part III `events` agent reads {job="kubernetes-event-exporter"} from Loki — without
+      # this deployment that stream is empty and the agent has no backend to query.
+      ansible.builtin.command: kubectl apply -f {{ playbook_dir }}/../manifests/monitoring/event-exporter.yaml
+      register: evexp_apply
+      changed_when: "'created' in evexp_apply.stdout or 'configured' in evexp_apply.stdout"

@@ -1,0 +1,30 @@
+# Copy to hosts.ini and fill in your node(s):  cp hosts.ini.example hosts.ini
+#
+# SINGLE NODE (the default for this launchable — one Brev VM):
+# scripts/setup.sh generates exactly this for you, running Ansible against the
+# local machine with no SSH. You normally never edit this file by hand.
+[server]
+localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
+
+[agents]
+
+[k3s_cluster:children]
+server
+agents
+
+# ---------------------------------------------------------------------------
+# MULTI-NODE (optional): drive a real cluster from your workstation over SSH.
+# Use SSH host aliases from ~/.ssh/config (or IPs) as ansible_host, set
+# mesh_iface in group_vars/all.yml if the nodes only reach each other over a
+# mesh NIC, then run the playbook directly (see ansible/README.md).
+#
+# [server]
+# node1 ansible_host=YOUR_CONTROL_PLANE_HOST
+#
+# [agents]
+# node2 ansible_host=YOUR_WORKER_HOST
+# node3 ansible_host=YOUR_WORKER_HOST_2
+#
+# [k3s_cluster:children]
+# server
+# agents

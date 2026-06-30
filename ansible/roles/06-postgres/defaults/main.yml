@@ -1,0 +1,24 @@
+---
+# PostgreSQL for the OpenShell gateway (optional). Deploys the Bitnami chart and
+# creates the `openshell-db` Secret (key: uri) the gateway reads via
+# server.externalDbSecret. Only runs when gateway_db_backend == "postgres".
+# With Postgres the gateway can run as a multi-replica Deployment (HA); with the
+# default SQLite it stays a single-replica StatefulSet.
+postgres_namespace: postgres
+postgres_chart: "oci://registry-1.docker.io/bitnamicharts/postgresql"
+postgres_chart_version: "16.7.27"
+postgres_db: openshell
+postgres_user: openshell
+postgres_storage_size: 8Gi
+
+# Bitnami moved their OSS images to the `bitnamilegacy` archive (Aug 2025), so the
+# chart's default `bitnami/postgresql` tag no longer resolves. Pull from the
+# legacy archive and allow it. Override if you mirror images yourself.
+postgres_image_registry: docker.io
+postgres_image_repository: bitnamilegacy/postgresql
+
+# Name of the Secret (created in the gateway/openshell namespace) holding the
+# PostgreSQL connection URI under key `uri`. The gateway's server.externalDbSecret
+# points at this.
+openshell_db_secret_name: openshell-db
+# postgres_password: set in inventory/group_vars/secrets.yml (never commit it).

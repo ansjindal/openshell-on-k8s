@@ -1,0 +1,58 @@
+---
+# Deploy PostgreSQL (Bitnami chart) and publish the connection URI as a Secret
+# the OpenShell gateway consumes. Runs only when gateway_db_backend == "postgres".
+- name: PostgreSQL (gateway database backend)
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Fail early if the DB password is missing
+      ansible.builtin.assert:
+        that:
+          - postgres_password is defined and (postgres_password | length) > 0
+        fail_msg: "Set postgres_password in inventory/group_vars/secrets.yml when gateway_db_backend=postgres."
+
+    - name: Ensure postgres namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ postgres_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Install PostgreSQL (Bitnami chart, legacy images)
+      ansible.builtin.shell: |
+        helm upgrade --install postgres {{ postgres_chart }} \
+          --version {{ postgres_chart_version }} \
+          --namespace {{ postgres_namespace }} \
+          --set global.security.allowInsecureImages=true \
+          --set image.registry={{ postgres_image_registry }} \
+          --set image.repository={{ postgres_image_repository }} \
+          --set auth.username={{ postgres_user }} \
+          --set auth.password='{{ postgres_password }}' \
+          --set auth.database={{ postgres_db }} \
+          --set primary.persistence.size={{ postgres_storage_size }} \
+          --set primary.resources.requests.cpu=100m \
+          --set primary.resources.requests.memory=256Mi \
+          --wait --timeout 8m
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+
+    - name: Ensure the gateway namespace exists (for the DB secret)
+      ansible.builtin.shell: |
+        kubectl create namespace {{ openshell_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Publish the PostgreSQL URI as a Secret the gateway reads
+      ansible.builtin.shell: |
+        kubectl -n {{ openshell_namespace }} create secret generic {{ openshell_db_secret_name }} \
+          --from-literal=uri="postgresql://{{ postgres_user }}:{{ postgres_password }}@postgres-postgresql.{{ postgres_namespace }}.svc.cluster.local:5432/{{ postgres_db }}" \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+
+    - name: PostgreSQL summary
+      ansible.builtin.debug:
+        msg:
+          - "PostgreSQL deployed in '{{ postgres_namespace }}'; URI stored in Secret '{{ openshell_db_secret_name }}' ({{ openshell_namespace }} ns)."
+          - "The gateway role wires server.externalDbSecret to it and runs as a Deployment (HA-capable)."

@@ -1,0 +1,58 @@
+---
+# Deploy the OpenShell Console (web UI) and route it at {{ openshell_ui_path }}
+# behind the shared Envoy Gateway. Requires keycloak_enabled (OIDC) and
+# envoy_gateway_enabled (the fleet-gw Gateway the HTTPRoute attaches to).
+- name: OpenShell Console (web UI)
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Fail early if required secrets are missing
+      ansible.builtin.assert:
+        that:
+          - openshell_ui_client_secret is defined and (openshell_ui_client_secret | length) > 0
+          - openshell_ui_auth_secret is defined and (openshell_ui_auth_secret | length) > 0
+        fail_msg: >-
+          Set openshell_ui_client_secret (must equal the openshell-ui realm client
+          secret) and openshell_ui_auth_secret (openssl rand -base64 32) in
+          inventory/group_vars/secrets.yml.
+
+    - name: Ensure openshell-ui namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ openshell_ui_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Render console manifests
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/tmp/openshell-ui-{{ item }}"
+        mode: "0644"
+      loop:
+        - configmap.yaml
+        - secret.yaml
+        - deployment.yaml
+        - service.yaml
+        - httproute.yaml
+
+    - name: Apply console manifests
+      ansible.builtin.command: kubectl apply -f /tmp/openshell-ui-{{ item }}
+      loop:
+        - configmap.yaml
+        - secret.yaml
+        - deployment.yaml
+        - service.yaml
+        - httproute.yaml
+      register: ui_apply
+      changed_when: "'created' in ui_apply.stdout or 'configured' in ui_apply.stdout"
+
+    - name: Wait for the console rollout
+      ansible.builtin.command: kubectl -n {{ openshell_ui_namespace }} rollout status deploy/openshell-ui --timeout=180s
+      changed_when: false
+      failed_when: false
+
+    - name: Console endpoint
+      ansible.builtin.debug:
+        msg:
+          - "OpenShell Console: {{ console_url | default('<base>' ~ openshell_ui_path) }}"
+          - "Log in with a Keycloak user ({{ keycloak_admin_role }} → create/delete, {{ keycloak_user_role }} → read-only)."
+          - "NOTE: openshell_ui_image must be built with BASE_PATH={{ openshell_ui_path }}."

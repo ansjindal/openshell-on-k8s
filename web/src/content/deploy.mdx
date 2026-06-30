@@ -1,0 +1,52 @@
+Good news: **the VM is already provisioned.** Ansible (`./scripts/setup.sh`) installed k3s, gVisor, the agent-sandbox controller, LiteLLM, and the OpenShell gateway when the machine came up. So you don't stand anything up here — you **confirm it's healthy**.
+
+**Open the lab shell** on the right (▶) — it's a real bash shell on the VM, with `KUBECONFIG` already pointed at `/etc/rancher/k3s/k3s.yaml`.
+
+## 1 · The node is up
+
+```bash
+kubectl get nodes
+```
+
+You should see a single node in `Ready` state. That's k3s — one node, but a full Kubernetes API.
+
+## 2 · The control plane is running
+
+The OpenShell gateway and the agent-sandbox controller live in the `openshell` namespace. The agent sandboxes themselves run in a **separate** `openshell-sandboxes` namespace — empty until you create one:
+
+```bash
+kubectl -n openshell get pods
+kubectl -n openshell-sandboxes get pods
+```
+
+Wait for everything in `openshell` to read `Running`. The gateway is what the `openshell` CLI talks to; the agent pods will show up in `openshell-sandboxes` once you create sandboxes in the next lesson.
+
+## 3 · The gateway is reachable
+
+The gateway is exposed as a NodePort service on **30808**:
+
+```bash
+kubectl -n openshell get svc
+```
+
+Look for a service with `30808` in its `PORT(S)` column. That's the door the CLI knocks on:
+
+```bash
+openshell sandbox list
+```
+
+An empty list (no sandboxes yet) is a healthy answer — it means the CLI reached the gateway. We'll create one in the next lesson.
+
+## 4 · Inference is wired
+
+LiteLLM runs in its own namespace:
+
+```bash
+kubectl -n litellm get pods
+```
+
+That's the OpenAI-compatible endpoint every agent will reach through `inference.local`.
+
+<Callout type="lab" title="What 'healthy' looks like">
+One <code>Ready</code> node, all pods in <code>openshell</code> and <code>litellm</code> <code>Running</code>, a service on NodePort <code>30808</code>, and <code>openshell sandbox list</code> returning without an error. If something's still <code>Pending</code>, give it a minute and re-run.
+</Callout>

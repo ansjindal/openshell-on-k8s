@@ -1,0 +1,22 @@
+---
+# OpenShell Console (web UI) — optional. Deploys the openshell-ui image, wires
+# its OIDC client + the gateway gRPC endpoint, and exposes it at openshell_ui_path
+# behind the shared Envoy Gateway. Requires keycloak_enabled + envoy_gateway_enabled.
+openshell_ui_namespace: openshell-ui
+
+# IMPORTANT: the image must be BUILT with BASE_PATH={{ openshell_ui_path }} baked
+# in (Next.js bakes basePath at build time). The default tag is published from
+# github.com/ansjindal/openshell-ui; rebuild + repin if you change the path.
+openshell_ui_image: "ghcr.io/ansjindal/openshell-ui:latest"
+openshell_ui_replicas: 1
+openshell_ui_path: "/console"
+
+# Roles claim the UI reads (the realm maps realm roles into a "groups" claim).
+openshell_ui_roles_claim: "groups"
+
+# Optional: name of an existing imagePullSecret (docker-registry type) in the
+# console namespace, for pulling the image from a private registry. Leave empty
+# for a public image. Create one with, e.g.:
+#   kubectl -n openshell-ui create secret docker-registry <name> \
+#     --docker-server=<registry> --docker-username=<user> --docker-password=<token>
+openshell_ui_image_pull_secret: ""

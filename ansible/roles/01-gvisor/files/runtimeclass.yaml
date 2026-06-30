@@ -1,0 +1,9 @@
+# RuntimeClass for gVisor (runsc). Applied by bootstrap/optional/install-gvisor.sh
+# after runsc is installed and registered with containerd. Reference the name
+# `gvisor` from the OpenShell gateway's sandbox pod runtimeClassName (see
+# components/30-openshell-gateway/values.gvisor.yaml).
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor
+handler: runsc

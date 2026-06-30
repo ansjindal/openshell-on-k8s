@@ -1,0 +1,47 @@
+---
+# Configure the k3s kube-apiserver for OIDC (Keycloak) and bind realm roles to
+# RBAC. Runs on the server, after Keycloak is up (issuer must be reachable).
+- name: apiserver OIDC
+  become: true
+  block:
+    - name: Ensure k3s config drop-in dir
+      ansible.builtin.file:
+        path: /etc/rancher/k3s/config.yaml.d
+        state: directory
+        mode: "0755"
+
+    - name: Write kube-apiserver OIDC drop-in
+      ansible.builtin.template:
+        src: oidc.yaml.j2
+        dest: /etc/rancher/k3s/config.yaml.d/oidc.yaml
+        mode: "0644"
+      register: oidc_dropin
+
+    - name: Restart k3s to apply apiserver OIDC
+      ansible.builtin.systemd:
+        name: k3s
+        state: restarted
+      when: oidc_dropin.changed
+
+    - name: Wait for the apiserver to come back
+      ansible.builtin.command: k3s kubectl get --raw=/readyz
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: readyz
+      retries: 30
+      delay: 5
+      until: readyz.rc == 0
+      changed_when: false
+
+    - name: Render RBAC (roles -> cluster-admin / view)
+      ansible.builtin.template:
+        src: rbac.yaml.j2
+        dest: /tmp/oidc-rbac.yaml
+        mode: "0644"
+
+    - name: Apply OIDC RBAC bindings
+      ansible.builtin.command: kubectl apply -f /tmp/oidc-rbac.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: rbac_apply
+      changed_when: "'created' in rbac_apply.stdout or 'configured' in rbac_apply.stdout"

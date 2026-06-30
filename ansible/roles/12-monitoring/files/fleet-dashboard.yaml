@@ -1,0 +1,54 @@
+# Grafana dashboard: the fleet itself (sandbox pods ready/total, CPU, memory).
+# Imported by the Grafana sidecar via the grafana_dashboard=1 label.
+# Pod metrics come from kube-state-metrics (bundled in kube-prometheus-stack).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-fleet
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  fleet.json: |-
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "schemaVersion": 39,
+      "title": "OpenShell Fleet",
+      "tags": ["openshell", "fleet"],
+      "time": {"from": "now-30m", "to": "now"},
+      "refresh": "10s",
+      "templating": {"list": []},
+      "panels": [
+        {
+          "type": "stat", "title": "Sandbox pods ready",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "count(kube_pod_status_ready{namespace=\"openshell\", condition=\"true\"} == 1)", "legendFormat": "ready"}]
+        },
+        {
+          "type": "stat", "title": "Sandbox pods total",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "count(kube_pod_info{namespace=\"openshell\"})", "legendFormat": "total"}]
+        },
+        {
+          "type": "timeseries", "title": "Sandbox pods by phase",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum by (phase) (kube_pod_status_phase{namespace=\"openshell\"})", "legendFormat": "{{phase}}"}]
+        },
+        {
+          "type": "timeseries", "title": "Fleet CPU (cores)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"openshell\"}[1m]))", "legendFormat": "cpu cores"}]
+        },
+        {
+          "type": "timeseries", "title": "Fleet memory (bytes)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(container_memory_working_set_bytes{namespace=\"openshell\"})", "legendFormat": "memory"}]
+        }
+      ]
+    }

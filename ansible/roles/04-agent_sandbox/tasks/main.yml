@@ -1,0 +1,19 @@
+---
+# Install the upstream kubernetes-sigs/agent-sandbox controller + CRDs.
+# The OpenShell gateway needs this before it can create Sandbox resources.
+- name: Apply agent-sandbox manifest
+  ansible.builtin.command: kubectl apply -f {{ agent_sandbox_manifest_url }}
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: as_apply
+  changed_when: "'created' in as_apply.stdout or 'configured' in as_apply.stdout"
+
+- name: Wait for the Sandbox CRD to register
+  ansible.builtin.command: kubectl get crd sandboxes.agents.x-k8s.io
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: as_crd
+  changed_when: false
+  retries: 15
+  delay: 4
+  until: as_crd.rc == 0

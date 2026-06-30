@@ -1,0 +1,48 @@
+# Rendered by the litellm role from `litellm_models`. Official LiteLLM Helm chart.
+# Agents address a model by its `model_name`. api_base is literal; api_key is
+# pulled from an env var (injected from the litellm-secrets Secret).
+image:
+  repository: ghcr.io/berriai/litellm
+  tag: main-stable
+
+environmentSecrets:
+  - litellm-secrets
+
+proxy_config:
+  model_list:
+{% for m in litellm_models %}
+    - model_name: {{ m.name }}
+      litellm_params:
+        model: "openai/{{ m.model }}"
+        api_base: "{{ m.base_url | default(upstream_base_url) }}"
+        api_key: "os.environ/{{ m.api_key_env | default('UPSTREAM_API_KEY') }}"
+        stream_options:
+          include_usage: true
+{% endfor %}
+
+  general_settings:
+    master_key: os.environ/LITELLM_MASTER_KEY
+    store_model_in_db: false
+
+  litellm_settings:
+    callbacks: [prometheus]
+    success_callback: [prometheus]
+    failure_callback: [prometheus]
+    require_auth_for_metrics_endpoint: false
+    drop_params: true
+    json_logs: true
+
+db:
+  deployStandalone: false
+  useExisting: false
+
+service:
+  type: ClusterIP
+  port: 4000
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    memory: 2Gi

@@ -1,0 +1,51 @@
+You created `agent-0` and saw it reconciled into a pod. That pod is where the OpenClaw agent actually lives. To poke at the agent directly, you go **into the sandbox** — and a sandbox is just a gVisor pod, so "going in" is an ordinary `exec`.
+
+## Confirm it's there
+
+Agent pods live in the `openshell-sandboxes` namespace:
+
+```bash
+kubectl -n openshell-sandboxes get pods
+```
+
+You should see the pod backing `agent-0`, `Running`.
+
+## Get a shell inside
+
+The friendliest way is the fleet helper:
+
+```bash
+./scripts/fleet shell agent-0
+```
+
+That drops you into a shell **inside the sandbox**, on the other side of the gVisor boundary. Try a few things:
+
+```bash
+whoami
+uname -a
+ls /
+```
+
+You're running as a non-root user, inside runsc's user-space kernel — not the host. Type `exit` to come back out.
+
+## The other doors
+
+`fleet shell` is a convenience wrapper. Two equivalent ways to run a command inside the sandbox:
+
+```bash
+openshell sandbox exec -n agent-0 -- whoami
+```
+
+```bash
+kubectl -n openshell-sandboxes exec -it deploy/agent-0 -- /bin/sh
+```
+
+The `openshell` path goes through the gateway and the supervisor (so it respects the sandbox's identity and policy relay); the `kubectl exec` path goes straight at the pod. Both land you in the same container.
+
+## Prove the isolation
+
+From inside the sandbox, the agent's view of the world is deliberately small. The kernel it talks to is gVisor's, not the host's — that `uname` you ran reports the gVisor kernel. And the network is deny-by-default: the agent can reach `inference.local` (next lesson) and not much else.
+
+<Callout type="lab" title="A sandbox is a pod, a pod is a sandbox">
+There's no magic VM here — just a pod with a stricter runtime. That's the design: reuse everything Kubernetes already gives you (scheduling, RBAC, lifecycle), and add isolation + policy on top.
+</Callout>

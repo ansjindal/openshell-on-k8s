@@ -1,0 +1,32 @@
+flowchart LR
+  B["🧑‍💻 Browser"]
+
+  subgraph host["one public host · Envoy ingress :3001"]
+    direction TB
+    SITE["Teaching site + <b>OpenShell Console</b><br/>/ · /console"]
+    GRAF["Grafana<br/>/grafana"]
+    KC["Keycloak SSO<br/>/auth"]
+  end
+
+  subgraph ns_openshell["namespace: openshell"]
+    GW["OpenShell gateway<br/>(control plane, dev/plaintext)"]
+    LITELLM["LiteLLM"]
+  end
+
+  subgraph ns_sandbox["namespace: openshell-sandboxes"]
+    POD["OpenClaw agent pod<br/>🛡️ gVisor · supervisor + agent"]
+  end
+
+  CTRL["agent-sandbox controller"]
+  KYV["Kyverno<br/>require-gvisor"]
+  MODEL["Upstream model API<br/>(NVIDIA / OpenAI / vLLM)"]
+
+  B -->|https, login via Keycloak| host
+  SITE -->|gRPC| GW
+  GW -->|writes Sandbox CR| CTRL
+  CTRL -->|reconciles + admits| POD
+  KYV -. enforces gVisor .-> POD
+  POD -->|"https://inference.local"| PROXY["in-pod supervisor proxy<br/>🔑 injects the key"]
+  PROXY --> LITELLM --> MODEL
+  KC -. validates logins .-> GRAF
+  KC -. validates logins .-> SITE

@@ -1,0 +1,31 @@
+Welcome to **OpenShell on Kubernetes** — a hands-on guide to running sandboxed AI agents on a real cluster. By the end you'll have created agents, talked to them, watched them reach a model through a credential-isolated proxy, and handed them a task to run — all from a live shell embedded in this page.
+
+Everything runs on a single VM that's already been provisioned for you: **k3s** (single-node upstream Kubernetes), **gVisor** for kernel-level isolation, the **agent-sandbox** controller, **LiteLLM** for inference, and the **OpenShell** gateway that ties it together. The default agent is **OpenClaw 🦞**.
+
+## What you'll learn
+
+- How the stack fits together — from a `Sandbox` custom resource to a running, isolated pod.
+- Why each agent runs under **gVisor (runsc)** and never holds the model's API key.
+- How to operate a fleet of agents with `kubectl`, the `openshell` CLI, and a small `./scripts/fleet` helper.
+
+## How this works
+
+This guide is a short book of **parts → lessons**. The hands-on lessons (🧪) include a **live shell right in the page** — when you click *Run in shell*, the command runs on your real VM. The shell already has `KUBECONFIG` pointed at the k3s cluster.
+
+- **Part I** — what this is, the stack, the runtime, and the security model.
+- **Part II** — the hands-on labs: verify the cluster, create a sandbox, exec in, route inference, run a task.
+- **Part III** — where to take it next.
+
+## The one-command bring-up
+
+If you're standing this up yourself, everything is provisioned by Ansible behind a single script:
+
+```bash
+./scripts/setup.sh
+```
+
+That installs k3s, gVisor, the agent-sandbox controller, LiteLLM, and the OpenShell gateway, then leaves you a working cluster.
+
+<Callout type="tip" title="Want to get hands-on fast?">
+Skim Part I, then jump to <strong>Verify the Cluster</strong>. The concept lessons are there when you want the <em>why</em>.
+</Callout>

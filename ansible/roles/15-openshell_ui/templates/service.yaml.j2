@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: openshell-ui
+  namespace: {{ openshell_ui_namespace }}
+  labels:
+    app.kubernetes.io/name: openshell-ui
+    app.kubernetes.io/part-of: openshell
+spec:
+  selector:
+    app.kubernetes.io/name: openshell-ui
+  ports:
+    - { name: http, port: 80, targetPort: http }

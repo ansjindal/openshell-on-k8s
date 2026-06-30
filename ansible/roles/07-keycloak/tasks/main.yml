@@ -1,0 +1,92 @@
+---
+# Deploy Keycloak (dev mode) as the OIDC identity provider, importing a realm
+# with the openshell-cli client + admin/user roles + a demo user.
+- name: Keycloak
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Require a Keycloak admin password
+      ansible.builtin.assert:
+        that:
+          - keycloak_admin_password is defined
+          - (keycloak_admin_password | string | length) > 0
+        fail_msg: "Set keycloak_admin_password in secrets.yml (and keycloak_demo_password)."
+
+    - name: Ensure keycloak namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ keycloak_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Create keycloak admin secret
+      ansible.builtin.shell: |
+        kubectl -n {{ keycloak_namespace }} create secret generic keycloak-admin \
+          --from-literal=password='{{ keycloak_admin_password }}' \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+
+    - name: Render realm import JSON
+      ansible.builtin.template:
+        src: realm.json.j2
+        dest: /tmp/keycloak-realm.json
+        mode: "0644"
+
+    - name: Create/update realm ConfigMap
+      ansible.builtin.shell: |
+        kubectl -n {{ keycloak_namespace }} create configmap keycloak-realm \
+          --from-file=realm.json=/tmp/keycloak-realm.json \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Compute realm checksum (rolls the pod + re-imports on realm change)
+      ansible.builtin.set_fact:
+        realm_checksum: "{{ lookup('ansible.builtin.template', 'realm.json.j2') | hash('sha1') }}"
+
+    - name: Render + apply Keycloak Deployment/Service
+      ansible.builtin.template:
+        src: deployment.yaml.j2
+        dest: /tmp/keycloak-deploy.yaml
+        mode: "0644"
+    - name: Apply Keycloak
+      ansible.builtin.command: kubectl apply -f /tmp/keycloak-deploy.yaml
+      register: kc_apply
+      changed_when: "'created' in kc_apply.stdout or 'configured' in kc_apply.stdout"
+
+    - name: Wait for Keycloak to be ready
+      ansible.builtin.command: kubectl -n {{ keycloak_namespace }} rollout status deploy/keycloak --timeout=300s
+      changed_when: false
+
+    # The realm is imported only ONCE — Keycloak does not overwrite an existing realm on
+    # re-import — so a regenerated keycloak_demo_password would never reach Keycloak and the
+    # `demo` login would fail with the documented password. Reconcile it explicitly on every
+    # run via the admin API, so `demo` / keycloak_demo_password always works (repeatable, not a
+    # one-off reset). Retries because Keycloak may need a moment after the rollout reports ready.
+    - name: Reconcile the demo user's password (idempotent)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        IP="$(kubectl -n {{ keycloak_namespace }} get svc keycloak -o jsonpath='{.spec.clusterIP}')"
+        KC="http://${IP}:8080{{ keycloak_relative_path }}"
+        TOK="$(curl -sf "$KC/realms/master/protocol/openid-connect/token" \
+          -d client_id=admin-cli -d grant_type=password \
+          -d username='{{ keycloak_admin_user }}' \
+          --data-urlencode 'password={{ keycloak_admin_password }}' \
+          | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')"
+        USERID="$(curl -sf "$KC/admin/realms/{{ keycloak_realm }}/users?exact=true&username={{ keycloak_demo_user | default('demo') }}" \
+          -H "Authorization: Bearer $TOK" \
+          | python3 -c 'import sys,json;u=json.load(sys.stdin);print(u[0]["id"] if u else "")')"
+        [ -n "$USERID" ] || { echo "demo user not found in realm {{ keycloak_realm }}"; exit 1; }
+        curl -sf -X PUT "$KC/admin/realms/{{ keycloak_realm }}/users/${USERID}/reset-password" \
+          -H "Authorization: Bearer $TOK" -H "content-type: application/json" \
+          -d '{"type":"password","value":"{{ keycloak_demo_password }}","temporary":false}'
+        echo "demo password reconciled"
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+      register: _demo_pw_reconcile
+      retries: 5
+      delay: 6
+      until: _demo_pw_reconcile.rc == 0
+      when: (keycloak_demo_password | default('') | string | length) > 0

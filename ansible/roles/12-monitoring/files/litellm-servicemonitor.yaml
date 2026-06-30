@@ -1,0 +1,24 @@
+# Scrape the LiteLLM proxy /metrics so the LiteLLM dashboard + fleet token panels
+# have data. serviceMonitorSelectorNilUsesHelmValues=false (in the kps values)
+# means Prometheus picks this up without a release label.
+#
+# Verify the Service name/port the LiteLLM Helm chart created:
+#   kubectl -n litellm get svc
+# and adjust matchLabels / port below if they differ.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: litellm
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: openshell-fleet
+spec:
+  namespaceSelector:
+    matchNames: [litellm]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: litellm
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

@@ -1,0 +1,86 @@
+An agent is only useful once it can think — which means it needs a model. The safe trick on this platform: the agent reaches the model through **one URL it has no credentials for** (`https://inference.local`), and the platform fills in the rest. But first you tell the platform *which* model and *what key* — there's no baked-in default you should rely on; it all comes from your `.env`.
+
+## 1. Put your model + key in `.env`
+
+On the VM, edit `~/openshell-on-k8s/.env` and set your provider:
+
+```bash
+OPENSHELL_API_KEY=nvapi-your-key-here
+OPENSHELL_BASE_URL=https://integrate.api.nvidia.com/v1
+OPENSHELL_MODEL=meta/llama-3.3-70b-instruct
+```
+
+`OPENSHELL_BASE_URL` is any OpenAI-compatible endpoint, `OPENSHELL_MODEL` is the exact model id that endpoint serves, and `OPENSHELL_API_KEY` is its key. (Grab a free `nvapi-…` key from [build.nvidia.com](https://build.nvidia.com).)
+
+## 2. Verify the endpoint actually works
+
+Before wiring it into the cluster, confirm the key + URL + model are real — catch a typo now, not later. Load `.env` and ask the provider for its model list:
+
+```bash
+cd ~/openshell-on-k8s && set -a && . ./.env && set +a
+curl -sS "$OPENSHELL_BASE_URL/models" -H "Authorization: Bearer $OPENSHELL_API_KEY" | head -c 600; echo
+```
+
+A JSON model list means the endpoint and key work. **401** → bad or expired key; **404** → the base URL probably needs (or shouldn't have) a trailing `/v1` — match your provider's docs. Confirm your `OPENSHELL_MODEL` is in the list:
+
+```bash
+curl -sS "$OPENSHELL_BASE_URL/models" -H "Authorization: Bearer $OPENSHELL_API_KEY" | grep -o '"id":"[^"]*"' | head -20
+```
+
+## 3. Apply it — re-render LiteLLM
+
+LiteLLM holds the key + model for the whole cluster, so the agents never do. You **don't** re-run the whole cluster setup — just the LiteLLM step. The `litellm` tag re-renders its config (key + `model_list`) from `.env` and rolls the deployment, nothing else:
+
+```bash
+ANSIBLE_TAGS=litellm ./scripts/setup.sh
+```
+
+If **only the key** changed (the model is already loaded in LiteLLM), the config doesn't change at all — a plain rollout restart picks up the new secret:
+
+```bash
+kubectl -n litellm rollout restart deploy/litellm
+```
+
+## 4. Confirm the active route
+
+Ask the gateway what inference is wired to — this reflects whatever you set in `.env`, not a hardcoded default:
+
+```bash
+openshell inference get
+```
+
+## The route
+
+```text
+agent code ──▶ https://inference.local ──▶ [proxy injects key] ──▶ LiteLLM ──▶ model API
+```
+
+Inside the sandbox, the agent calls `https://inference.local`. The in-sandbox **policy proxy** rewrites that request to **LiteLLM** (namespace `litellm`), injecting the real API key as it goes. LiteLLM is one OpenAI-compatible endpoint sitting in front of the actual model. The agent never holds the key — it only knows the local name.
+
+## See it from inside the sandbox
+
+Get a shell in your agent and hit the local endpoint:
+
+```bash
+./scripts/fleet shell agent-0
+```
+
+```bash
+curl -s https://inference.local/v1/models
+```
+
+You'll get a models list back — proof that the local name resolved, the proxy injected the credential, and LiteLLM answered. From the agent's point of view there's no key anywhere. Type `exit` to leave the sandbox.
+
+## Change the model later
+
+Because everything funnels through LiteLLM, you change the model in **one place**. To switch the *active* model the gateway routes to (it must already be loaded in LiteLLM):
+
+```bash-ref
+openshell inference set --model <model-id>
+```
+
+To add a *new* model or rotate the key, edit `.env` and re-run just the LiteLLM step — `ANSIBLE_TAGS=litellm ./scripts/setup.sh` (steps 1–3) — it propagates to every managed sandbox; the agents never need to know.
+
+<Callout type="note" title="Why front it with LiteLLM?">
+One OpenAI-compatible endpoint means agents speak a single, stable API no matter what model is behind it. Switch providers or models centrally; the sandboxes — and their <code>inference.local</code> calls — don't change.
+</Callout>

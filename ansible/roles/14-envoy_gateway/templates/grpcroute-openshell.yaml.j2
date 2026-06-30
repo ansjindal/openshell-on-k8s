@@ -1,0 +1,18 @@
+# gRPC route for the OpenShell gateway. Lives in the openshell namespace
+# (co-located with svc/openshell) so no ReferenceGrant is needed; attaches to
+# the Gateway's `grpc` listener cross-namespace. The CLI then reaches the
+# gateway at <node-ip>:{{ envoy_grpc_nodeport }} through Envoy.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: openshell-grpc
+  namespace: {{ openshell_namespace }}
+spec:
+  parentRefs:
+    - name: fleet-gw
+      namespace: {{ envoy_gateway_ns }}
+      sectionName: grpc
+  rules:
+    - backendRefs:
+        - name: openshell
+          port: 8080

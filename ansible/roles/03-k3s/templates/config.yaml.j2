@@ -1,0 +1,11 @@
+{% if k3s_role == 'server' %}
+write-kubeconfig-mode: "644"
+disable:
+  - traefik
+  - servicelb
+{% endif %}
+{% if mesh_present | default(false) | bool %}
+flannel-iface: {{ mesh_iface }}
+node-ip: {{ mesh_ip }}
+node-external-ip: {{ mesh_ip }}
+{% endif %}

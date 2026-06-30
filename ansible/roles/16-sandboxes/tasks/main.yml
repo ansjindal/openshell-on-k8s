@@ -1,0 +1,47 @@
+---
+# Create fleet_size sandboxes via the openshell CLI, each attached to
+# sandbox_provider. Idempotent + best-effort (a name that already exists is
+# left as-is). Runs only when sandboxes_enabled. Must run AFTER the gateway
+# (09) and inference routing / provider (10).
+- name: Create the sandbox fleet
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Install the openshell CLI (if missing)
+      ansible.builtin.shell: |
+        set -e
+        command -v openshell >/dev/null 2>&1 && exit 0
+        curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+        ln -sf "$HOME/.local/bin/openshell" /usr/local/bin/openshell 2>/dev/null || true
+      args: { executable: /bin/bash }
+      changed_when: false
+      failed_when: false
+
+    - name: Create sandboxes through the gateway
+      ansible.builtin.shell: |
+        set -e
+        # The gateway is published on a pinned plaintext NodePort, so the CLI can
+        # reach it directly — no port-forward background process to race/leak.
+        openshell gateway add http://127.0.0.1:{{ gateway_nodeport }} --local --name fleet 2>/dev/null || true
+        existing="$(openshell --gateway fleet sandbox list 2>/dev/null | awk 'NR>1{print $1}')"
+        for i in $(seq 0 {{ (fleet_size | int) - 1 }}); do
+          name="{{ sandbox_name_prefix }}-${i}"
+          if echo "$existing" | grep -qx "$name"; then echo "$name (already exists)"; continue; fi
+          # `sandbox create` attaches an interactive shell by default; run a no-op
+          # non-interactively (--no-tty -- true) so it creates + detaches instead of
+          # blocking. Without --no-keep the sandbox persists after the command exits.
+          # The post-create attach may fail if the supervisor isn't connected yet —
+          # that's fine, the Sandbox CR is created and reconciles to Running.
+          timeout 90 openshell --gateway fleet sandbox create --name "$name" --provider "{{ sandbox_provider }}" --no-tty -- true >/dev/null 2>&1 \
+            && echo "created $name" || echo "created $name (attach skipped)"
+        done
+      args: { executable: /bin/bash }
+      register: sb_create
+      changed_when: "'created' in sb_create.stdout"
+
+    - name: Sandbox fleet summary
+      ansible.builtin.debug:
+        msg:
+          - "Requested {{ fleet_size }} sandbox(es) named {{ sandbox_name_prefix }}-0..{{ (fleet_size | int) - 1 }} (provider: {{ sandbox_provider }})."
+          - "{{ sb_create.stdout_lines | default([]) }}"
+          - "Runtime ops (status / task / scale / logs): scripts/fleet, or the console."

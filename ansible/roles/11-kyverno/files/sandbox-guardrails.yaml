@@ -1,0 +1,47 @@
+# Base admission guardrails for OpenShell sandbox pods (requires Kyverno).
+# Scoped by the agent-sandbox pod label `agents.x-k8s.io/sandbox-name-hash`
+# (set by the controller on every Sandbox pod) rather than by namespace — so the
+# gateway / LiteLLM / system pods that share the namespace are NOT affected.
+#
+# NOTE: we intentionally do NOT enforce CPU/mem requests+limits here. OpenShell
+# sandbox pods don't declare resource bounds by default and the gateway chart has
+# no value to set them, so enforcing would block every sandbox. To bound sandbox
+# resources, pass `--cpu`/`--memory` on `openshell sandbox create`, or add a
+# Kyverno *mutate* policy that injects defaults.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: sandbox-pod-guardrails
+  annotations:
+    pod-policies.kyverno.io/autogen-controllers: none
+spec:
+  admission: true
+  validationFailureAction: Enforce
+  background: true
+  emitWarning: false
+  rules:
+    - name: block-host-namespace-sharing
+      skipBackgroundRequests: true
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              selector:
+                matchExpressions:
+                  - key: agents.x-k8s.io/sandbox-name-hash
+                    operator: Exists
+      validate:
+        allowExistingViolations: true
+        message: Sandbox pods cannot share host network, PID, or IPC namespaces.
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.hostNetwork || `false` }}"
+                operator: Equals
+                value: true
+              - key: "{{ request.object.spec.hostPID || `false` }}"
+                operator: Equals
+                value: true
+              - key: "{{ request.object.spec.hostIPC || `false` }}"
+                operator: Equals
+                value: true

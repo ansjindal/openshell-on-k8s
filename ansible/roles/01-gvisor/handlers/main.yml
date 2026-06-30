@@ -1,0 +1,11 @@
+---
+- name: restart k3s if running
+  ansible.builtin.shell: |
+    set -e
+    if systemctl list-unit-files | grep -q '^k3s.service'; then
+      systemctl restart k3s
+    elif systemctl list-unit-files | grep -q '^k3s-agent.service'; then
+      systemctl restart k3s-agent
+    fi
+  args:
+    executable: /bin/bash

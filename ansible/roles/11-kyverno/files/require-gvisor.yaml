@@ -1,0 +1,31 @@
+# Require gVisor on sandbox pods. Applied only when gvisor_enabled (the gateway
+# sets defaultRuntimeClassName=gvisor via values.gvisor.yaml). Scoped to sandbox
+# pods by label so it never blocks the gateway / system pods.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: sandbox-require-gvisor
+spec:
+  admission: true
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-gvisor-runtime
+      skipBackgroundRequests: true
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              selector:
+                matchExpressions:
+                  - key: agents.x-k8s.io/sandbox-name-hash
+                    operator: Exists
+      validate:
+        allowExistingViolations: true
+        message: Sandbox pods must run through the gVisor runtime class.
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.runtimeClassName || '' }}"
+                operator: NotEquals
+                value: gvisor

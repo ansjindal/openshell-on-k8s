@@ -1,0 +1,27 @@
+# Map Keycloak realm roles (delivered as the `groups` claim, prefixed by the
+# apiserver) to Kubernetes RBAC. openshell-admin -> cluster-admin, openshell-user -> view.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-openshell-admins
+subjects:
+  - kind: Group
+    name: "{{ oidc_groups_prefix }}{{ keycloak_admin_role }}"
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-openshell-users
+subjects:
+  - kind: Group
+    name: "{{ oidc_groups_prefix }}{{ keycloak_user_role }}"
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io

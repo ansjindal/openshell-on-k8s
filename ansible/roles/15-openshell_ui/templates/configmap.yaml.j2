@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openshell-ui-config
+  namespace: {{ openshell_ui_namespace }}
+data:
+  # Origin only — Auth.js appends BASE_PATH itself for the OIDC callback URL.
+  AUTH_URL: "{{ keycloak_base_url }}"
+  BASE_PATH: "{{ openshell_ui_path }}"
+  AUTH_TRUST_HOST: "true"
+  OIDC_ISSUER: "{{ keycloak_issuer_url }}"
+  OIDC_CLIENT_ID: "openshell-ui"
+  OIDC_ROLES_CLAIM: "{{ openshell_ui_roles_claim }}"
+  OIDC_ADMIN_ROLE: "{{ keycloak_admin_role }}"
+  OPENSHELL_GATEWAY_ENDPOINT: "openshell.{{ openshell_namespace }}.svc.cluster.local:8080"
+  OPENSHELL_GATEWAY_TLS: "false"

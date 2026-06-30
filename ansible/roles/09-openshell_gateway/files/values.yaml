@@ -1,0 +1,76 @@
+# Values for the official OpenShell gateway Helm chart.
+#   chart: oci://ghcr.io/nvidia/openshell/helm-chart   (see README.md for install)
+#
+# The gateway is the control plane: its Kubernetes compute driver turns sandbox
+# requests into agents.x-k8s.io Sandbox CRs (reconciled by component 00), and its
+# inference router serves https://inference.local to every sandbox.
+#
+# These are DEV-FRIENDLY defaults for a single-VM demo (no TLS, no OIDC) so the
+# CLI can talk to the gateway with no auth setup. DO NOT use as-is in production —
+# see components/30-openshell-gateway/README.md for the hardening switches.
+#
+# NOTE: key names follow the documented chart values; verify against
+#   helm show values oci://ghcr.io/nvidia/openshell/helm-chart
+# for your chart version and adjust if a key differs.
+
+image:
+  repository: ghcr.io/nvidia/openshell/gateway
+  # Empty = use the chart's appVersion tag. Do NOT pin to "latest": that pulls a
+  # floating gateway build that can skew against the chart's supervisor image and
+  # break the sandbox bootstrap handshake (IssueSandboxToken). Pin the CHART
+  # version (openshell_chart_version) instead and let gateway + supervisor track
+  # it together.
+  tag: ""
+
+# StatefulSet + bundled SQLite (no external Postgres needed for the demo).
+workload:
+  kind: statefulset
+
+# Expose the gateway gRPC/HTTP port outside the cluster so the openshell CLI can
+# reach it at <node-ip>:<nodeport> without a port-forward. (Dev convenience; for
+# production front it with an ingress / Gateway API + TLS instead.)
+service:
+  type: NodePort
+  port: 8080
+  # Pin the NodePort so the launchable can expose ONE predictable port on Brev
+  # (and the openshell CLI can reach the gateway at <node-ip>:30808). Without a
+  # fixed value k3s assigns a random port in 30000-32767 each install.
+  nodePort: 30808
+
+server:
+  # The image each sandbox pod runs (the OpenShell sandbox runtime). Pinned to a build that
+  # ships the OpenClaw plugin CLI (init/build/search) so the skills chapter — author, build,
+  # publish to the in-cluster registry, install — works end-to-end. The community :latest tag
+  # lagged at 2026.3.11, which has no plugin-authoring CLI.
+  sandboxImage: ghcr.io/ansjindal/openclaw-sandbox:2026.6.10
+  sandboxImagePullPolicy: IfNotPresent
+  # Namespace for sandbox pods. Empty = the Helm release namespace (openshell) —
+  # the chart only creates sandbox RBAC inside it; it does NOT create a separate
+  # namespace. Leave empty to follow the official default (sandboxes in openshell).
+  sandboxNamespace: ""
+  # Gateway callback endpoint sandboxes dial. Leave EMPTY so the chart derives it
+  # from the release namespace + service + disableTls (yields
+  # https://openshell.openshell.svc.cluster.local:8080). Hardcoding without a
+  # scheme breaks the sandbox supervisor connection.
+  grpcEndpoint: ""
+  # DEV: plaintext HTTP + unauthenticated CLI — matches the known-good reference
+  # deployment (k3s 1.35.x). NOTE: newer chart releases (>= 0.0.71) make the
+  # gateway ALWAYS terminate mTLS, which then needs client certs wired into the
+  # CLI and sandboxes; this launchable instead pins a compatible chart + k3s and
+  # keeps the simple plaintext path. (For a hardened setup, front the gateway with
+  # an mTLS-terminating proxy and flip disableTls.)
+  disableTls: true
+  auth:
+    allowUnauthenticatedUsers: true
+
+# How the openshell-sandbox supervisor binary is delivered into each pod.
+#   image-volume  -> Kubernetes 1.33+
+#   init-container -> older clusters (broadest compatibility)
+supervisor:
+  sideloadMethod: init-container
+
+# The chart creates the gateway + sandbox ServiceAccounts and their RBAC.
+serviceAccount:
+  create: true
+sandboxServiceAccount:
+  create: true

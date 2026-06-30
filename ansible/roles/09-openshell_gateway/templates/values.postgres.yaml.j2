@@ -1,0 +1,9 @@
+# Postgres overlay (applied when gateway_db_backend == "postgres").
+# A shared external DB lets the gateway run as a multi-replica Deployment (HA)
+# instead of the single-replica StatefulSet that the bundled SQLite requires.
+workload:
+  kind: deployment
+replicaCount: {{ gateway_replicas | default(2) }}
+server:
+  # Secret (key: uri) created by the 06-postgres role; gateway reads OPENSHELL_DB_URL from it.
+  externalDbSecret: {{ openshell_db_secret_name | default('openshell-db') }}

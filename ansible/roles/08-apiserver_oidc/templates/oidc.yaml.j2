@@ -1,0 +1,9 @@
+# k3s config drop-in: point the kube-apiserver at Keycloak so a Keycloak token
+# is a kubectl identity. Merged with the main config.yaml by k3s (config.yaml.d).
+kube-apiserver-arg:
+  - "oidc-issuer-url={{ keycloak_issuer_url }}"
+  - "oidc-client-id={{ oidc_apiserver_client_id }}"
+  - "oidc-username-claim={{ oidc_username_claim }}"
+  - "oidc-username-prefix={{ oidc_username_prefix }}"
+  - "oidc-groups-claim={{ oidc_groups_claim }}"
+  - "oidc-groups-prefix={{ oidc_groups_prefix }}"

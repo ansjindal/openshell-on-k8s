@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# fleet — scale and drive a fleet of OpenShell sandboxes via the openshell CLI.
+# The gateway turns each request into an agents.x-k8s.io Sandbox CR; inference
+# flows through the gateway's inference.local -> LiteLLM -> external API.
+#
+#   fleet up [N]            create N long-lived sandboxes (default FLEET_SIZE, or 1)
+#   fleet down              delete all fleet sandboxes
+#   fleet status            openshell sandbox list + kubectl pod readiness
+#   fleet task "<prompt>" [agent-i|all]   run the agent on a prompt across the fleet (parallel)
+#   fleet logs <agent-i>    tail one sandbox pod's logs
+#   fleet shell <agent-i>   open an interactive shell inside one sandbox
+#
+# Env (from .env or shell):
+#   FLEET_SIZE   default count for `up`
+#   AGENT_CMD    agent binary run inside the sandbox for tasks (default: openclaw).
+#                Must match the inference backend format — use codex/opencode for
+#                an OpenAI/LiteLLM backend, claude for an Anthropic-format backend.
+#   PROVIDER     gateway provider to attach (default: fleet)
+#   SANDBOX_NS   sandbox namespace (default: openshell; matches gateway values)
+#   KUBECONFIG   defaults to the k3s path written by this launchable.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="${ENV_FILE:-${HERE}/.env}"
+[ -f "${ENV_FILE}" ] && { set -a; source "${ENV_FILE}"; set +a; }
+
+export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+FLEET_SIZE="${FLEET_SIZE:-1}"
+AGENT_CMD="${AGENT_CMD:-openclaw}"
+PROVIDER="${PROVIDER:-fleet}"
+SANDBOX_NS="${SANDBOX_NS:-openshell-sandboxes}"
+GATEWAY_NS="${GATEWAY_NS:-openshell}"
+GATEWAY_NODEPORT="${GATEWAY_NODEPORT:-30808}"
+# All CLI calls target the registered 'fleet' gateway explicitly.
+OSH=(openshell --gateway fleet)
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+command -v openshell >/dev/null 2>&1 || die "openshell CLI not found — run ./scripts/setup.sh (the gateway/inference roles install it)."
+command -v kubectl   >/dev/null 2>&1 || die "kubectl not found — is k3s installed? (run ./scripts/setup.sh)"
+
+# Register the gateway via its pinned plaintext NodePort — reachable directly on
+# the node, so no kubectl port-forward background process is needed.
+ensure_gateway() {
+  openshell gateway add "http://127.0.0.1:${GATEWAY_NODEPORT}" --local --name fleet >/dev/null 2>&1 || true
+}
+
+cmd_up() {
+  local n="${1:-${FLEET_SIZE}}"
+  [[ "${n}" =~ ^[0-9]+$ ]] || die "usage: fleet up [N]"
+  ensure_gateway
+  echo "Scaling fleet to ${n} sandbox(es)..."
+  local existing; existing="$("${OSH[@]}" sandbox list 2>/dev/null | awk 'NR>1{print $1}')"
+  for i in $(seq 0 $((n - 1))); do
+    if echo "${existing}" | grep -qx "agent-${i}"; then echo "  agent-${i} (already exists)"; continue; fi
+    # --no-tty -- true: create + detach instead of attaching an interactive shell
+    # (default). Without --no-keep the sandbox persists after the command exits.
+    timeout 90 "${OSH[@]}" sandbox create --name "agent-${i}" --provider "${PROVIDER}" --no-tty -- true >/dev/null 2>&1 \
+      && echo "  created agent-${i}" \
+      || echo "  created agent-${i} (attach skipped — check 'fleet status')"
+  done
+  echo ""
+  cmd_status
+}
+
+cmd_down() {
+  ensure_gateway
+  echo "Tearing down the fleet..."
+  "${OSH[@]}" sandbox list 2>/dev/null | awk '/^agent-/ {print $1}' | while read -r s; do
+    "${OSH[@]}" sandbox delete "${s}" >/dev/null 2>&1 && echo "  deleted ${s}" || true
+  done
+}
+
+cmd_status() {
+  ensure_gateway
+  echo "== openshell sandboxes =="
+  "${OSH[@]}" sandbox list 2>/dev/null || echo "(CLI unavailable)"
+  echo ""
+  echo "== Sandbox CRs + pods (${SANDBOX_NS}) =="
+  kubectl -n "${SANDBOX_NS}" get sandboxes 2>/dev/null || echo "(none)"
+  kubectl -n "${SANDBOX_NS}" get pods \
+    -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[0].ready,PHASE:.status.phase,NODE:.spec.nodeName' \
+    2>/dev/null || true
+  local total ready
+  total="$(kubectl -n "${SANDBOX_NS}" get pods --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+  ready="$(kubectl -n "${SANDBOX_NS}" get pods \
+    -o jsonpath='{range .items[*]}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null | grep -c true || true)"
+  echo ""
+  echo "Fleet ready: ${ready:-0}/${total:-0}"
+}
+
+cmd_task() {
+  local prompt="${1:-}" target="${2:-all}"
+  [ -n "${prompt}" ] || die 'usage: fleet task "<prompt>" [agent-i|all]'
+  ensure_gateway
+  local agents=()
+  if [ "${target}" = "all" ]; then
+    while IFS= read -r a; do [ -n "${a}" ] && agents+=("${a}"); done < <(
+      "${OSH[@]}" sandbox list 2>/dev/null | awk '/^agent-/ {print $1}')
+  else
+    agents=("${target}")
+  fi
+  [ "${#agents[@]}" -gt 0 ] || die "no agents — run 'fleet up' first"
+
+  echo "Running '${AGENT_CMD}' on ${#agents[@]} agent(s) in parallel..."
+  local pids=()
+  for a in "${agents[@]}"; do
+    ( out="$("${OSH[@]}" sandbox exec -n "${a}" -- "${AGENT_CMD}" -p "${prompt}" 2>&1 || true)"
+      printf '\n── [%s] ───────────────\n%s\n' "${a}" "${out}" ) &
+    pids+=("$!")
+  done
+  for p in "${pids[@]}"; do wait "${p}" || true; done
+  echo ""; echo "All agents finished."
+}
+
+cmd_shell() {
+  local a="${1:-agent-0}"
+  ensure_gateway
+  echo "Opening a shell inside ${a} (exit to return)..."
+  # --tty allocates a PTY; without it an interactive /bin/bash starts with no terminal,
+  # prints no prompt, and the session appears to hang. (`openshell sandbox connect` is the
+  # other option, but exec --tty keeps the one-shot semantics this wrapper expects.)
+  "${OSH[@]}" sandbox exec --tty -n "${a}" -- /bin/bash || "${OSH[@]}" sandbox exec --tty -n "${a}" -- /bin/sh
+}
+
+cmd_logs() {
+  local a="${1:-}"; [ -n "${a}" ] || die "usage: fleet logs <agent-i>"
+  local pod
+  pod="$(kubectl -n "${SANDBOX_NS}" get pods -o name 2>/dev/null | grep "${a}" | head -1)"
+  [ -n "${pod}" ] || die "no pod matching ${a} in ${SANDBOX_NS}"
+  kubectl -n "${SANDBOX_NS}" logs "${pod}" --tail=200 -f
+}
+
+case "${1:-}" in
+  up)     shift; cmd_up "$@";;
+  down)   cmd_down;;
+  status) cmd_status;;
+  task)   shift; cmd_task "$@";;
+  shell)  shift; cmd_shell "$@";;
+  logs)   shift; cmd_logs "$@";;
+  *) grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//'; exit 1;;
+esac

@@ -1,0 +1,69 @@
+---
+# Install the OpenShell gateway (official Helm chart). Adds the gVisor overlay
+# (sandbox pods on RuntimeClass gvisor) when gvisor_enabled.
+- name: OpenShell gateway
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Ensure gateway + sandbox namespaces
+      ansible.builtin.shell: |
+        for ns in {{ openshell_namespace }} {{ k3s_sandbox_namespace }}; do
+          kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f -
+        done
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Copy gateway values
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/tmp/openshell-{{ item }}"
+        mode: "0644"
+      loop:
+        - values.yaml
+        - values.gvisor.yaml
+
+    - name: Render OIDC overlay (when auth_mode == oidc)
+      ansible.builtin.template:
+        src: values.oidc.yaml.j2
+        dest: /tmp/openshell-values.oidc.yaml
+        mode: "0644"
+      when: auth_mode == 'oidc'
+
+    - name: Render Postgres overlay (when gateway_db_backend == postgres)
+      ansible.builtin.template:
+        src: values.postgres.yaml.j2
+        dest: /tmp/openshell-values.postgres.yaml
+        mode: "0644"
+      when: gateway_db_backend | default('sqlite') == 'postgres'
+
+    # Switching backends flips the workload kind (StatefulSet <-> Deployment).
+    # Helm won't change an existing object's kind in place, so drop the stale
+    # workload first when it doesn't match the target kind.
+    - name: Reconcile workload kind for the DB backend
+      ansible.builtin.shell: |
+        stale="{{ 'statefulset' if (gateway_db_backend | default('sqlite') == 'postgres') else 'deployment' }}"
+        kubectl -n {{ openshell_namespace }} delete "$stale" openshell --ignore-not-found
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Install OpenShell gateway
+      ansible.builtin.shell: |
+        helm upgrade --install openshell {{ openshell_chart }} \
+          --version {{ openshell_chart_version }} \
+          --namespace {{ openshell_namespace }} \
+          --set server.sandboxNamespace={{ k3s_sandbox_namespace }} \
+          -f /tmp/openshell-values.yaml \
+          {{ '-f /tmp/openshell-values.gvisor.yaml' if (gvisor_enabled | bool) else '' }} \
+          {{ '-f /tmp/openshell-values.oidc.yaml' if (auth_mode == 'oidc') else '' }} \
+          {{ '-f /tmp/openshell-values.postgres.yaml' if (gateway_db_backend | default('sqlite') == 'postgres') else '' }} \
+          --wait --timeout 8m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Wait for the gateway to roll out
+      ansible.builtin.command: >-
+        kubectl -n {{ openshell_namespace }}
+        rollout status {{ 'deployment' if (gateway_db_backend | default('sqlite') == 'postgres') else 'statefulset' }}/openshell
+        --timeout=300s
+      changed_when: false
+      failed_when: false

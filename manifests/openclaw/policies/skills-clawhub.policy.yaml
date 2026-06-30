@@ -1,0 +1,33 @@
+# The same locked skills sandbox with a TEMPORARY ClawHub door open: ClawHub's registry +
+# package CDN, plus DIRECT public npm (for a ClawHub plugin's OWN dependencies). Lock it back
+# down by re-applying skills-locked.policy.yaml.
+#
+#   openshell policy set agent-0 --policy manifests/openclaw/policies/skills-clawhub.policy.yaml --wait
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /proc, /dev/urandom, /app, /etc, /var/log]
+  read_write: [/sandbox, /tmp, /dev/null]
+landlock: { compatibility: best_effort }
+process: { run_as_user: sandbox, run_as_group: sandbox }
+network_policies:
+  in-cluster-registry:
+    name: in-cluster-registry
+    endpoints:
+      - { host: registry.openshell.svc.cluster.local, port: 4873, access: full, protocol: rest, allow_encoded_slash: true }
+    binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node } ]
+  clawhub:
+    name: clawhub
+    endpoints:
+      - { host: clawhub.ai, port: 443, access: full }        # ClawHub registry
+      - { host: hub.openclaw.ai, port: 443, access: full }   # …its package CDN
+    binaries: [ { path: /usr/bin/node }, { path: /usr/local/bin/node } ]
+  npm-registry:
+    name: npm-registry
+    # A ClawHub plugin's own deps install DIRECTLY from public npm (not via Verdaccio), and a
+    # scoped dep (e.g. @sinclair/typebox) arrives as /@sinclair%2Ftypebox — so this endpoint,
+    # exactly like the in-cluster one, needs protocol: rest + allow_encoded_slash: true (which
+    # is why it's in the policy YAML and not an `--add-endpoint`).
+    endpoints:
+      - { host: registry.npmjs.org, port: 443, access: full, protocol: rest, allow_encoded_slash: true }
+    binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node } ]

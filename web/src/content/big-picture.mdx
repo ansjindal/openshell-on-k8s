@@ -1,0 +1,35 @@
+One VM runs the whole thing. From the bottom up, each layer hands a safer, more-managed surface to the one above — until at the top you have an AI agent that can only do what your policy allows.
+
+<EndToEndFlow />
+
+For the detailed topology — where each object lives and how this setup maps to it — explore the deployment below:
+
+<OpenShellOnK8s />
+
+## The stack, layer by layer
+
+- **k3s** — single-node upstream Kubernetes. Lightweight, but a real cluster: the same CRDs, RBAC, and scheduler you'd use anywhere. The CLI is `kubectl`, and the kubeconfig lives at `/etc/rancher/k3s/k3s.yaml`.
+- **gVisor (runsc)** — a user-space kernel. Every agent sandbox pod runs under `RuntimeClass: gvisor`, so the agent's syscalls hit gVisor instead of the host kernel. This is the isolation boundary.
+- **agent-sandbox controller** — the [kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox) operator. It reconciles each `Sandbox` custom resource (`agents.x-k8s.io`) into a pod, the way a Deployment controller reconciles ReplicaSets into pods.
+- **LiteLLM** — one OpenAI-compatible endpoint (namespace `litellm`) in front of the model. Agents never talk to the model API directly.
+- **OpenShell gateway** — the control plane (namespace `openshell`). It allocates sandboxes, delivers policy, and routes inference. Exposed on NodePort **30808** and driven by the `openshell` CLI.
+- **OpenClaw 🦞** — the default agent. It's the gateway's default sandbox image, `ghcr.io/nvidia/openshell-community/sandboxes/openclaw:latest`.
+
+## The flow, end to end
+
+```text
+you ──▶ openshell CLI / kubectl ──▶ OpenShell gateway ──▶ Sandbox CR
+                                                            │
+                              agent-sandbox controller ◀────┘
+                                          │
+                                          ▼
+                              gVisor pod (supervisor + OpenClaw)
+                                          │
+   agent code ──▶ https://inference.local ──▶ LiteLLM ──▶ model API
+```
+
+You ask the gateway for a sandbox. It writes a `Sandbox` CR. The controller turns that into a gVisor pod running OpenClaw. When the agent needs the model, it calls `https://inference.local` — and the in-sandbox proxy injects the real credential on the way to LiteLLM, so the agent never sees the key.
+
+<Callout type="note" title="The mental model">
+A sandbox <em>is</em> a pod. Creating an agent means creating a <code>Sandbox</code> object; deleting one tears the pod down. Everything else — isolation, policy, inference — hangs off that.
+</Callout>

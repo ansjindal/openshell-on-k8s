@@ -1,0 +1,54 @@
+---
+# Point the gateway's inference backend at LiteLLM, ONCE. After this, every
+# sandbox's https://inference.local routes to LiteLLM -> upstream. This is the
+# CLI-driven part of OpenShell (no declarative API yet), so it's best-effort:
+# the playbook prints the exact commands if any step needs a hand.
+- name: Inference routing
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Install the openshell CLI
+      ansible.builtin.shell: |
+        set -e
+        command -v openshell >/dev/null 2>&1 && exit 0
+        curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+        # install.sh drops the binary in ~/.local/bin; expose it on PATH
+        ln -sf "$HOME/.local/bin/openshell" /usr/local/bin/openshell 2>/dev/null || true
+      args: { executable: /bin/bash }
+      changed_when: false
+      failed_when: false
+
+    - name: Read the LiteLLM master key
+      ansible.builtin.shell: |
+        kubectl -n {{ litellm_namespace }} get secret litellm-secrets \
+          -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d
+      args: { executable: /bin/bash }
+      register: ll_key
+      no_log: true
+      changed_when: false
+
+    - name: Register gateway, create provider, and wire inference.local to LiteLLM
+      ansible.builtin.shell: |
+        set -e
+        # Reach the gateway directly on its pinned plaintext NodePort (no port-forward).
+        openshell gateway add http://127.0.0.1:{{ gateway_nodeport }} --local --name fleet 2>/dev/null || true
+        openshell --gateway fleet provider create --name fleet --type openai \
+          --config OPENAI_BASE_URL=http://litellm.{{ litellm_namespace }}.svc.cluster.local:4000/v1 \
+          --credential OPENAI_API_KEY={{ ll_key.stdout }} 2>/dev/null || true
+        # user route (code calling inference.local) and system route (the agent
+        # harness own LLM calls) -- both point at LiteLLM. --no-verify: configure
+        # the route even if the upstream key cannot be verified now (placeholder
+        # key or transient 403); otherwise inference set rejects the route and
+        # agents hit "inference route not configured". Real calls need a valid key.
+        openshell --gateway fleet inference set          --provider fleet --model {{ inference_model }} --no-verify || true
+        openshell --gateway fleet inference set --system --provider fleet --model {{ inference_model }} --no-verify || true
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+      failed_when: false
+
+    - name: Inference routing summary
+      ansible.builtin.debug:
+        msg:
+          - "Provider 'fleet' → LiteLLM; inference.local (user) + system route set to '{{ inference_model }}'."
+          - "Verify on the gateway host: openshell inference get"

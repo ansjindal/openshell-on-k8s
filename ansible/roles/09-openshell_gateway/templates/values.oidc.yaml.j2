@@ -1,0 +1,11 @@
+# OIDC overlay — applied after values.yaml when auth_mode == oidc. Switches the
+# gateway from dev-unauthenticated to validating Bearer tokens from Keycloak.
+server:
+  auth:
+    allowUnauthenticatedUsers: false
+  oidc:
+    issuer: "{{ keycloak_issuer_url }}"
+    audience: "{{ keycloak_client_id }}"
+    rolesClaim: "realm_access.roles"
+    adminRole: "{{ keycloak_admin_role }}"
+    userRole: "{{ keycloak_user_role }}"

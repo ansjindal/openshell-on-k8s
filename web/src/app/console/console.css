@@ -1,0 +1,308 @@
+/* Scoped styles for the embedded OpenShell console. The standalone console
+ * styled html/body and bare element selectors; here everything is nested under
+ * .console-root so it does not clash with the teaching site's theme. The CSS
+ * variables (formerly on :root) live on .console-root, and the html/body rules
+ * became .console-root rules. */
+
+.console-root {
+  /* Surfaces */
+  --bg: #0b0e14;
+  --bg-grad: radial-gradient(1200px 600px at 78% -12%, rgba(56, 189, 248, 0.09), transparent 60%),
+             radial-gradient(900px 520px at -8% 8%, rgba(99, 102, 241, 0.06), transparent 55%);
+  --surface: #11151d;
+  --surface-2: #161b25;
+  --surface-3: #1c2230;
+  --border: #232b39;
+  --border-light: #2e3748;
+
+  /* Text */
+  --text: #e8ecf3;
+  --text-dim: #98a2b3;
+  --text-faint: #69748a;
+
+  /* Brand + status — light-blue accent */
+  --accent: #38bdf8;        /* sky-400 */
+  --accent-hover: #5fccfb;
+  --accent-soft: rgba(56, 189, 248, 0.13);
+  --accent-ring: rgba(56, 189, 248, 0.38);
+  --accent-ink: #06121c;    /* text on accent buttons */
+  --blue: #60a5fa;
+  --green: #34d399;
+  --amber: #fbbf24;
+  --red: #fb7185;
+  --purple: #a78bfa;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+  --sidebar-w: 248px;
+
+  /* Was on html/body — now the console root surface. */
+  min-height: 100vh;
+  background: var(--bg);
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
+  color: var(--text);
+  font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+}
+
+.console-root * { box-sizing: border-box; }
+
+.console-root a { color: inherit; text-decoration: none; }
+.console-root ::selection { background: var(--accent-soft); }
+
+/* ---------- App shell ---------- */
+.console-root .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+
+.console-root .sidebar {
+  position: sticky; top: 0; align-self: start;
+  height: 100vh;
+  display: flex; flex-direction: column;
+  gap: 4px;
+  padding: 18px 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  border-right: 1px solid var(--border);
+  backdrop-filter: blur(6px);
+}
+
+.console-root .brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px 16px;
+  font-weight: 650; font-size: 15px;
+}
+.console-root .brand .logo {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-ring);
+}
+.console-root .brand .sub { display:block; font-size: 11px; font-weight: 500; color: var(--text-faint); letter-spacing: .02em; }
+
+.console-root .nav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.console-root .nav-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); padding: 14px 12px 6px; }
+.console-root .nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  color: var(--text-dim); font-weight: 500;
+  transition: background .15s, color .15s;
+}
+.console-root .nav-item:hover { background: var(--surface-2); color: var(--text); }
+.console-root .nav-item.active { background: var(--accent-soft); color: #bfe6ff; }
+.console-root .nav-item.active svg { color: var(--accent); }
+.console-root .nav-item svg { width: 17px; height: 17px; opacity: .9; flex: none; }
+
+.console-root .side-foot { margin-top: auto; }
+.console-root .usercard {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.console-root .avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; font-weight: 650; font-size: 13px;
+  color: var(--accent-ink); background: linear-gradient(135deg, var(--accent), #818cf8);
+}
+.console-root .usercard .meta { min-width: 0; }
+.console-root .usercard .name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.console-root .usercard .role { font-size: 11px; color: var(--text-faint); }
+
+/* ---------- Main ---------- */
+.console-root .main { min-width: 0; }
+.console-root .topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,12,16,.7); backdrop-filter: blur(10px);
+}
+.console-root .topbar .crumb { color: var(--text-faint); font-size: 13px; }
+.console-root .topbar .crumb b { color: var(--text); font-weight: 600; }
+.console-root .content { padding: 28px; max-width: 1180px; }
+
+.console-root .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.console-root .page-head h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.02em; }
+.console-root .page-head p { margin: 5px 0 0; color: var(--text-dim); font-size: 13.5px; }
+
+/* ---------- Cards / grid ---------- */
+.console-root .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.console-root .card {
+  display: block; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.console-root a.card:hover { border-color: var(--border-light); transform: translateY(-2px); box-shadow: var(--shadow); }
+.console-root .card h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+.console-root .card p { margin: 0; color: var(--text-dim); font-size: 13px; }
+.console-root .card .ic { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--surface-3); color: var(--accent); margin-bottom: 12px; }
+.console-root .card .ic svg { width: 18px; height: 18px; }
+
+/* Stat cards */
+.console-root .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 26px; }
+.console-root .stat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; position: relative; overflow: hidden;
+}
+.console-root .stat::after { content:""; position:absolute; inset:0 0 auto auto; width:80px; height:80px; background: radial-gradient(circle at 70% 30%, var(--accent-soft), transparent 70%); }
+.console-root .stat .label { color: var(--text-faint); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.console-root .stat .value { font-size: 30px; font-weight: 680; margin-top: 6px; letter-spacing: -0.02em; }
+.console-root .stat .value small { font-size: 14px; color: var(--text-faint); font-weight: 500; }
+.console-root .stat .trend { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+.console-root .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 0; overflow: hidden; }
+.console-root .panel-head { display:flex; align-items:center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.console-root .panel-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.console-root .panel-body { padding: 18px 20px; }
+
+/* ---------- Table ---------- */
+.console-root .table-wrap { overflow-x: auto; }
+.console-root table.grid { width: 100%; border-collapse: collapse; }
+.console-root table.grid th, .console-root table.grid td { text-align: left; padding: 13px 20px; }
+.console-root table.grid th { color: var(--text-faint); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); }
+.console-root table.grid td { border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.console-root table.grid tbody tr { transition: background .12s; }
+.console-root table.grid tbody tr:hover { background: var(--surface-2); }
+.console-root table.grid tbody tr:last-child td { border-bottom: none; }
+.console-root .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+.console-root .cell-name { font-weight: 600; }
+
+/* ---------- Status pill ---------- */
+.console-root .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+.console-root .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent); }
+.console-root .pill.ready { color: var(--green); background: rgba(46,204,113,.1); border-color: rgba(46,204,113,.25); }
+.console-root .pill.pending { color: var(--amber); background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.25); }
+.console-root .pill.error { color: var(--red); background: rgba(255,92,92,.1); border-color: rgba(255,92,92,.25); }
+.console-root .pill.unknown { color: var(--text-dim); background: var(--surface-3); border-color: var(--border-light); }
+
+.console-root .tag { display:inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; background: var(--surface-3); border:1px solid var(--border-light); color: var(--text-dim); }
+.console-root .badge { display:inline-flex; align-items:center; gap:6px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight:600; }
+.console-root .badge.admin { color: var(--accent); background: var(--accent-soft); border:1px solid var(--accent-ring); }
+.console-root .badge.user { color: var(--purple); background: rgba(167,139,250,.12); border:1px solid rgba(167,139,250,.3); }
+
+/* ---------- Buttons / inputs ---------- */
+.console-root button, .console-root .btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent); color: var(--accent-ink); border: none; border-radius: 9px;
+  padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background .15s, opacity .15s, transform .05s;
+}
+.console-root button:hover, .console-root .btn:hover { background: var(--accent-hover); }
+.console-root button:active { transform: translateY(1px); }
+.console-root button:disabled { opacity: .5; cursor: not-allowed; }
+.console-root button.ghost, .console-root .btn.ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border-light); }
+.console-root button.ghost:hover { background: var(--surface-3); }
+.console-root button.danger { background: transparent; color: var(--red); border: 1px solid rgba(255,92,92,.35); padding: 6px 12px; }
+.console-root button.danger:hover { background: rgba(255,92,92,.12); }
+.console-root button.sm { padding: 5px 11px; font-size: 12px; }
+
+.console-root input, .console-root select {
+  background: var(--bg); border: 1px solid var(--border-light); border-radius: 9px;
+  color: var(--text); padding: 8px 12px; font-size: 13px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.console-root input:focus, .console-root select:focus { border-color: var(--accent-ring); box-shadow: 0 0 0 3px var(--accent-soft); }
+.console-root input::placeholder { color: var(--text-faint); }
+
+.console-root .actionbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ---------- States ---------- */
+.console-root .muted { color: var(--text-dim); }
+.console-root .empty { text-align: center; padding: 48px 20px; color: var(--text-dim); }
+.console-root .empty .ic { width: 46px; height: 46px; margin: 0 auto 14px; border-radius: 12px; display:grid; place-items:center; background: var(--surface-3); color: var(--text-faint); }
+.console-root .empty h3 { margin: 0 0 4px; color: var(--text); font-size: 15px; font-weight: 600; }
+.console-root .empty p { margin: 0; font-size: 13px; }
+
+.console-root .alert { display:flex; gap: 10px; align-items:flex-start; padding: 12px 14px; border-radius: 10px; font-size: 13px; }
+.console-root .alert.error { background: rgba(255,92,92,.08); border: 1px solid rgba(255,92,92,.25); color: #ffb4b4; }
+.console-root .alert.info { background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.22); color: #bcd4ff; }
+.console-root .alert svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+
+.console-root .note { font-size: 12.5px; color: var(--text-faint); margin-top: 14px; }
+.console-root .note code { background: var(--surface-3); padding: 1px 6px; border-radius: 5px; font-size: 11.5px; }
+
+.console-root pre.code {
+  background: #0c0e13; border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; overflow: auto; font-size: 12px; color: var(--text-dim);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ---------- Modal ---------- */
+.console-root .modal-overlay { position: fixed; inset: 0; background: rgba(4,6,10,.62); backdrop-filter: blur(3px); display: grid; place-items: center; z-index: 50; padding: 20px; }
+.console-root .modal { width: 100%; max-width: 460px; background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
+.console-root .modal h2 { margin: 0 0 16px; font-size: 16px; font-weight: 650; }
+.console-root .field { margin-bottom: 14px; }
+.console-root .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 6px; font-weight: 500; }
+.console-root .field input, .console-root .field select { width: 100%; }
+.console-root .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.console-root .chip { background: var(--surface-2); border: 1px solid var(--border-light); color: var(--text-dim); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font-weight: 500; }
+.console-root .chip.on { background: var(--accent-soft); border-color: var(--accent-ring); color: #bfe6ff; }
+.console-root .chip:hover { background: var(--surface-3); }
+
+/* ---------- Tabs ---------- */
+.console-root .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.console-root .tab { padding: 9px 14px; font-size: 13.5px; font-weight: 500; color: var(--text-dim); border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-radius: 0; }
+.console-root .tab:hover { color: var(--text); background: none; }
+.console-root .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+/* ---------- Logs ---------- */
+.console-root .logbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.console-root .logview { background: #0a0c11; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; max-height: 560px; overflow: auto; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; line-height: 1.7; }
+.console-root .logline { display: grid; grid-template-columns: 84px 70px 1fr; gap: 12px; padding: 1px 0; white-space: pre-wrap; word-break: break-word; }
+.console-root .logline .lt { color: var(--text-faint); }
+.console-root .logline .ll { font-weight: 600; }
+.console-root .logline .lm { color: var(--text-dim); }
+.console-root .logline.lvl-error .ll, .console-root .logline.deny .lm { color: var(--red); }
+.console-root .logline.lvl-warn .ll { color: var(--amber); }
+.console-root .logline.deny { background: rgba(251,113,133,.07); border-radius: 4px; }
+.console-root .lvl-info .ll { color: var(--blue); }
+
+/* ---------- Policy / key-value ---------- */
+.console-root .kv { display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; font-size: 13px; }
+.console-root .kv dt { color: var(--text-faint); }
+.console-root .kv dd { margin: 0; }
+.console-root .policy-block { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; background: var(--surface-2); }
+.console-root .policy-block h4 { margin: 0 0 10px; font-size: 13px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+.console-root .ep { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px dashed var(--border); font-size: 12.5px; }
+.console-root .ep:first-of-type { border-top: none; }
+.console-root .ep .host { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
+.console-root .rule-allow { color: var(--green); }
+.console-root .rule-deny { color: var(--red); }
+
+/* ---------- Terminal ---------- */
+.console-root .xterm-host { height: 520px; background: #0a0c11; border: 1px solid var(--border); border-radius: 10px; padding: 8px; overflow: hidden; }
+.console-root .xterm-host .xterm { height: 100%; }
+
+@media (max-width: 820px) {
+  .console-root .app { grid-template-columns: 64px 1fr; }
+  .console-root .sidebar .label, .console-root .brand .text, .console-root .nav-label, .console-root .usercard .meta { display: none; }
+  .console-root .brand { justify-content: center; padding: 8px 0 16px; }
+  .console-root .nav-item { justify-content: center; padding: 11px; }
+  .console-root .usercard { justify-content: center; padding: 8px; }
+}
+
+/* ---------- Auth (OIDC) ---------- */
+.console-root .auth-status { display: flex; align-items: center; gap: 12px; }
+.console-root .auth-status .user { color: var(--text); font-size: 13px; font-weight: 600; }
+.console-root .btn.signout { padding: 6px 12px; font-size: 12.5px; }
+
+.console-root .signin-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg); background-image: var(--bg-grad); padding: 24px;
+}
+.console-root .signin-card {
+  display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 40px 44px; max-width: 380px; width: 100%;
+}
+.console-root .signin-card .logo {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 16px;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-ring);
+}
+.console-root .signin-card h1 { font-size: 20px; font-weight: 700; color: var(--text); }
+.console-root .signin-card p { color: var(--text-dim); font-size: 13.5px; margin-bottom: 4px; }
+.console-root .signin-card .btn.primary { width: 100%; justify-content: center; padding: 10px; }
+.console-root .signin-back { color: var(--text-faint); font-size: 12.5px; text-decoration: none; margin-top: 4px; }
+.console-root .signin-back:hover { color: var(--text); }

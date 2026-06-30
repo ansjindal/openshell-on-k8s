@@ -1,0 +1,42 @@
+---
+# Host-level gVisor: install runsc and register it with k3s's containerd.
+# Runs BEFORE k3s — the containerd drop-in is read on k3s first-start, so no
+# restart is needed on a fresh node (the handler covers re-runs).
+- name: gVisor host prep
+  when: gvisor_enabled | bool
+  block:
+    - name: Install gVisor apt keyring
+      ansible.builtin.shell: |
+        set -euo pipefail
+        curl -fsSL https://gvisor.dev/archive.key \
+          | gpg --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg
+      args:
+        executable: /bin/bash
+        creates: /usr/share/keyrings/gvisor-archive-keyring.gpg
+
+    - name: Add gVisor apt repo
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }} signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main"
+        filename: gvisor
+        state: present
+
+    - name: Install runsc
+      ansible.builtin.apt:
+        name: runsc
+        update_cache: true
+        state: present
+
+    - name: Ensure k3s containerd drop-in dir exists
+      ansible.builtin.file:
+        path: /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d
+        state: directory
+        mode: "0755"
+
+    - name: Register runsc runtime with containerd
+      ansible.builtin.copy:
+        dest: /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d/gvisor.toml
+        mode: "0644"
+        content: |
+          [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runsc]
+            runtime_type = "io.containerd.runsc.v1"
+      notify: restart k3s if running

@@ -1,0 +1,100 @@
+Web search was one tool. **Skills** (OpenClaw plugins) give an agent many — a weather lookup, a domain workflow, your own code. The platform point isn't just *adding* skills; it's that every skill stays **governed**: where it comes from, whether it's enabled, and what it can reach are all things you control. The production pattern: skills enter through **one registry you run in the cluster**, and the agent's only install egress is that registry — ClawHub and public npm are denied at the seal.
+
+## The locked default — registry only
+
+A bare `openshell sandbox create` gives `agent-0` the gateway's **generic default policy** — which has *no* in-cluster-registry rule at all, so every `npm` and `openclaw plugins` call is denied at the proxy (`policy_denied`). The first move is to give it the **locked skills posture**: a policy whose *only* install egress is your in-cluster [Verdaccio](https://verdaccio.org) registry (`registry.openshell.svc.cluster.local:4873`, the `17-skill-registry` role).
+
+We do this with a **policy YAML** and `openshell policy set` (not `policy update --add-endpoint`) for a concrete reason: scoped npm names (`@workshop/x`) are fetched URL-encoded (`/@workshop%2Fx`), and the proxy rejects that `%2F` unless the endpoint sets `allow_encoded_slash: true` — a field that **only** lives in policy YAML. So apply the locked policy (the lab shell starts in the repo root):
+
+```bash
+openshell policy set agent-0 --policy manifests/openclaw/policies/skills-locked.policy.yaml --wait
+```
+
+Its single rule — read [`skills-locked.policy.yaml`](https://github.com/ansjindal/openshell-on-k8s/blob/main/manifests/openclaw/policies/skills-locked.policy.yaml):
+
+```yaml
+network_policies:
+  in-cluster-registry:
+    endpoints:
+      - { host: registry.openshell.svc.cluster.local, port: 4873, access: full, protocol: rest, allow_encoded_slash: true }
+    binaries: [ {path: /usr/bin/npm}, {path: /usr/local/bin/npm}, {path: /usr/bin/node}, {path: /usr/local/bin/node} ]
+```
+
+Confirm the seal — ClawHub is **denied** (the proxy refuses to tunnel to `clawhub.ai`):
+
+```bash
+openshell sandbox exec -n agent-0 -- openclaw plugins search hello
+```
+
+Verdaccio uplinks npmjs server-side and caches transitive deps, so this one rule is enough to install **any** `@workshop` skill — the agent never reaches public npm directly. To understand the alternative we're locking *out*, let's open a door to **ClawHub**, OpenClaw's public registry, and govern pulling from it.
+
+## 1. Open a temporary ClawHub door
+
+ClawHub lives at `clawhub.ai` + `hub.openclaw.ai`, and a ClawHub plugin's *own* dependencies install **directly** from public npm. Swap in the policy that adds all three on top of the registry — [`skills-clawhub.policy.yaml`](https://github.com/ansjindal/openshell-on-k8s/blob/main/manifests/openclaw/policies/skills-clawhub.policy.yaml):
+
+```bash
+openshell policy set agent-0 --policy manifests/openclaw/policies/skills-clawhub.policy.yaml --wait
+```
+
+Now search and install — the hello-world skill and its deps resolve, and OpenClaw links the `openclaw` SDK from the image:
+
+```bash
+openshell sandbox exec -n agent-0 -- openclaw plugins search hello
+openshell sandbox exec -n agent-0 -- openclaw plugins install clawhub:openclaw-hello-world
+```
+
+<Callout type="note" title="Why the npm endpoint needs allow_encoded_slash">
+The added <code>npm-registry</code> rule (<code>registry.npmjs.org</code>) carries <code>protocol: rest</code> + <code>allow_encoded_slash: true</code> for the same reason as the in-cluster one: a plugin can pull <strong>scoped</strong> deps (e.g. <code>@sinclair/typebox</code>), which npm fetches as <code>/@sinclair%2Ftypebox</code>. Without the flag the host is allowed but the request is denied by the proxy's strict path parser and the install hangs at <em>"Installing plugin dependencies"</em>. This is exactly why the grant lives in the policy YAML and isn't an <code>--add-endpoint</code>.
+</Callout>
+
+## 2. Gate ClawHub package-by-package (L7)
+
+`access: full` lets the agent install **any** ClawHub package. The egress proxy can do better: in `rest` + `enforce` mode it terminates TLS and evaluates the HTTP **path**, so you vet ClawHub one package at a time. This part *is* incremental, so use `openshell policy update` on the live policy — switch ClawHub to enforced and block one package you don't trust:
+
+```bash
+openshell policy update agent-0 --remove-endpoint 'clawhub.ai:443'
+openshell policy update agent-0 --add-endpoint 'clawhub.ai:443:read-only:rest:enforce' --binary /usr/bin/node --binary /usr/local/bin/node
+openshell policy update agent-0 --add-deny 'clawhub.ai:443:GET:/api/v1/packages/badpkg' --add-deny 'clawhub.ai:443:GET:/api/v1/packages/badpkg/**'
+```
+
+It's a **blocklist** — deny rules win over allow rules, so `badpkg` is refused while the rest of ClawHub still installs. Every decision lands on the [Live](/learn/live) policy log with the rule that decided it, the exact package URL, and the binary.
+
+## 3. Publish your own skill to the in-cluster registry
+
+The production move: skills come from your **in-cluster registry**, under the `@workshop` npm scope. First authenticate the sandbox to it — create the publish user and write `/sandbox/.npmrc`. It's one line (`sandbox exec` rejects newlines), so `node` creates the user from inside the pod and `printf` writes the file:
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'R=registry.openshell.svc.cluster.local:4873; node -e "const h=require(\"http\"),b=JSON.stringify({name:\"workshop\",password:\"wad26-skills\"});const q=h.request(\"http://$R/-/user/org.couchdb.user:workshop\",{method:\"PUT\",headers:{\"content-type\":\"application/json\",\"content-length\":Buffer.byteLength(b)}},r=>r.on(\"end\",()=>console.log(\"registry user:\",r.statusCode)));q.write(b);q.end();"; printf "registry=http://%s/\n@workshop:registry=http://%s/\n//%s/:_auth=%s\n" "$R" "$R" "$R" "$(printf workshop:wad26-skills | base64)" > /sandbox/.npmrc; echo "wrote /sandbox/.npmrc"'
+```
+
+Scaffold a skill, build it, give it a `@workshop` name, and publish. The SDK build runs `esbuild`, so install into a **clean** `node_modules` (a partial install left from a denied run leaves a broken `esbuild` binary → `EFAULT`):
+
+```bash
+openshell sandbox exec -n agent-0 -- openclaw plugins init my-skill --name "My Skill" --directory /sandbox/myskill
+openshell sandbox exec -n agent-0 -- sh -c 'cd /sandbox/myskill && rm -rf node_modules package-lock.json && npm install && npm run plugin:build && npm pkg set name=@workshop/myskill && npm pkg delete private && npm publish'
+```
+
+You'll see `+ @workshop/myskill@0.1.0` — published to your registry. Now install it by name, the way any agent would, no ClawHub round-trip:
+
+```bash
+openshell sandbox exec -n agent-0 -- openclaw plugins install @workshop/myskill --force
+```
+
+## 4. Lock the door again
+
+Return to the shipped posture — the registry is the **only** skill source. Re-apply the locked policy, which drops ClawHub *and* direct npm in one step:
+
+```bash
+openshell policy set agent-0 --policy manifests/openclaw/policies/skills-locked.policy.yaml --wait
+```
+
+Prove the boundary — ClawHub is gone, your registry still serves:
+
+```bash-ref
+openshell sandbox exec -n agent-0 -- openclaw plugins install clawhub:openclaw-hello-world   # denied at the proxy
+openshell sandbox exec -n agent-0 -- openclaw plugins install @workshop/myskill --force      # OK, from your registry
+```
+
+<Callout type="rh" title="A supply chain you can prove">
+A skill is gated three ways — its registry, its enablement, and its egress — and every byte it moves is on the audit log. Flipping between two committed policy files (<code>skills-locked</code> ↔ <code>skills-clawhub</code>) is the whole story: the door is open only while a reviewed policy says so, and locking it back down is one command. That's the difference between an agent that's <em>extensible</em> and one that's extensible <em>and</em> governable.
+</Callout>

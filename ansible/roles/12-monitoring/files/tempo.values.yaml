@@ -1,0 +1,12 @@
+# Grafana Tempo (monolithic) — distributed tracing backend.
+# Receives OTLP from in-cluster apps (e.g. the Incident Desk backend) on 4317/4318 and is wired
+# into Grafana as the "Tempo" datasource (see grafana-datasource-tempo.yaml).
+tempo:
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+  # OTLP (grpc 4317 / http 4318), jaeger and zipkin receivers are enabled by the chart defaults.
+  metricsGenerator:
+    enabled: false

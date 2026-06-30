@@ -1,0 +1,91 @@
+# Values for kube-prometheus-stack (release name: kps). Single-node adapted.
+# When grafana_oidc_enabled: Grafana is ClusterIP (exposed via the Envoy
+# /grafana route), served under a sub-path, with Keycloak SSO. Otherwise it's a
+# plain NodePort with local admin login.
+crds:
+  enabled: true
+
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    resources:
+      requests:
+        cpu: 200m
+        memory: 700Mi
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+grafana:
+  enabled: true
+{% if grafana_oidc_enabled | bool %}
+  # ClusterIP — exposed publicly via the Envoy /grafana route, not a NodePort.
+  service:
+    type: ClusterIP
+  # Client secret comes from the grafana-oauth Secret (GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET).
+  envFromSecret: grafana-oauth
+  grafana.ini:
+    server:
+      root_url: "{{ grafana_url }}"
+      serve_from_sub_path: true
+    auth.generic_oauth:
+      enabled: true
+      name: Keycloak
+      client_id: grafana
+      # "groups" is not a Keycloak client scope; the groups claim comes from an
+      # always-on client mapper, so request only openid/email/profile.
+      scopes: "openid email profile"
+      # auth_url is browser-facing (public host, behind Pomerium — the browser has a session).
+      # token_url/api_url are SERVER-SIDE from the in-cluster Grafana pod, so they must hit the
+      # in-cluster Keycloak Service directly — the public host's Pomerium 302s server fetches
+      # ("Failed to get token from provider").
+      auth_url: "{{ keycloak_issuer_url }}/protocol/openid-connect/auth"
+      token_url: "{{ keycloak_internal_issuer_url }}/protocol/openid-connect/token"
+      api_url: "{{ keycloak_internal_issuer_url }}/protocol/openid-connect/userinfo"
+      role_attribute_path: "contains(groups[*], '{{ keycloak_admin_role }}') && 'Admin' || 'Viewer'"
+      login_attribute_path: preferred_username
+      email_attribute_path: email
+{% else %}
+  service:
+    type: NodePort
+    nodePort: 30030
+{% endif %}
+  persistence:
+    enabled: true
+    type: pvc
+    storageClassName: local-path
+    accessModes: ["ReadWriteOnce"]
+    size: 2Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+      label: grafana_dashboard
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100

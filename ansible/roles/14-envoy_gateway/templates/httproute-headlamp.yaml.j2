@@ -1,0 +1,33 @@
+# /headlamp → Headlamp (serves under its base-url). Headlamp only answers under
+# the trailing-slash path, so redirect the exact /headlamp → /headlamp/.
+# In the headlamp namespace (co-located with the Service) → no ReferenceGrant.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: headlamp
+  namespace: {{ headlamp_namespace }}
+spec:
+  parentRefs:
+    - name: fleet-gw
+      namespace: {{ envoy_gateway_ns }}
+      sectionName: web
+  rules:
+    - matches:
+        - path: { type: Exact, value: "{{ headlamp_path }}" }
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            path: { type: ReplaceFullPath, replaceFullPath: "{{ headlamp_path }}/" }
+            statusCode: 302
+    - matches:
+        - path: { type: PathPrefix, value: "{{ headlamp_path }}" }
+      filters:
+        # TLS terminates at the edge; tell Headlamp the original scheme is https
+        # so it builds an https OIDC redirect_uri (matches the registered URI).
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - { name: X-Forwarded-Proto, value: "https" }
+      backendRefs:
+        - name: headlamp
+          port: 80

@@ -1,0 +1,34 @@
+You've gone end to end: stood up the stack (or confirmed it), created sandboxes, exec'd into one, traced inference through `inference.local`, and run tasks across a fleet. Here's where to take it next.
+
+## Scale out to multiple nodes
+
+This guide runs on a single k3s node, but nothing in the design is single-node. The agent-sandbox controller and the OpenShell gateway schedule onto whatever cluster they're given. Join more nodes to k3s and your sandboxes spread across them — the gateway, the CRDs, and `inference.local` all work the same.
+
+## Turn on the monitoring stack
+
+The provisioner ships an optional monitoring toggle (Prometheus + Grafana, and logging). Enable it to watch sandbox resource use, model latency through LiteLLM, and policy decisions over time — useful the moment you have more than a couple of agents.
+
+## Tighten the guardrails with Kyverno
+
+If you didn't enable it, add **Kyverno** and apply the `require-gvisor` policy so no pod can land in the sandbox namespace without the `gvisor` RuntimeClass. From there you can layer more admission policies — image provenance, resource limits, allowed namespaces.
+
+## Run a different agent
+
+OpenClaw is the default, but a sandbox is just a pod running an image. Point the gateway at a different sandbox image, or override the agent's entrypoint, to run another agent under the same isolation and inference guarantees:
+
+- Swap the sandbox image (the gateway's default is `ghcr.io/nvidia/openshell-community/sandboxes/openclaw:latest`).
+- Override the agent command (`AGENT_CMD`) to run your own harness inside the same sandbox.
+
+The platform — gVisor, the supervisor, the policy proxy, `inference.local` — stays exactly the same.
+
+## Resources
+
+- **agent-sandbox** — the Kubernetes primitive everything sits on: [github.com/kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox)
+- **gVisor** — the user-space kernel providing the isolation: [gvisor.dev](https://gvisor.dev)
+- **LiteLLM** — the OpenAI-compatible model gateway: [docs.litellm.ai](https://docs.litellm.ai)
+- **Kyverno** — Kubernetes-native policy: [kyverno.io](https://kyverno.io)
+- **k3s** — lightweight upstream Kubernetes: [k3s.io](https://k3s.io)
+
+<Callout type="tip" title="The takeaway">
+Sandboxed agents on Kubernetes are just three ideas stacked: a CR that becomes a pod, a runtime that isolates it, and a proxy that holds the secrets it shouldn't. Once that clicks, the rest is ordinary Kubernetes.
+</Callout>

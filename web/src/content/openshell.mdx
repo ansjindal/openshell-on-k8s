@@ -1,0 +1,24 @@
+**OpenShell** is what makes "run an autonomous agent *safely*" real. The pitch in one line: **to be useful, agents need access; to be safe, they need Zero Trust** — and OpenShell is the runtime that gives you both. It's not a single process; it's a gateway plus a set of guardrails, sitting on top of the open-source `agent-sandbox` Kubernetes primitive.
+
+<OpenShellRuntime />
+
+## The four pieces
+
+OpenShell splits into an **agent path** (the components that make the agent run) and a **guardrail path** (the components that keep it bounded).
+
+- **Gateway** — the control plane. A gRPC API that allocates sandboxes, mints each one a scoped identity, hosts the policy engine and the inference router, and exposes the operator-facing `openshell` CLI. It's reached from the VM on NodePort `30808`.
+- **Compute driver** — the part of the gateway that speaks Kubernetes. It watches the `agents.x-k8s.io` Sandbox CRD and turns gateway requests into cluster objects, so OpenShell doesn't reinvent scheduling — it rides on the `agent-sandbox` controller.
+- **Supervisor** — sideloaded into *every* sandbox as an init-container. It sets up the agent's isolated network namespace, exchanges a bootstrap token for a scoped JWT, relays `exec`/SSH, and enforces the sandbox-side L7 policy proxy.
+- **Inference router** — the privacy layer. Sandboxes call one URL, `https://inference.local`, and the router injects the real model credential on the way to LiteLLM. Change the model once and it propagates to every managed sandbox.
+
+## Why a control plane at all?
+
+You *could* hand-write `Sandbox` CRs with `kubectl`. The gateway exists so you don't have to: it gives every sandbox a consistent identity, a policy, and credential-isolated inference without you wiring those up by hand. The CLI is the friendly front door:
+
+```bash
+openshell sandbox list
+```
+
+<Callout type="tip" title="Two front doors, one cluster">
+Anything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The gateway control plane lives in <code>openshell</code>; the agent sandboxes it creates live in <code>openshell-sandboxes</code>. You can always drop to <code>kubectl -n openshell-sandboxes get sandboxes,pods</code> to see what the gateway did.
+</Callout>

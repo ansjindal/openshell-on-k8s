@@ -1,0 +1,19 @@
+# Headlamp (Kubernetes dashboard) with Keycloak OIDC, served under a sub-path
+# behind the single public host (Envoy /headlamp route). Users log in via
+# Keycloak; Headlamp forwards their token to the apiserver, so OIDC RBAC applies
+# (openshell-admin → cluster-admin, openshell-user → view).
+config:
+  baseURL: "{{ headlamp_path }}"
+  oidc:
+    clientID: headlamp
+    clientSecret: "{{ headlamp_client_secret }}"
+    issuerURL: "{{ keycloak_issuer_url }}"
+    # Headlamp prepends "openid" itself. Do NOT request "groups" — it's not a
+    # Keycloak client scope (Keycloak rejects it); the groups claim is emitted by
+    # an always-on client mapper regardless of requested scopes.
+    scopes: "profile email"
+
+# ClusterIP only — exposed publicly via the Envoy /headlamp route, not a NodePort.
+service:
+  type: ClusterIP
+  port: 80

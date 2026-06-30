@@ -1,0 +1,48 @@
+You've driven the gateway from the CLI all lesson. The same gateway has a **browser console** — the embedded **OpenShell Console**, served at `<your site URL>/console`. It isn't a separate system: a thin BFF speaks gRPC to the *same* gateway, so it respects the same identity and policy. Everything you did with `openshell …` you can see and do here, with a GUI.
+
+## Open it
+
+The console is part of the teaching site, behind the one public URL:
+
+```text
+https://<your-launchpad-host>/console
+```
+
+With SSO on, log in via Keycloak; on a bare lab box (no SSO) it's open.
+
+<Callout type="note" title="Your Keycloak logins — and how to get the passwords">
+Two accounts exist on every SSO-enabled box (passwords are generated per box, kept in <code>.sso-secrets.env</code>):
+
+- **`demo`** — the workshop login for the **Console and Grafana** (it carries the `openshell-admin` role → create/delete). Password: <code>KC_DEMO_PASSWORD</code>.
+- **`admin`** — the **Keycloak admin console** itself (manage realms/users). Password: <code>KC_ADMIN_PASSWORD</code>.
+
+Print them from the lab shell on the right:
+
+```bash
+sudo grep KC_ ~/openshell-on-k8s/.sso-secrets.env
+```
+</Callout>
+
+## If the `demo` sign-in is rejected
+
+Keycloak imports its realm **once** and won't overwrite an existing one. So if the box's `.sso-secrets.env` was regenerated after first boot, the stored `demo` password and the file can drift apart — and sign-in fails with the documented password. One command reconciles it (re-applies the realm and forces `demo`'s password back to `KC_DEMO_PASSWORD`); then sign in again:
+
+```bash-ref
+ANSIBLE_TAGS=keycloak ./scripts/setup.sh
+```
+
+You normally **don't** need this — a fresh launch wires `demo` correctly. Run it only when SSO sign-in rejects the documented password. It's safe to re-run and touches nothing but the Keycloak step (the `keycloak` tag), so it's quick.
+
+## What's in it
+
+- **Sandboxes** — every agent the gateway manages (`agent-0`, …), its phase and the pod behind it, with actions to **create**, open a **shell**, tail **logs**, or **delete**. The GUI of `openshell sandbox list / create / exec / logs` and `./scripts/fleet`.
+- **Policies** — a sandbox's effective egress policy, in a panel — the [Seal](/learn/policy) lesson, point-and-click.
+- **Inference / Providers** — the active model + provider the gateway routes to — the [Inference](/learn/inference) lesson's `openshell inference get / set`, as a form.
+
+## Same gateway, same rules
+
+The console is not a backdoor. It connects to the gateway over gRPC — the site's BFF holds that connection, so the **browser never receives cluster credentials** — and every action runs through the same supervisor + policy path as the CLI. A sandbox you create in the console is identical to one from `openshell sandbox create`: same gVisor seal, same egress policy, same audit log.
+
+<Callout type="note" title="CLI and console are one control plane">
+Create a sandbox in the console, then run <code>openshell sandbox list</code> in the lab shell — it's there. Two faces of the same gateway; use whichever fits the moment.
+</Callout>

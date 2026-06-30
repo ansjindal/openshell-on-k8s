@@ -1,0 +1,41 @@
+---
+# Deploy a private npm registry (Verdaccio) in-cluster as the agents' single, governed
+# skill source, and provision the publish user. Reachable at
+# registry.{{ skill_registry_namespace }}.svc.cluster.local:4873. Agents install scoped
+# skills from it (@workshop/*); see web/src/content/skills.mdx for the per-agent policy
+# (the registry endpoint needs protocol: rest + allow_encoded_slash for scoped names).
+- name: Skill registry — Verdaccio (PVC + ConfigMap + Deployment + Service)
+  when: skill_registry_enabled | bool
+  block:
+    - name: Stage the registry manifest
+      ansible.builtin.copy:
+        src: registry.yaml
+        dest: /tmp/skill-registry.yaml
+        mode: "0644"
+
+    - name: Apply the registry manifest
+      ansible.builtin.command: kubectl apply -f /tmp/skill-registry.yaml
+      register: reg_apply
+      changed_when: "'created' in reg_apply.stdout or 'configured' in reg_apply.stdout"
+
+    - name: Wait for the registry to roll out
+      ansible.builtin.command: >
+        kubectl -n {{ skill_registry_namespace }} rollout status deploy/registry --timeout=150s
+      changed_when: false
+
+    - name: Provision the publish user (from inside the registry pod — it reaches localhost:4873)
+      ansible.builtin.shell: |
+        kubectl -n {{ skill_registry_namespace }} exec deploy/registry -- node -e '
+          const http=require("http");
+          const b=JSON.stringify({name:"{{ skill_registry_user }}",password:"{{ skill_registry_password }}"});
+          const r=http.request("http://localhost:4873/-/user/org.couchdb.user:{{ skill_registry_user }}",
+            {method:"PUT",headers:{"content-type":"application/json","content-length":Buffer.byteLength(b)}},
+            res=>{console.log("registry user status",res.statusCode);});
+          r.on("error",e=>console.log("ERR",e.message));r.write(b);r.end();'
+      register: reg_user
+      changed_when: "'201' in reg_user.stdout"
+      failed_when: false
+
+    - name: Registry ready
+      ansible.builtin.debug:
+        msg: "Skill registry at registry.{{ skill_registry_namespace }}.svc.cluster.local:4873 (publish user '{{ skill_registry_user }}'; status: {{ reg_user.stdout | default('?') | trim }})"

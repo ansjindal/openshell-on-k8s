@@ -1,0 +1,8 @@
+# Overlay: schedule sandbox pods onto the gVisor (runsc) RuntimeClass.
+# Apply as a second -f after values.yaml (the gateway role does this when
+# gvisor_enabled). Requires runsc + the gvisor RuntimeClass on the nodes.
+#
+# defaultRuntimeClassName is applied to any sandbox whose CreateSandbox request
+# doesn't specify one — i.e. the whole fleet runs under gVisor.
+server:
+  defaultRuntimeClassName: gvisor

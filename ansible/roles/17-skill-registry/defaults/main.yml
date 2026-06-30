@@ -1,0 +1,6 @@
+---
+# Private in-cluster skill registry (Verdaccio) — the governed source agents install skills from.
+skill_registry_enabled: true
+skill_registry_namespace: "{{ openshell_namespace | default('openshell') }}"
+skill_registry_user: workshop
+skill_registry_password: wad26-skills

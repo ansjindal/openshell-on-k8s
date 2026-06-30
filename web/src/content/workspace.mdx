@@ -1,0 +1,39 @@
+An agent's personality isn't a settings panel — it's **Markdown files in its workspace**. Each session the agent "wakes up," reads them, and acts accordingly: no system-prompt black box, just text you can read and edit. A fresh `agent-0` starts **blank** (no persona) — let's give it one.
+
+## The files
+
+The agent reads these from `/sandbox/.openclaw/workspace/`:
+
+| File | What it is |
+|---|---|
+| `IDENTITY.md` | *Who* the agent is — name, role, vibe, emoji |
+| `SOUL.md` | *How* it behaves — values, boundaries, tone (the closest thing to an editable system prompt) |
+| `BOOTSTRAP.md` | What it should do on first run / at the start of a session |
+
+## Give agent-0 a persona
+
+`openshell sandbox exec` rejects multi-line arguments, so write each file from a **single line** with `printf` — the `\n` are interpreted by `printf`, not sent as real newlines. An `IDENTITY.md`:
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'mkdir -p /sandbox/.openclaw/workspace && printf "%s\n" "Name: Sandy" "Role: A k3s-native SRE sidekick — lives in a gVisor pod, reads telemetry, fixes things." "Vibe: Sharp and pragmatic. Helps first, explains second." "Emoji: 🦾" > /sandbox/.openclaw/workspace/IDENTITY.md'
+```
+
+…and a `SOUL.md` with its values and boundaries:
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'printf "%s\n" "## Core Truths" "- Be genuinely helpful, not performatively helpful." "- Have opinions; be resourceful before asking." "- You run on a real cluster — when something is cluster-shaped, lean in." "" "## Boundaries" "- Never run a destructive command without confirming first." "- Read before you write." > /sandbox/.openclaw/workspace/SOUL.md'
+```
+
+Confirm they landed:
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'ls -la /sandbox/.openclaw/workspace; echo ---; cat /sandbox/.openclaw/workspace/IDENTITY.md'
+```
+
+## Customize it
+
+These files are *yours to edit* — change the name, sharpen the boundaries, add house rules. The agent re-reads its workspace each session, so an edit takes effect on the next run (no redeploy, no config panel). The same per-agent files are how the Part III fleet gives each specialist its own personality and scope — there are ready-made `IDENTITY.md` / `SOUL.md` for the logs / metrics / traces / events / analyst roles under `manifests/openclaw/fleet-roles/` you can crib from.
+
+<Callout type="note" title="Workspace = the agent's memory">
+Because the persona is plain files in the workspace, an agent can even edit <em>its own</em> — "open your SOUL.md and add a rule: always confirm before deleting" — and it persists for the life of the sandbox. The file is the source of truth, not a hidden prompt.
+</Callout>

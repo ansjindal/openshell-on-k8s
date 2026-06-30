@@ -1,0 +1,9 @@
+---
+# Create the initial sandbox fleet declaratively (opt-in). OpenShell has no
+# declarative sandbox API, so this drives the `openshell` CLI — the same calls
+# scripts/fleet makes, but as a repeatable playbook step. scripts/fleet remains
+# for interactive runtime ops (status / task / scale down / logs).
+sandboxes_enabled: false
+sandbox_provider: fleet         # gateway provider to attach (created by 10-inference_routing)
+sandbox_name_prefix: agent
+# fleet_size (how many to create) comes from inventory/group_vars/all.yml.

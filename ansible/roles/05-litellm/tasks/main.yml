@@ -1,0 +1,90 @@
+---
+# LiteLLM proxy: the OpenShell gateway's inference backend. Creates the secret
+# from vars, then installs the official LiteLLM Helm chart.
+- name: LiteLLM
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    # Keyless bring-up is supported on purpose: the whole stack should come up
+    # without an upstream key so you can deploy first and set the key later (via
+    # the UI / by editing .env and re-running). So DON'T hard-fail on an empty
+    # key — deploy LiteLLM with a placeholder; model calls 401 until a real key
+    # is set, then a re-run (below) restarts LiteLLM to pick it up.
+    - name: Decide the effective upstream key (placeholder when empty)
+      ansible.builtin.set_fact:
+        effective_upstream_api_key: "{{ upstream_api_key if (upstream_api_key | default('') | string | length) > 0 else 'PLACEHOLDER-no-key-set-yet' }}"
+      no_log: true
+
+    - name: Warn when bringing up LiteLLM without a real key
+      ansible.builtin.debug:
+        msg: >
+          upstream_api_key is empty — LiteLLM deploys with a placeholder so the full
+          stack comes up. Model calls will 401 until you set a real key: put
+          OPENSHELL_API_KEY in .env and re-run ./scripts/setup.sh (this restarts
+          LiteLLM), or update the litellm-secrets Secret and
+          `kubectl -n {{ litellm_namespace }} rollout restart deploy/litellm`.
+      when: (upstream_api_key | default('') | string | length) == 0
+
+    - name: Note whether LiteLLM is already deployed (re-run -> must restart for key change)
+      ansible.builtin.shell: |
+        kubectl -n {{ litellm_namespace }} get deploy litellm >/dev/null 2>&1 && echo yes || echo no
+      args: { executable: /bin/bash }
+      register: litellm_already_deployed
+      changed_when: false
+
+    - name: Ensure litellm namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ litellm_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Read existing master key (reuse across runs)
+      ansible.builtin.shell: |
+        kubectl -n {{ litellm_namespace }} get secret litellm-secrets \
+          -o jsonpath='{.data.LITELLM_MASTER_KEY}' 2>/dev/null | base64 -d || true
+      args: { executable: /bin/bash }
+      register: existing_master_key
+      changed_when: false
+
+    - name: Determine master key (reuse or generate)
+      ansible.builtin.set_fact:
+        litellm_master_key: "{{ existing_master_key.stdout if (existing_master_key.stdout | length) > 0 else 'sk-' + (lookup('ansible.builtin.password', '/dev/null length=48 chars=hexdigits') | lower) }}"
+      no_log: true
+
+    - name: Create/update litellm-secrets (master key + all model API keys)
+      ansible.builtin.shell: |
+        kubectl -n {{ litellm_namespace }} create secret generic litellm-secrets \
+          --from-literal=LITELLM_MASTER_KEY='{{ litellm_master_key }}' \
+          --from-literal=UPSTREAM_API_KEY='{{ effective_upstream_api_key }}' \
+          {% for k, v in litellm_extra_credentials.items() %}--from-literal={{ k }}='{{ v }}' {% endfor %} \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+
+    - name: Render LiteLLM chart values (multi-model model_list)
+      ansible.builtin.template:
+        src: values.yaml.j2
+        dest: /tmp/litellm-values.yaml
+        mode: "0644"
+
+    - name: Install LiteLLM (official Helm chart)
+      ansible.builtin.shell: |
+        helm upgrade --install litellm {{ litellm_chart }} \
+          {{ ('--version ' + litellm_chart_version) if (litellm_chart_version | length) > 0 else '' }} \
+          --namespace {{ litellm_namespace }} \
+          -f /tmp/litellm-values.yaml --wait --timeout 6m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    # The API key is consumed from the litellm-secrets Secret via an env ref, so a
+    # content-only change to that Secret does NOT roll the pod. On a re-run (the
+    # deploy already existed) restart it so an edited key actually takes effect.
+    # Skipped on first install — helm --wait already started pods with the current key.
+    - name: Restart LiteLLM to pick up an updated key (re-runs only)
+      ansible.builtin.shell: |
+        kubectl -n {{ litellm_namespace }} rollout restart deploy/litellm
+        kubectl -n {{ litellm_namespace }} rollout status deploy/litellm --timeout=120s
+      args: { executable: /bin/bash }
+      when: litellm_already_deployed.stdout == "yes"
+      changed_when: true

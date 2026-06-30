@@ -1,0 +1,27 @@
+# The Gateway. One HTTP listener (web) carries all path-routed UIs (/auth,
+# /grafana, /headlamp); the gRPC listener carries the OpenShell gateway.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: fleet-gw
+  namespace: {{ envoy_gateway_ns }}
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: web            # single public host → path routes
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: grpc           # OpenShell gateway (gRPC / h2c)
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: fleet-envoy

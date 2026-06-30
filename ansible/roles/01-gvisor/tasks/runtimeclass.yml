@@ -1,0 +1,22 @@
+---
+# Applied on the server AFTER k3s is up (imported from site.yml pre_tasks).
+- name: Copy gVisor RuntimeClass manifest
+  ansible.builtin.copy:
+    src: runtimeclass.yaml
+    dest: /tmp/gvisor-runtimeclass.yaml
+    mode: "0644"
+
+# k3s flaps its API server during first-boot bootstrap — it can pass /readyz once (the gate in
+# site.yml) and then bounce again moments later, so the apply hits "connection refused". Retry
+# through the flap rather than trusting a single readiness check. --validate=false skips the
+# client-side openapi download (the exact call that failed: "failed to download openapi … 6443:
+# connect: connection refused") — the manifest is a trivial, known-good RuntimeClass.
+- name: Apply gVisor RuntimeClass
+  ansible.builtin.command: kubectl apply --validate=false -f /tmp/gvisor-runtimeclass.yaml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: rc_apply
+  changed_when: "'created' in rc_apply.stdout or 'configured' in rc_apply.stdout"
+  retries: 30
+  delay: 5
+  until: rc_apply.rc == 0

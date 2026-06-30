@@ -1,0 +1,40 @@
+---
+# Kyverno + sandbox guardrails. require-gvisor is applied only when gvisor_enabled
+# (otherwise it would reject every sandbox pod).
+- name: Kyverno
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Add Kyverno helm repo
+      ansible.builtin.shell: |
+        helm repo add kyverno https://kyverno.github.io/kyverno/ && helm repo update kyverno
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Install Kyverno
+      ansible.builtin.shell: |
+        helm upgrade --install kyverno {{ kyverno_chart }} \
+          --version {{ kyverno_chart_version }} \
+          --namespace kyverno --create-namespace --wait --timeout 6m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Copy guardrail policies
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/tmp/kyverno-{{ item }}"
+        mode: "0644"
+      loop:
+        - sandbox-guardrails.yaml
+        - require-gvisor.yaml
+
+    - name: Apply base guardrails
+      ansible.builtin.command: kubectl apply -f /tmp/kyverno-sandbox-guardrails.yaml
+      register: kg
+      changed_when: "'created' in kg.stdout or 'configured' in kg.stdout"
+
+    - name: Apply require-gvisor rule (gVisor enabled)
+      ansible.builtin.command: kubectl apply -f /tmp/kyverno-require-gvisor.yaml
+      when: gvisor_enabled | bool
+      register: kgg
+      changed_when: "'created' in kgg.stdout or 'configured' in kgg.stdout"

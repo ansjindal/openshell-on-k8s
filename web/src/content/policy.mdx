@@ -1,0 +1,40 @@
+A sandbox isn't only kernel-isolated (the gVisor story from [Security](/learn/security)) — its **network** is governed too. Every byte an agent sends out passes through the OpenShell supervisor's **egress proxy**, which enforces a per-sandbox **policy**: deny-by-default, with a short allow-list. That policy *is* the seal you felt in [Into the Sandbox](/learn/into-the-sandbox) — `inference.local` worked, and nothing else did.
+
+## See the policy
+
+Every sandbox has an effective policy. Ask the gateway for `agent-0`'s:
+
+```bash
+openshell policy get agent-0
+```
+
+That shows its version, hash, and source. For the actual rules — which hosts and binaries are allowed — print the full payload:
+
+```bash
+openshell policy get agent-0 --full -o json
+```
+
+Each entry is a **network rule**: a `host:port`, an `access` level (`read-only` / `full`), a `protocol` (`rest` / `websocket`), an `enforcement` mode, and the **binaries** allowed to use it. Anything not listed is denied, and every denial is audited.
+
+## Deny-by-default, in practice
+
+A fresh sandbox can reach almost nothing on the network. The one thing it *can* reach is `https://inference.local` — and even that isn't a normal allow rule: the supervisor intercepts that name *before* policy is evaluated and routes it to LiteLLM (see [Inference](/learn/inference)). So:
+
+- the agent can think (`inference.local` → the model), but
+- it **cannot** reach the cluster API, the public internet, or any host you didn't grant.
+
+That's why there's no `kubectl` inside a sandbox, and why a compromised agent can't phone home to an arbitrary address.
+
+## Grant an endpoint (when a task needs one)
+
+To let a sandbox reach a new host, add an endpoint rule — e.g. allow the GitHub API over REST for `node`:
+
+```bash-ref
+openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/node
+```
+
+The format is `host:port[:access[:protocol[:enforcement[:options]]]]`. In **enforce + rest** mode the proxy terminates TLS and can gate by HTTP path (`--add-deny 'host:443:GET:/secret/**'`) — that's the L7 control the [Skills](/learn/skills) lesson uses to vet a package registry package-by-package. (A few options — like `allow_encoded_slash` for scoped npm packages — aren't settable from the CLI; they live in the policy YAML the sandbox ships with.)
+
+<Callout type="rh" title="The policy is the contract">
+Kernel isolation (gVisor) says <em>how strong</em> the box is; the egress policy says <em>what it may reach</em>. Together they make a sandbox something you can hand untrusted agent code — and <em>prove</em> what it can and cannot do, with every decision on the audit log.
+</Callout>

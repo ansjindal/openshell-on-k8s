@@ -1,0 +1,34 @@
+An autonomous agent is, by design, an untrusted process you've given a shell and a network. The whole point of this stack is to make that *safe* — not with one big wall, but with layers, so that defeating any single one doesn't get an attacker much.
+
+<SecurityLayers />
+
+## The headline: gVisor kernel isolation
+
+Every sandbox pod runs under `RuntimeClass: gvisor`. That means the agent's syscalls don't hit the host Linux kernel — they hit **runsc**, gVisor's user-space kernel, which re-implements the syscall surface in a sandboxed process. A container escape lands the attacker *inside gVisor*, not on the node.
+
+This is the difference between "the agent is in a container" (shared host kernel — one kernel bug away from the node) and "the agent is in a gVisor sandbox" (its own kernel boundary).
+
+## Credential isolation: the agent never holds the key
+
+The agent's code calls `https://inference.local`. It has **no API key**. The in-sandbox policy proxy is what injects the real credential on the way to LiteLLM, which then talks to the upstream model API.
+
+```text
+agent  ──▶  inference.local  ──▶  [proxy injects key]  ──▶  LiteLLM  ──▶  model API
+(no key)                                                   (holds key)
+```
+
+So even if an agent is fully compromised — prompt-injected, hijacked, whatever — it cannot exfiltrate the model credential, because it never had it.
+
+## Kyverno: making isolation non-optional
+
+gVisor only protects you if every sandbox actually uses it. The optional **Kyverno** admission controller enforces that with a `require-gvisor` policy: any pod created in the sandbox namespace that *isn't* pinned to the `gvisor` RuntimeClass is **rejected at admission**. Isolation can't be skipped by accident or by a misconfigured manifest.
+
+## The L7 policy proxy
+
+On top of all that, the supervisor enforces a deny-by-default **L7 policy** per sandbox — which binary may reach which host, method, and path. This is the layer that stops data exfil through an unexpected binary, even when the network would otherwise allow it.
+
+<PolicyExplorer />
+
+<Callout type="warn" title="Defense in depth, not a silver bullet">
+No single layer is the answer. gVisor bounds the kernel, credential isolation bounds the secrets, Kyverno keeps the isolation honest, and the L7 policy bounds the network — together they make a compromised agent a contained problem instead of a cluster-wide one.
+</Callout>

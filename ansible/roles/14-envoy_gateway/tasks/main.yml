@@ -1,0 +1,58 @@
+---
+# Envoy Gateway (Gateway API) exposure for the OpenShell gateway (gRPC) and
+# Grafana (HTTP). Optional — runs only when envoy_gateway_enabled.
+- name: Envoy Gateway
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Install Envoy Gateway (controller + Gateway API CRDs)
+      ansible.builtin.shell: |
+        helm upgrade --install envoy-gateway oci://docker.io/envoyproxy/gateway-helm \
+          --version v{{ envoy_gateway_version }} \
+          --namespace envoy-gateway-system --create-namespace --wait --timeout 8m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Wait for the Envoy Gateway controller
+      ansible.builtin.command: kubectl -n envoy-gateway-system rollout status deploy/envoy-gateway --timeout=180s
+      changed_when: false
+      failed_when: false
+
+    - name: Ensure the gateway namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ envoy_gateway_ns }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    # Only route to backends that actually exist: Keycloak (always, under SSO),
+    # Grafana when monitoring is on, Headlamp when headlamp is on. Applying a
+    # route into a missing namespace (e.g. headlamp off) fails the kubectl apply.
+    - name: Build the Gateway API manifest list
+      ansible.builtin.set_fact:
+        eg_manifests: >-
+          {{ ['gatewayclass.yaml', 'envoyproxy.yaml', 'gateway.yaml',
+              'grpcroute-openshell.yaml', 'httproute-auth.yaml']
+             + (['httproute-grafana.yaml'] if (monitoring_enabled | bool) else [])
+             + (['httproute-headlamp.yaml'] if (headlamp_enabled | bool) else []) }}
+
+    - name: Render Gateway API manifests
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/tmp/eg-{{ item }}"
+        mode: "0644"
+      loop: "{{ eg_manifests }}"
+
+    - name: Apply Gateway API manifests
+      ansible.builtin.command: kubectl apply -f /tmp/eg-{{ item }}
+      loop: "{{ eg_manifests }}"
+      register: eg_apply
+      changed_when: "'created' in eg_apply.stdout or 'configured' in eg_apply.stdout"
+
+    - name: Envoy Gateway endpoints (single public host, path-routed)
+      ansible.builtin.debug:
+        msg:
+          - "Public host → Envoy web NodePort {{ envoy_web_nodeport }}:"
+          - "  {{ keycloak_base_url | default('https://<host>') }}{{ keycloak_relative_path }}    (Keycloak)"
+          - "  {{ keycloak_base_url | default('https://<host>') }}{{ grafana_path }}             (Grafana)"
+          - "  {{ keycloak_base_url | default('https://<host>') }}{{ headlamp_path }}            (Headlamp)"
+          - "OpenShell gateway (gRPC): <node-ip>:{{ envoy_grpc_nodeport }} (separate listener)"

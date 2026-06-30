@@ -1,0 +1,177 @@
+---
+# OpenShell Fleet — full cluster bring-up.
+#   ansible-playbook site.yml -e upstream_api_key=nvapi-xxxx
+# Tags let you run a single component, e.g.:  --tags monitoring
+#
+# Role folders are numbered in creation order (01-gvisor … 16-sandboxes).
+# Order: host prep (gVisor FIRST, then mesh) -> k3s server -> k3s agents ->
+# cluster components (on the server) -> sandbox fleet.
+
+- name: Host prep — gVisor (first) then mesh
+  hosts: k3s_cluster
+  become: true
+  roles:
+    - { role: "01-gvisor", tags: [gvisor, hostprep] }   # runsc + containerd drop-in, BEFORE k3s
+    - { role: "02-mesh",   tags: [mesh, hostprep] }      # conditional: only if mesh_iface present
+
+- name: k3s control-plane
+  hosts: server
+  become: true
+  roles:
+    - { role: "03-k3s", vars: { k3s_role: server }, tags: [k3s] }
+
+- name: k3s workers
+  hosts: agents
+  become: true
+  roles:
+    - { role: "03-k3s", vars: { k3s_role: agent }, tags: [k3s] }
+
+- name: Apply MSS clamp now that flannel.1 exists (mesh nodes)
+  hosts: k3s_cluster
+  become: true
+  tags: [k3s, mesh]
+  tasks:
+    - name: Restart MSS clamp so it programs flannel.1
+      ansible.builtin.systemd:
+        name: openshell-flannel-mss-clamp.service
+        state: restarted
+      when: mesh_iface in ansible_interfaces
+      failed_when: false
+
+# ---------------------------------------------------------------------------
+# Cluster components — one play each, so you can install à la carte:
+#   ansible-playbook site.yml --tags litellm -e upstream_api_key=...
+#   ansible-playbook site.yml --tags gateway
+#   ansible-playbook site.yml --tags monitoring
+# (helm + the gVisor RuntimeClass are ensured by the prep play below, which
+#  runs for whichever component tags you select.)
+# ---------------------------------------------------------------------------
+
+- name: Control-plane prerequisites (helm + gVisor RuntimeClass)
+  hosts: server
+  become: true
+  tasks:
+    # The 03-k3s `restart k3s` handler (containerd gVisor drop-in / config change) fires at the
+    # end of the k3s play and bounces the API server. The "node Ready" wait happened BEFORE that
+    # restart, so without re-waiting here the next kubectl (the gVisor RuntimeClass apply) can hit
+    # the API mid-restart and fail with: dial tcp 127.0.0.1:6443: connect: connection refused.
+    # Poll the real readiness endpoint until it answers — condition-based, not a fixed sleep.
+    - name: Wait for the k3s API server to be ready (it may have just restarted)
+      ansible.builtin.command: k3s kubectl get --raw=/readyz
+      register: _k3s_readyz
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: _k3s_readyz.rc == 0
+      tags: [always]
+    - name: Ensure helm is installed
+      ansible.builtin.shell: |
+        set -e
+        command -v helm >/dev/null 2>&1 || \
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      args: { executable: /bin/bash }
+      changed_when: false
+      tags: [litellm, postgres, gateway, kyverno, monitoring]
+    - name: Apply the gVisor RuntimeClass (API is up now)
+      ansible.builtin.import_role:
+        name: "01-gvisor"
+        tasks_from: runtimeclass
+      when: gvisor_enabled | bool
+      tags: [gvisor, gateway]
+
+- name: Component — agent-sandbox controller
+  hosts: server
+  become: true
+  tags: [agent_sandbox]
+  roles: ["04-agent_sandbox"]
+
+- name: Component — LiteLLM proxy
+  hosts: server
+  become: true
+  tags: [litellm]
+  roles: ["05-litellm"]
+
+- name: Component — PostgreSQL (gateway DB backend, optional)
+  hosts: server
+  become: true
+  tags: [postgres, database]
+  roles:
+    - { role: "06-postgres", when: gateway_db_backend | default('sqlite') == 'postgres' }
+
+- name: Component — Keycloak (OIDC identity provider, optional)
+  hosts: server
+  become: true
+  tags: [keycloak]
+  roles:
+    - { role: "07-keycloak", when: keycloak_enabled | bool }
+
+- name: Component — apiserver OIDC + RBAC (so Keycloak tokens are kubectl identities)
+  hosts: server
+  become: true
+  tags: [apiserver-oidc, dashboard]
+  roles:
+    - { role: "08-apiserver_oidc", when: apiserver_oidc_enabled | bool }
+
+- name: Component — OpenShell gateway
+  hosts: server
+  become: true
+  tags: [gateway]
+  roles: ["09-openshell_gateway"]
+
+- name: Component — inference routing (inference.local → LiteLLM)
+  hosts: server
+  become: true
+  tags: [inference]
+  roles: ["10-inference_routing"]
+
+- name: Component — Kyverno guardrails
+  hosts: server
+  become: true
+  tags: [kyverno]
+  roles:
+    - { role: "11-kyverno", when: kyverno_enabled | bool }
+
+- name: Component — monitoring (Prometheus + Grafana + Loki + Alloy)
+  hosts: server
+  become: true
+  tags: [monitoring]
+  roles:
+    - { role: "12-monitoring", when: monitoring_enabled | bool }
+
+- name: Component — Headlamp (Kubernetes dashboard, OIDC SSO, optional)
+  hosts: server
+  become: true
+  tags: [headlamp, dashboard]
+  roles:
+    - { role: "13-headlamp", when: headlamp_enabled | bool }
+
+- name: Component — Envoy Gateway (Gateway API exposure, optional)
+  hosts: server
+  become: true
+  tags: [envoy]
+  roles:
+    - { role: "14-envoy_gateway", when: envoy_gateway_enabled | bool }
+
+# Runs last among components: the console's HTTPRoute attaches to the fleet-gw Gateway.
+- name: Component — OpenShell Console (web UI, optional)
+  hosts: server
+  become: true
+  tags: [console, ui]
+  roles:
+    - { role: "15-openshell_ui", when: openshell_ui_enabled | bool }
+
+# Private skill registry (Verdaccio) — the governed source agents install skills from.
+- name: Component — Skill registry (Verdaccio, optional)
+  hosts: server
+  become: true
+  tags: [registry, skills]
+  roles:
+    - { role: "17-skill-registry", when: skill_registry_enabled | default(true) | bool }
+
+# Sandbox fleet — runtime objects, created last (needs the gateway + provider).
+- name: Sandboxes — create the initial fleet (optional)
+  hosts: server
+  become: true
+  tags: [sandboxes, fleet]
+  roles:
+    - { role: "16-sandboxes", when: sandboxes_enabled | default(false) | bool }

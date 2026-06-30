@@ -1,0 +1,38 @@
+---
+# Deploy Headlamp (Kubernetes dashboard) with Keycloak OIDC SSO. Requires the
+# apiserver_oidc role (so the apiserver accepts Keycloak tokens).
+- name: Headlamp
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Add Headlamp helm repo
+      ansible.builtin.shell: |
+        helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/ && helm repo update headlamp
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Ensure headlamp namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ headlamp_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Render Headlamp values
+      ansible.builtin.template:
+        src: values.yaml.j2
+        dest: /tmp/headlamp-values.yaml
+        mode: "0644"
+
+    - name: Install Headlamp
+      ansible.builtin.shell: |
+        helm upgrade --install headlamp {{ headlamp_chart }} \
+          --namespace {{ headlamp_namespace }} \
+          -f /tmp/headlamp-values.yaml --wait --timeout 5m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Headlamp endpoint
+      ansible.builtin.debug:
+        msg:
+          - "Headlamp served under {{ headlamp_url | default('<base>' ~ headlamp_path) }} via the Envoy /headlamp route."
+          - "Log in with a Keycloak user (openshell-admin → full, openshell-user → read-only)."

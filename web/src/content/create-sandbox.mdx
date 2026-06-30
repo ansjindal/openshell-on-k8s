@@ -1,0 +1,82 @@
+Now create an agent. A sandbox is the unit of work here: one command, and the OpenShell gateway orchestrates a fully-isolated agent onto the cluster. Watch the whole lifecycle.
+
+<SandboxFlow />
+
+## The easy way: the fleet helper
+
+`./scripts/fleet` wraps the common operations. To bring up one agent:
+
+```bash
+./scripts/fleet up 1
+```
+
+That asks the gateway to create a sandbox named `agent-0`. Watch it become Ready:
+
+```bash
+./scripts/fleet status
+```
+
+When `agent-0` reads `Ready`, the agent is running in its own gVisor pod.
+
+## The direct way: the openshell CLI
+
+`fleet up` is just calling the gateway for you. You can call it yourself — first list, then create:
+
+```bash
+openshell sandbox list
+openshell sandbox create
+```
+
+## What `openshell sandbox create` actually does
+
+A lot happens behind that one command — and the key thing to understand is that **a sandbox is not an "agent."**
+
+**The flow.** The CLI never touches Kubernetes directly. It calls the **OpenShell gateway** over gRPC; the gateway writes a `Sandbox` **custom resource**; the **agent-sandbox controller** reconciles that CR into a **pod** in the `openshell-sandboxes` namespace, pinned to the **gvisor** RuntimeClass (Kyverno rejects anything else). Inside the pod the OpenShell **supervisor** boots, seals the pod, and — since you ran `create` with no trailing command — the CLI **attaches you to a shell** in it:
+
+```text
+openshell sandbox create
+  CLI ──gRPC──▶ gateway ──writes──▶ Sandbox CR ──reconciles──▶ gVisor pod (supervisor) ──attach──▶ your shell
+```
+
+**It's a sandbox, not an agent (yet).** What you just got is an **empty, isolated, policy-governed box with a shell** — not a running AI agent. The "agent" (OpenClaw) is *software you run inside the sandbox*; later lessons install and configure it. The sandbox is the **sealed compute**; the agent is **what you put in it**. Bare `openshell sandbox create` gives you the box and drops you in — your prompt changes from the lab shell (`openshell-lab`) to inside the sandbox (`sandbox@<name>`). Type `exit` to come back; you have no `kubectl` or cluster access *in here* (that's the seal, not a broken tool).
+
+**The image — what's in the box.** Every sandbox boots from one pinned image, `ghcr.io/ansjindal/openclaw-sandbox:2026.6.10` (the gateway's `sandboxImage`). It ships the OpenShell **supervisor** (which seals the pod and runs the policy proxy described below) plus the **OpenClaw** agent framework — the `openclaw` CLI and its plugin SDK — preinstalled. So the agent software is *present* in every sandbox but **idle**: nothing runs it until you point it at a model and start it (the next lessons). That's exactly why a bare sandbox is just a shell — the box and its tools are there; no agent is running yet. (Override the image per box with `openshell sandbox create --from <image>`.)
+
+**The policy — deny-by-default egress.** The supervisor enforces an OpenShell **network policy** on everything the sandbox sends out, and the default is **deny-by-default**: from inside, the sandbox can reach `https://inference.local` (the model path, next lesson) and **almost nothing else** — no cluster API, no arbitrary internet. That policy *is* the seal; you'll prove it from the inside in [Into a Sandbox](/learn/into-the-sandbox).
+
+**The proxy — the agent never holds the key.** `inference.local` is served by an **in-sandbox policy proxy** the supervisor runs. It does two jobs: it **enforces that egress policy**, and it **intercepts `inference.local`**, injects the real model API key, and forwards to LiteLLM, then the model. So code in the sandbox calls a local name and never sees a credential — details in [Inference](/learn/inference).
+
+<Callout type="note" title="Create without attaching">
+Bare <code>openshell sandbox create</code> attaches you to the new sandbox. To create one <em>without</em> attaching (how <code>./scripts/fleet up</code> does it, so you stay in the lab shell), pass a no-op command: <code>openshell sandbox create --name mybox --no-tty -- true</code>.
+</Callout>
+
+## See what actually happened on the cluster
+
+These are **lab-shell** commands — if your prompt still reads `sandbox@…`, type `exit` first to get back to `openshell-lab:~$` (the sandbox has no `kubectl`). Everything the gateway did is plain Kubernetes: the agents live in the `openshell-sandboxes` namespace (the gateway control plane stays in `openshell`). Look at the custom resources and the pods they produced:
+
+```bash
+kubectl -n openshell-sandboxes get sandboxes
+kubectl -n openshell-sandboxes get pods
+```
+
+Notice every sandbox pod is pinned to the `gvisor` RuntimeClass:
+
+```bash
+kubectl -n openshell-sandboxes get pods -o custom-columns='NAME:.metadata.name,RUNTIME:.spec.runtimeClassName'
+```
+
+Every row shows `gvisor` in the RUNTIME column — that single field is the whole isolation story from the last lesson, made concrete (Kyverno *rejects* any sandbox pod that isn't `gvisor`). The pod name is the sandbox name; the agent-sandbox controller labels them `agents.x-k8s.io/sandbox-name-hash=…` (not `app=…`), so select a specific one by name, e.g. `kubectl -n openshell-sandboxes get pod agent-0 -o jsonpath='{.spec.runtimeClassName}'`.
+
+## Bring up a few
+
+Need a fleet? Ask for more:
+
+```bash
+./scripts/fleet up 3
+```
+
+You'll get `agent-0`, `agent-1`, `agent-2`, each its own sandbox.
+
+<Callout type="lab" title="Tear down when you're done">
+<code>./scripts/fleet down</code> deletes the sandboxes (and their pods). Because a sandbox <em>is</em> a CR, deleting the CR is all it takes — the controller cleans up the pod for you.
+</Callout>

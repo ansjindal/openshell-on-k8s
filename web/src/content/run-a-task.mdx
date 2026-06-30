@@ -1,0 +1,63 @@
+You have an isolated agent that can reach a model. Time to put it to work. The fleet helper lets you hand a prompt to one agent or the whole fleet at once.
+
+## Make sure you have agents
+
+```bash
+./scripts/fleet status
+```
+
+If the list is empty, bring some up:
+
+```bash
+./scripts/fleet up 2
+```
+
+## Hand the fleet a task
+
+`fleet task` takes a prompt and an optional target. `all` fans it out to every agent:
+
+```bash
+./scripts/fleet task "Write a haiku about Kubernetes pods" all
+```
+
+Each agent receives the prompt, calls the model through `inference.local`, and works on it independently in its own gVisor sandbox.
+
+## Target a single agent
+
+Drop `all` (or name an agent) to send the task to just one:
+
+```bash
+./scripts/fleet task "List three reasons to sandbox an AI agent" agent-0
+```
+
+## Read the logs
+
+The output and the agent's reasoning show up in its logs:
+
+```bash
+./scripts/fleet logs agent-0
+```
+
+That's the same as reading the pod's logs directly, if you prefer the raw view:
+
+```bash
+kubectl -n openshell-sandboxes logs deploy/agent-0
+```
+
+## Watch the whole fleet work
+
+With multiple agents on one prompt, `status` gives you the bird's-eye view while they run:
+
+```bash
+./scripts/fleet status
+```
+
+<Callout type="lab" title="This is the payoff">
+Each task ran inside a gVisor pod, reached the model without ever holding the key, and was bounded by the sandbox's policy. That's the entire point of the stack — useful, autonomous, and contained — demonstrated in one command.
+</Callout>
+
+When you're done, tear the fleet down:
+
+```bash
+./scripts/fleet down
+```

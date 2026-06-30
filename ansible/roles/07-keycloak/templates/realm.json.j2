@@ -1,0 +1,147 @@
+{
+  "realm": "{{ keycloak_realm }}",
+  "enabled": true,
+  "sslRequired": "none",
+  "roles": {
+    "realm": [
+      { "name": "{{ keycloak_admin_role }}", "description": "OpenShell admin" },
+      { "name": "{{ keycloak_user_role }}", "description": "OpenShell user" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "{{ keycloak_client_id }}",
+      "name": "OpenShell CLI",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:*", "http://127.0.0.1:*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true",
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "openshell-cli-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "{{ keycloak_client_id }}",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "headlamp",
+      "name": "Headlamp (Kubernetes dashboard)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "{{ headlamp_client_secret | default('headlamp-secret-changeme') }}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [{{ ('"' ~ headlamp_url ~ '/*"') if (headlamp_url | default('') | length) > 0 else '"*"' }}],
+      "webOrigins": ["+"],
+      "protocolMappers": [
+        {
+          "name": "realm-roles-to-groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "groups",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "openshell-ui",
+      "name": "OpenShell Console",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "{{ openshell_ui_client_secret | default('openshell-ui-secret-changeme') }}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [{{ ('"' ~ console_url ~ '/*"') if (console_url | default('') | length) > 0 else '"*"' }}],
+      "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "protocolMappers": [
+        {
+          "name": "openshell-cli-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "{{ keycloak_client_id }}",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles-to-groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "groups",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "grafana",
+      "name": "Grafana",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "{{ grafana_client_secret | default('grafana-secret-changeme') }}",
+      "standardFlowEnabled": true,
+      "redirectUris": [{{ ('"' ~ grafana_url ~ '/*"') if (grafana_url | default('') | length) > 0 else '"*"' }}],
+      "webOrigins": ["+"],
+      "protocolMappers": [
+        {
+          "name": "realm-roles-to-groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "groups",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "{{ keycloak_demo_user | default('demo') }}",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "{{ keycloak_demo_user | default('demo') }}@example.com",
+      "firstName": "Demo",
+      "lastName": "User",
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "{{ keycloak_demo_password | default('changeme') }}", "temporary": false }
+      ],
+      "realmRoles": ["{{ keycloak_admin_role }}"]
+    }
+  ]
+}
