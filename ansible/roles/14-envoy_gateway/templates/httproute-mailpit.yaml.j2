@@ -1,7 +1,13 @@
 # /mailpit → Mailpit web UI (the Incident Desk's mail sink; svc mailpit:8025).
 # In the research-desk namespace (co-located with the Service) → no ReferenceGrant.
-# Strip the /mailpit prefix; Mailpit serves its UI from root. X-Forwarded-Proto=https
-# so links/assets are built for the https edge (TLS terminates at Envoy).
+#
+# Mailpit runs with MP_WEBROOT=/mailpit (see incident-desk/deploy/mailpit.yaml), so it
+# serves its UI/assets/API/websocket under /mailpit and emits data-webroot=/mailpit/.
+# Therefore we must NOT strip the prefix — the backend needs to receive /mailpit/... so
+# its webroot matches (stripping → root would break the SPA's /mailpit-prefixed assets).
+# Mailpit only serves the app under the trailing-slash path, so redirect the exact
+# bare /mailpit → /mailpit/ (mirrors the headlamp route). X-Forwarded-Proto=https so
+# links/assets are built for the https edge (TLS terminates at Envoy).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -14,11 +20,15 @@ spec:
       sectionName: web
   rules:
     - matches:
+        - path: { type: Exact, value: "{{ mailpit_path }}" }
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            path: { type: ReplaceFullPath, replaceFullPath: "{{ mailpit_path }}/" }
+            statusCode: 302
+    - matches:
         - path: { type: PathPrefix, value: "{{ mailpit_path }}" }
       filters:
-        - type: URLRewrite
-          urlRewrite:
-            path: { type: ReplacePrefixMatch, replacePrefixMatch: / }
         - type: RequestHeaderModifier
           requestHeaderModifier:
             set:

@@ -18,7 +18,7 @@ const platform: L[] = [
   { name: "Grafana", href: BASE ? `${BASE}/grafana` : "/grafana", desc: "Dashboards & metrics (Prometheus + Loki + Tempo). Behind the Envoy ingress; SSO via Keycloak.", ext: true, off: !BASE },
   { name: "Gitea", href: BASE ? `${BASE}/gitea` : "/gitea", desc: "Self-hosted Git server holding the GitOps repos the remediation PRs land in.", ext: true, off: !BASE },
   { name: "ArgoCD", href: BASE ? `${BASE}/argocd` : "/argocd", desc: "GitOps delivery: syncs merged remediations from Git to the cluster.", ext: true, off: !BASE },
-  { name: "Mailpit", href: BASE ? `${BASE}/mailpit` : "/mailpit", desc: "Email inbox sink — the runbooks the Incident Desk's sender delivers land here.", ext: true, off: !BASE },
+  { name: "Mailpit", href: BASE ? `${BASE}/mailpit/` : "/mailpit/", desc: "Email inbox sink — the runbooks the Incident Desk's sender delivers land here.", ext: true, off: !BASE },
   { name: "Keycloak", href: BASE ? `${BASE}/auth` : "/auth", desc: "Single sign-on / identity. Admin console + the openshell realm.", ext: true, off: !BASE },
 ];
 
