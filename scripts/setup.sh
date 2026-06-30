@@ -359,6 +359,13 @@ Environment=LAB_KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 Environment=LAB_CWD=${ROOT}
 Environment=OPENSHELL_GATEWAY_ENDPOINT=127.0.0.1:${GATEWAY_NODEPORT}
 Environment=OPENSHELL_GATEWAY_TLS=false
+# Device-pairing approvals (/approvals + /api/devices) target the standalone OpenClaw Control
+# UI sandbox via the named fleet gateway. Password is config (not a source literal); override
+# any of these per-deploy. Defaults match the live openclaw-ui sandbox.
+Environment=OPENCLAW_UI_SANDBOX=${OPENCLAW_UI_SANDBOX:-openclaw-ui}
+Environment=OPENCLAW_UI_GATEWAY=${OPENCLAW_UI_GATEWAY:-fleet}
+Environment=OPENCLAW_UI_PORT=${OPENCLAW_UI_PORT:-18789}
+Environment=OPENCLAW_UI_PASSWORD=${OPENCLAW_UI_PASSWORD:-openclaw-ui-ctl}
 Environment=PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
 Environment=AUTH_URL=${PUBLIC_BASE_URL}
 Environment=AUTH_SECRET=${CONSOLE_AUTH_SECRET:-}

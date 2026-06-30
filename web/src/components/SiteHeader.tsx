@@ -17,6 +17,7 @@ export function SiteHeader() {
       <nav className="ml-auto flex items-center gap-2 text-[0.72rem] text-[var(--color-fg-mut)]">
         <Link href={`/learn/${FIRST_SLUG}`} className="rounded-full border border-[var(--color-line-2)] px-2.5 py-1 transition hover:border-[var(--color-nv)] hover:text-[var(--color-fg)]">Lessons</Link>
         <Link href="/console" className="rounded-full border border-[var(--color-line-2)] px-2.5 py-1 transition hover:border-[var(--color-nv)] hover:text-[var(--color-fg)]">OpenShell Console</Link>
+        <Link href="/approvals" className="rounded-full border border-[var(--color-line-2)] px-2.5 py-1 transition hover:border-[var(--color-nv)] hover:text-[var(--color-fg)]">Approvals</Link>
         <Link href="/links" className="rounded-full border border-[var(--color-line-2)] px-2.5 py-1 transition hover:border-[var(--color-nv)] hover:text-[var(--color-fg)]">Links</Link>
         <ThemeToggle />
       </nav>
