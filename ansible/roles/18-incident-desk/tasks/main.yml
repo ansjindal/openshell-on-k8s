@@ -113,6 +113,37 @@
       when: "'missing' in gitea_user_check.stdout"
       changed_when: true
 
+    # ---- 2a'. Gitea demo user (pre-create so SSO links to it) ---------------
+    # The `demo` user logs into Gitea via Keycloak SSO, but the OAuth source only
+    # auto-registers / account-links (ACCOUNT_LINKING=auto, USERNAME=preferred_username)
+    # to an EXISTING local user. Pre-create it (non-admin) up front so a later
+    # collaborator grant (step 7a) can add it to the gitops repo even before its
+    # first SSO login. Idempotent: create only if missing + tolerate "already exist".
+    - name: Check whether the Gitea demo user exists
+      ansible.builtin.shell: |
+        kubectl -n {{ gitea_namespace }} exec deploy/gitea -- \
+          su-exec git gitea admin user list 2>/dev/null | grep -qw '{{ keycloak_demo_user | default("demo") }}' \
+          && echo exists || echo missing
+      args: { executable: /bin/bash }
+      register: gitea_demo_user_check
+      changed_when: false
+
+    - name: Create the Gitea demo user (non-admin, SSO link target)
+      ansible.builtin.shell: |
+        out="$(kubectl -n {{ gitea_namespace }} exec deploy/gitea -- \
+          su-exec git gitea admin user create \
+            --username '{{ keycloak_demo_user | default("demo") }}' \
+            --password '{{ keycloak_demo_password }}' \
+            --email '{{ keycloak_demo_user | default("demo") }}@openshell.local' \
+            --must-change-password=false 2>&1)"; rc=$?
+        echo "$out"
+        if [ $rc -ne 0 ] && echo "$out" | grep -qi 'already exist'; then exit 0; fi
+        exit $rc
+      args: { executable: /bin/bash }
+      no_log: true
+      when: "'missing' in gitea_demo_user_check.stdout"
+      changed_when: true
+
     # ---- 2b. PAT → research-desk/gitea-token (create-or-keep) ---------------
     # The backend reads this token to open PRs. Generate it ONCE: if the secret
     # already exists, keep it (regenerating would orphan the live token + isn't
@@ -304,6 +335,37 @@
       ansible.builtin.command: "bash {{ incident_desk_repo_root }}/{{ incident_desk_seed_script }}"
       register: gitops_seed
       changed_when: "'POST apps/catalog' in gitops_seed.stdout"
+
+    # ---- 7a. Grant the demo user write on incident-gitops (merge perms) -----
+    # The demo user signs into Gitea via SSO but isn't a repo collaborator, so it
+    # can't merge the GitOps remediation PR. Add it as a write collaborator now —
+    # AFTER the seed (step 7) has ensured the repo exists and AFTER the demo user
+    # exists (step 2a'). Same TOKEN/API shell pattern as the org task (2d).
+    # Idempotent: PUT collaborators is a no-op when already granted; tolerant if the
+    # repo or user isn't there yet (log + skip rather than hard-fail).
+    - name: Grant the demo user write on gitops/incident-gitops
+      ansible.builtin.shell: |
+        set -euo pipefail
+        TOKEN="$(kubectl -n {{ research_desk_namespace }} get secret gitea-token -o jsonpath='{.data.token}' | base64 -d)"
+        IP="$(kubectl -n {{ gitea_namespace }} get svc gitea -o jsonpath='{.spec.clusterIP}')"
+        API="http://${IP}:3000/api/v1"
+        DEMO='{{ keycloak_demo_user | default("demo") }}'
+        # Repo must exist (seeded in step 7) and the demo user must exist (step 2a').
+        repo="$(curl -s -o /dev/null -w '%{http_code}' \
+          -H "Authorization: token ${TOKEN}" "${API}/repos/{{ gitea_org }}/incident-gitops")"
+        if [ "$repo" != "200" ]; then echo "incident-gitops not present (HTTP ${repo}) — skipping demo grant"; exit 0; fi
+        user="$(curl -s -o /dev/null -w '%{http_code}' \
+          -H "Authorization: token ${TOKEN}" "${API}/users/${DEMO}")"
+        if [ "$user" != "200" ]; then echo "demo user '${DEMO}' not present (HTTP ${user}) — skipping demo grant"; exit 0; fi
+        # PUT collaborators: 204 = granted/updated, 200 = ok. Both fine + idempotent.
+        code="$(curl -s -o /dev/null -w '%{http_code}' \
+          -X PUT -H "Authorization: token ${TOKEN}" -H 'Content-Type: application/json' \
+          -d '{"permission":"write"}' \
+          "${API}/repos/{{ gitea_org }}/incident-gitops/collaborators/${DEMO}")"
+        case "$code" in 200|201|204) echo "demo write granted (HTTP ${code})";; *) echo "demo collaborator grant failed HTTP ${code}" >&2; exit 1;; esac
+      args: { executable: /bin/bash }
+      register: gitea_demo_grant
+      changed_when: "'granted' in gitea_demo_grant.stdout"
 
     # ---- 8. OpenClaw Control UI (the /openclaw route + its supervisor) ------
     # A standalone OpenClaw gateway running INSIDE its own fleet sandbox (openclaw_ui_sandbox),

@@ -3,8 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { marked } from "marked";
 import {
   Activity, AlertTriangle, ArrowUpRight, Brain, CheckCircle2, Circle, Clock, Compass, Coins, Cpu,
-  Database, ExternalLink, Eye, FileText, GitMerge, History, Inbox, LineChart, Moon, Network, Play,
-  RotateCw, ScrollText, Search, Send, Shield, ShieldCheck, Sun, Workflow, X, XCircle, Zap, BarChart3, Gauge,
+  Database, ExternalLink, Eye, FileText, GitMerge, History, Inbox, LineChart, Network, Play,
+  RotateCw, ScrollText, Search, Send, Shield, ShieldCheck, Workflow, X, XCircle, Zap, BarChart3, Gauge,
 } from "lucide-react";
 import {
   appHealth, approve, cancelRun, getAutopilot, getIncident, getIncidents, getLogs, getPods, getPolicy, getPolicyHistory, getRun, hotReloadPolicy,
@@ -129,8 +129,16 @@ export default function App() {
   const [deck, setDeck] = useState<Deck>("timeline");
   const [tele, setTele] = useState<TelemetryConfig | null>(null);
   const [llm, setLlm] = useState<LiteLLMSummary | null>(null);
-  const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("idesk-theme") as "dark" | "light") || "dark");
-  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("idesk-theme", theme); }, [theme]);
+  // Theme is owned by the site header (SiteHeader's ThemeToggle, key "oclaw-theme")
+  // so the page has ONE toggle, not two. We mirror that state for the in-app charts
+  // (the Dashboards/Grafana embed needs to know dark vs light) and react to the
+  // header's toggle event — we don't write the theme or render our own toggle.
+  const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("oclaw-theme") as "dark" | "light") || "dark");
+  useEffect(() => {
+    const onTheme = (e: Event) => setTheme(((e as CustomEvent).detail as "dark" | "light") || "dark");
+    window.addEventListener("oclaw:theme", onTheme);
+    return () => window.removeEventListener("oclaw:theme", onTheme);
+  }, []);
   const [history, setHistory] = useState<RunSummary[]>([]);
   const [showHist, setShowHist] = useState(false);
   const [autopilot, setAutopilot] = useState(false);
@@ -206,10 +214,14 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <div className="logo">{I(ShieldCheck, 20)}</div>
-          <div><h1>OpenShell Incident Desk</h1><p>policy-scoped agent fleet · human-in-the-loop RCA</p></div>
+      {/* In-page sub-toolbar — sits under the site nav (SiteHeader), not a second site header.
+          Styled with the site tokens so it reads as one consistent page header band. The
+          theme toggle lives in SiteHeader only (no duplicate here). */}
+      <header className="idesk-subbar">
+        <div className="idesk-title">
+          <span className="idesk-mark">{I(ShieldCheck, 15)}</span>
+          <span className="idesk-name">Incident Desk</span>
+          <span className="idesk-tagline">policy-scoped agent fleet · human-in-the-loop RCA</span>
         </div>
         {run && <span className="tb-status"><StatusPill status={run.status} gate={run.gate} /></span>}
         <div className="tb-right">
@@ -232,7 +244,6 @@ export default function App() {
           </div>
           {tele?.dashboards?.[0] && <a className="tb-link" href={tele.dashboards[0].url} target="_blank" rel="noreferrer">{I(BarChart3)} Grafana</a>}
           <a className="tb-link" href="/mailpit" target="_blank" rel="noreferrer">{I(Inbox)} Inbox</a>
-          <button className="theme-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} title="toggle theme">{I(theme === "dark" ? Sun : Moon, 15)}</button>
         </div>
       </header>
 

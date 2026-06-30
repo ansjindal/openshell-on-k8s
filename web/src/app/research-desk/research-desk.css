@@ -36,10 +36,9 @@
   --sh-md:0 4px 14px rgba(15,23,42,.09); --sh-lg:0 12px 36px rgba(15,23,42,.16); --sh-accent:0 0 18px var(--accent-glow);
 }
 :root[data-theme="light"] body { background-image:radial-gradient(1100px 600px at 78% -8%, rgba(90,140,0,.07), transparent 60%), radial-gradient(900px 500px at 5% 0%, rgba(10,157,119,.05), transparent 55%); }
-:root[data-theme="light"] .topbar { background:rgba(255,255,255,.86); }
+:root[data-theme="light"] .idesk-subbar { background:var(--bg-surface); }
 :root[data-theme="light"] pre.code { color:#1e293b; } :root[data-theme="light"] pre.code.yaml { color:#0a5e46; }
 :root[data-theme="light"] .step-detail { color:#334155; }
-:root[data-theme="light"] .logo { color:#fff; }
 
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:var(--font); background:var(--bg-base); color:var(--text); font-size:14px; line-height:1.55;
@@ -51,14 +50,18 @@ body { font-family:var(--font); background:var(--bg-base); color:var(--text); fo
 .app { min-height:100vh; }
 .mono { font-family:var(--mono); }
 
-/* ── topbar ── */
-.topbar { display:flex; align-items:center; gap:18px; padding:0 26px; height:60px; position:sticky; top:0; z-index:30;
-  background:rgba(13,16,19,.86); backdrop-filter:blur(14px); border-bottom:1px solid var(--border-subtle); }
-.brand { display:flex; align-items:center; gap:12px; }
-.logo { width:38px; height:38px; border-radius:11px; display:grid; place-items:center; color:#fff;
-  background:linear-gradient(135deg,var(--accent),#4a7a00); box-shadow:var(--sh-accent); }
-.brand h1 { font-size:16px; font-weight:750; letter-spacing:.2px; }
-.brand p { font-size:11.5px; color:var(--text-2); margin-top:1px; }
+/* ── in-page sub-toolbar ──
+   The site nav (SiteHeader) is the single sticky page header. This bar sits
+   directly below it as a slim in-page band — NOT a second site header — so the
+   top of /research-desk reads consistently with /console and /learn. Uses the
+   shared design tokens (Inter, the same green, the same pill buttons). */
+.idesk-subbar { display:flex; align-items:center; gap:14px; padding:11px 32px;
+  background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); }
+.idesk-title { display:flex; align-items:baseline; gap:9px; min-width:0; }
+.idesk-mark { color:var(--accent-bright); position:relative; top:2px; }
+.idesk-name { font-size:14px; font-weight:700; letter-spacing:.1px; color:var(--text); white-space:nowrap; }
+.idesk-tagline { font-size:11.5px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:760px){ .idesk-tagline{ display:none; } .idesk-subbar{ padding:11px 18px; } }
 .tb-status { margin-left:8px; }
 .tb-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
 .tb-link { color:var(--text-2); text-decoration:none; font-size:12.5px; border:1px solid var(--border); border-radius:9px;
@@ -246,8 +249,6 @@ pre.code.diff { padding:0; background:var(--bg-base); }
 .dl { padding:2px 12px; white-space:pre-wrap; } .dl.add { background:var(--teal-dim); color:var(--teal); } .dl.del { background:var(--pink-dim); color:#ff7eb6; }
 :root[data-theme="light"] .dl.del { color:#b3245b; }
 .diff-head { font-size:11px; color:var(--text-2); margin:8px 0 6px; display:flex; gap:6px; align-items:center; }
-.theme-btn { background:none; border:1px solid var(--border); color:var(--text-2); border-radius:9px; padding:7px 9px; cursor:pointer; display:inline-flex; align-items:center; }
-.theme-btn:hover { background:var(--bg-hover); color:var(--text); }
 .histmenu { position:absolute; top:38px; right:0; width:380px; max-height:60vh; overflow:auto; z-index:50;
   background:var(--bg-overlay); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--sh-lg); padding:6px; }
 .histrow { display:flex; gap:9px; align-items:center; width:100%; text-align:left; background:none; border:none; cursor:pointer;
