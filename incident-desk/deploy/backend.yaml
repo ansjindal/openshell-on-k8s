@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: research-desk-backend
+  namespace: research-desk
+  labels: { app.kubernetes.io/name: research-desk-backend, app.kubernetes.io/part-of: openshell-research-desk }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: research-desk-backend } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: research-desk-backend }
+    spec:
+      containers:
+        - name: backend
+          image: incident-desk/research-desk-backend:local
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8080, name: http }]
+          envFrom:
+            - secretRef: { name: research-desk-secrets }    # OIDC_*, RESEND_API_KEY, REPORT_TO, OPENSHELL_GATEWAY_*
+          env:
+            - { name: SANDBOX_PROVIDER, value: "fleet" }
+            - { name: INFERENCE_MODEL,  value: "meta/llama-3.3-70b-instruct" }
+            # RCA: investigators fetch incident evidence from THIS service (path-scoped per agent).
+            - { name: INCIDENT_HOST, value: "research-desk-backend.research-desk.svc.cluster.local:8080" }
+            - { name: INCIDENT_SCHEME, value: "http" }
+            # Telemetry backends (in-cluster).
+            - { name: PROMETHEUS_URL, value: "http://kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090" }
+            - { name: GRAFANA_EMBED_URL, value: "/grafana" }
+            - { name: MODEL_PRICE_PER_1K_USD, value: "0.002" }
+            # OpenTelemetry traces → Tempo (deployed in the monitoring namespace)
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://tempo.monitoring.svc.cluster.local:4318" }
+            - { name: OTEL_SERVICE_NAME, value: "incident-desk" }
+            # GitOps incident: GitHub PR-based remediation (PAT from the github-pat Secret)
+            - { name: GITHUB_OWNER, value: "ansjindal" }
+            - { name: GITHUB_REPO, value: "openshell-incident-gitops" }
+            - name: GITHUB_PAT
+              valueFrom: { secretKeyRef: { name: github-pat, key: GITHUB_PAT, optional: true } }
+            # Reuse pre-warmed sandboxes (skip ~minutes of create+Ready). Remove to create fresh.
+            # 8 warm sandboxes: coordinator + up to ~4 workers + synthesizer + sender all reuse,
+            # so even multi-worker question runs avoid fresh-sandbox creation latency.
+            - { name: REUSE_SANDBOXES,  value: "agent-0,agent-1,agent-2,agent-3,agent-4,agent-5,agent-6,agent-7" }
+            # run-history persistence (PVC) so runs survive backend restarts + page refresh
+            - { name: DATA_DIR, value: "/data" }
+          volumeMounts: [{ name: data, mountPath: /data }]
+          readinessProbe: { httpGet: { path: /api/health, port: http }, initialDelaySeconds: 3, periodSeconds: 10 }
+          resources:
+            requests: { cpu: "50m", memory: "128Mi" }
+            limits:   { cpu: "500m", memory: "512Mi" }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: research-desk-data }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: research-desk-data, namespace: research-desk }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: research-desk-backend
+  namespace: research-desk
+spec:
+  selector: { app.kubernetes.io/name: research-desk-backend }
+  ports: [{ port: 8080, targetPort: http }]
+---
+# Browser → /research-desk/api/* → backend /api/* (strip the /research-desk prefix). The UI is
+# folded into the teaching site (served at /), so this longer-prefix route wins over the "/" route.
+# request timeout 0s because /api/runs/:id/stream is a long-lived SSE run feed.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: { name: research-desk-api, namespace: research-desk }
+spec:
+  parentRefs:
+    - { name: fleet-gw, namespace: fleet-gateway, sectionName: web }
+  rules:
+    - matches:
+        - { path: { type: PathPrefix, value: /research-desk/api } }
+      timeouts: { request: "0s" }
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path: { type: ReplacePrefixMatch, replacePrefixMatch: /api }
+      backendRefs:
+        - { name: research-desk-backend, port: 8080 }
