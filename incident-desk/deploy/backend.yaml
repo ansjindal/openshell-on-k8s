@@ -21,6 +21,9 @@ spec:
           env:
             - { name: SANDBOX_PROVIDER, value: "fleet" }
             - { name: INFERENCE_MODEL,  value: "meta/llama-3.3-70b-instruct" }
+            # Output-token budget per agent/synth call. High, because the cluster's reasoning model
+            # (nemotron-super) spends most of its budget inside <think> before the answer.
+            - { name: INFERENCE_MAX_TOKENS, value: "60000" }
             # RCA: investigators fetch incident evidence from THIS service (path-scoped per agent).
             - { name: INCIDENT_HOST, value: "research-desk-backend.research-desk.svc.cluster.local:8080" }
             - { name: INCIDENT_SCHEME, value: "http" }
