@@ -40,6 +40,11 @@ spec:
             - { name: GITEA__service__DISABLE_REGISTRATION, value: "true" }
             - { name: GITEA__server__OFFLINE_MODE, value: "true" }
             - { name: GITEA__webhook__ALLOWED_HOST_LIST, value: "*" }
+            # SSO: Keycloak users auto-provision a Gitea account on first OAuth login, linked by
+            # email to any existing account. Username comes from the preferred_username claim.
+            - { name: GITEA__oauth2_client__ENABLE_AUTO_REGISTRATION, value: "true" }
+            - { name: GITEA__oauth2_client__USERNAME, value: "preferred_username" }
+            - { name: GITEA__oauth2_client__ACCOUNT_LINKING, value: "auto" }
           ports:
             - { name: http, containerPort: 3000 }
           volumeMounts: [{ name: data, mountPath: /data }]
@@ -54,3 +59,26 @@ spec:
   selector: { app: gitea }
   ports:
     - { name: http, port: 3000, targetPort: http }
+---
+# Expose Gitea behind the shared Envoy host at /gitea. Gitea serves at root and builds links
+# from ROOT_URL (…/gitea/), so we strip the /gitea prefix before forwarding (like the nginx
+# sub-path pattern). X-Forwarded-Proto=https so Gitea/OAuth build https redirect URIs.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: { name: gitea, namespace: gitea }
+spec:
+  parentRefs:
+    - { name: fleet-gw, namespace: fleet-gateway, sectionName: web }
+  rules:
+    - matches:
+        - { path: { type: PathPrefix, value: /gitea } }
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path: { type: ReplacePrefixMatch, replacePrefixMatch: / }
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - { name: X-Forwarded-Proto, value: "https" }
+      backendRefs:
+        - { name: gitea, port: 3000 }

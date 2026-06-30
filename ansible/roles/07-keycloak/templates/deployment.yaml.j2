@@ -52,6 +52,14 @@ spec:
               value: "{{ keycloak_base_url }}{{ keycloak_relative_path }}"
             - name: KC_HTTP_RELATIVE_PATH
               value: "{{ keycloak_relative_path }}"
+            # Frontend (authorize) URLs use KC_HOSTNAME (public, for the browser); BACKCHANNEL
+            # URLs (token/userinfo/jwks) are derived from the request host. So an in-cluster
+            # client that runs OIDC discovery against the in-cluster Keycloak Service gets a
+            # PUBLIC authorize endpoint + an INTERNAL token endpoint — which is exactly what's
+            # needed behind the launchpad Pomerium proxy (it 302s server-side calls to the
+            # public host). This is what lets Gitea (and any in-cluster OIDC client) log in.
+            - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+              value: "true"
 {% endif %}
             - name: KC_PROXY_HEADERS
               value: "xforwarded"
