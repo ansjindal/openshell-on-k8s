@@ -1,0 +1,38 @@
+{
+  "event": "GTC 2025",
+  "description": "Curated, bounded set of NVIDIA products for the research demo. Each becomes one worker agent. Keep this list small (3-5) so a run finishes fast.",
+  "products": [
+    {
+      "id": "blackwell",
+      "name": "NVIDIA Blackwell",
+      "focus": "GPU architecture for trillion-parameter AI",
+      "seedUrls": [
+        "https://www.nvidia.com/en-us/data-center/technologies/blackwell-architecture/"
+      ]
+    },
+    {
+      "id": "nim",
+      "name": "NVIDIA NIM",
+      "focus": "microservices for deploying AI models in production",
+      "seedUrls": [
+        "https://www.nvidia.com/en-us/ai-data-science/products/nim-microservices/"
+      ]
+    },
+    {
+      "id": "dgx",
+      "name": "NVIDIA DGX",
+      "focus": "purpose-built AI supercomputing systems",
+      "seedUrls": [
+        "https://www.nvidia.com/en-us/data-center/dgx-platform/"
+      ]
+    },
+    {
+      "id": "omniverse",
+      "name": "NVIDIA Omniverse",
+      "focus": "platform for building and operating 3D / digital-twin applications",
+      "seedUrls": [
+        "https://www.nvidia.com/en-us/omniverse/"
+      ]
+    }
+  ]
+}

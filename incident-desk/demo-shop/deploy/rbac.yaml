@@ -1,0 +1,39 @@
+# Lets the Incident Desk backend (research-desk/default SA) read + apply the real remediation:
+# patch the orders-config ConfigMap and roll the orders-api Deployment. Scoped to demo-shop.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: { name: incident-remediator, namespace: demo-shop }
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "pods"]
+    verbs: ["get", "list", "patch", "update"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: { name: incident-remediator, namespace: demo-shop }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: incident-remediator }
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: research-desk
+---
+# demo-shop-gitops is ArgoCD-managed; the backend only needs to READ pods there (remediation is via PR).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: { name: incident-reader, namespace: demo-shop-gitops }
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "configmaps"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: { name: incident-reader, namespace: demo-shop-gitops }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: incident-reader }
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: research-desk

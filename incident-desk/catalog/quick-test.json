@@ -1,0 +1,14 @@
+{
+  "event": "Quick Test",
+  "description": "Single-product event for fast end-to-end testing (1 worker). Pair with REUSE_SANDBOXES to skip sandbox creation and finish in ~1-2 min.",
+  "products": [
+    {
+      "id": "blackwell",
+      "name": "NVIDIA Blackwell",
+      "focus": "GPU architecture for trillion-parameter AI",
+      "seedUrls": [
+        "https://www.nvidia.com/en-us/data-center/technologies/blackwell-architecture/"
+      ]
+    }
+  ]
+}

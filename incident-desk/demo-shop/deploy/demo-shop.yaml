@@ -1,0 +1,105 @@
+# demo-shop — a real instrumented app the Incident Desk investigates.
+# orders-api (Node, OTel→Tempo, /metrics→Prometheus, JSON logs→Loki) + Postgres + a load generator.
+# The DB pool size lives in a ConfigMap; too small under load → real latency/5xx incident.
+apiVersion: v1
+kind: Namespace
+metadata: { name: demo-shop }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: postgres, namespace: demo-shop }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - { name: POSTGRES_USER, value: shop }
+            - { name: POSTGRES_PASSWORD, value: shop }
+            - { name: POSTGRES_DB, value: shop }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports: [{ containerPort: 5432 }]
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+          resources: { requests: { cpu: 100m, memory: 128Mi }, limits: { cpu: "1", memory: 512Mi } }
+      volumes: [{ name: data, emptyDir: {} }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: demo-shop }
+spec: { selector: { app: postgres }, ports: [{ port: 5432, targetPort: 5432 }] }
+---
+# The fault knob. DB_POOL_MAX="10" is too small for the load → incident. Remediation sets it to "50".
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: orders-config, namespace: demo-shop }
+data:
+  DB_POOL_MAX: "10"
+  BUILD: "v2.3.1"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: orders-api, namespace: demo-shop, labels: { app: orders-api } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: orders-api } }
+  template:
+    metadata: { labels: { app: orders-api } }
+    spec:
+      imagePullSecrets: [{ name: nvcr-pull }]
+      containers:
+        - name: orders-api
+          image: incident-desk/orders-api:local
+          imagePullPolicy: Never
+          envFrom: [{ configMapRef: { name: orders-config } }]
+          env:
+            - { name: PGHOST, value: postgres.demo-shop.svc.cluster.local }
+            - { name: OTEL_SERVICE_NAME, value: orders-api }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://tempo.monitoring.svc.cluster.local:4318" }
+          ports: [{ name: http, containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /healthz, port: http }, initialDelaySeconds: 5, periodSeconds: 10 }
+          resources: { requests: { cpu: 100m, memory: 128Mi }, limits: { cpu: "1", memory: 512Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: orders-api, namespace: demo-shop, labels: { app: orders-api } }
+spec: { selector: { app: orders-api }, ports: [{ name: http, port: 8080, targetPort: http }] }
+---
+# Load generator — sustained concurrent traffic so a small pool actually saturates.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: loadgen, namespace: demo-shop }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: loadgen } }
+  template:
+    metadata: { labels: { app: loadgen } }
+    spec:
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.10.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # 40 PERSISTENT workers, each looping curl sequentially → a steady ~40 concurrent
+              # in-flight requests (bounded fds, no accumulation). 40 > pool(10) → sustained
+              # saturation/incident until remediated; 40 < pool(50) → healthy after the fix.
+              echo "loadgen → orders-api (40 persistent workers, continuous)";
+              i=0
+              while [ "$i" -lt 40 ]; do
+                ( while true; do curl -s -o /dev/null -m 6 http://orders-api.demo-shop.svc.cluster.local:8080/orders; done ) &
+                i=$((i+1))
+              done
+              wait
+          resources: { requests: { cpu: 50m, memory: 32Mi }, limits: { cpu: 500m, memory: 64Mi } }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata: { name: orders-api, namespace: demo-shop, labels: { release: kps } }
+spec:
+  namespaceSelector: { matchNames: [demo-shop] }
+  selector: { matchLabels: { app: orders-api } }
+  endpoints: [{ port: http, path: /metrics, interval: 10s }]

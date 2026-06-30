@@ -1,0 +1,30 @@
+{
+  "event": "GTC 2026",
+  "description": "Curated NVIDIA products for the GTC 2026 research fleet (one worker each).",
+  "products": [
+    {
+      "id": "rubin",
+      "name": "NVIDIA Vera Rubin",
+      "focus": "next-generation Rubin GPU + Vera CPU platform for AI factories",
+      "seedUrls": ["https://www.nvidia.com/en-us/data-center/"]
+    },
+    {
+      "id": "blackwell-ultra",
+      "name": "NVIDIA Blackwell Ultra",
+      "focus": "enhanced Blackwell GPUs for large-scale training and inference",
+      "seedUrls": ["https://www.nvidia.com/en-us/data-center/technologies/blackwell-architecture/"]
+    },
+    {
+      "id": "nim",
+      "name": "NVIDIA NIM",
+      "focus": "microservices for deploying AI models in production",
+      "seedUrls": ["https://www.nvidia.com/en-us/ai-data-science/products/nim-microservices/"]
+    },
+    {
+      "id": "omniverse",
+      "name": "NVIDIA Omniverse",
+      "focus": "platform for building and operating 3D / digital-twin and robotics applications",
+      "seedUrls": ["https://www.nvidia.com/en-us/omniverse/"]
+    }
+  ]
+}
