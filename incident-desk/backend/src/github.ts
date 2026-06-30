@@ -31,10 +31,12 @@ async function getFile(path: string, ref = "main"): Promise<{ content: string; s
   return { content: Buffer.from(j.content, "base64").toString("utf8"), sha: j.sha };
 }
 
-// Gitea: the tip SHA of a branch (replaces GitHub's /git/ref/heads/<b> → {object:{sha}}).
-async function branchSha(branch = "main"): Promise<string> {
-  const b = await gh("GET", `/repos/${OWNER}/${REPO}/branches/${branch}`);
-  return b.commit.id;
+// Gitea: create a branch off main. Gitea rejects GitHub's `POST /git/refs` (405 Method Not
+// Allowed), so use the native branches endpoint. A 409 means the branch already exists → reuse it.
+async function createBranch(branch: string): Promise<void> {
+  try {
+    await gh("POST", `/repos/${OWNER}/${REPO}/branches`, { new_branch_name: branch, old_branch_name: "main" });
+  } catch { /* branch already exists — reuse it */ }
 }
 
 /** Commit new file content directly to main (used to inject/clear the fault). */
@@ -45,9 +47,7 @@ export async function commitToMain(path: string, content: string, message: strin
 
 /** Open a PR on a new branch that sets the file to `content`. Returns the PR html_url + number. */
 export async function openFixPR(path: string, content: string, branch: string, title: string, prBody: string): Promise<{ url: string; number: number }> {
-  const baseSha = await branchSha("main");
-  try { await gh("POST", `/repos/${OWNER}/${REPO}/git/refs`, { ref: `refs/heads/${branch}`, sha: baseSha }); }
-  catch { /* branch may already exist — reuse it */ }
+  await createBranch(branch);
   const { sha } = await getFile(path, "main");
   await gh("PUT", `/repos/${OWNER}/${REPO}/contents/${path}`, { message: title, content: b64(content), sha, branch });
   const pr = await gh("POST", `/repos/${OWNER}/${REPO}/pulls`, { title, head: branch, base: "main", body: prBody });
@@ -56,9 +56,7 @@ export async function openFixPR(path: string, content: string, branch: string, t
 
 /** Open a PR applying multiple file edits (full content, or find/replace on the current file). */
 export async function openMultiFilePR(branch: string, title: string, prBody: string, edits: { path: string; find?: string; replace?: string; content?: string }[]): Promise<{ url: string; number: number }> {
-  const baseSha = await branchSha("main");
-  try { await gh("POST", `/repos/${OWNER}/${REPO}/git/refs`, { ref: `refs/heads/${branch}`, sha: baseSha }); }
-  catch { /* branch may already exist */ }
+  await createBranch(branch);
   for (const e of edits) {
     const f = await getFile(e.path, branch); // branch was created from main → current content + sha
     const content = e.content ?? (e.find != null ? f.content.split(e.find).join(e.replace ?? "") : f.content);

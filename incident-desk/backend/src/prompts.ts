@@ -23,7 +23,7 @@ const INFERENCE_URL = "https://inference.local/v1/chat/completions";
 const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64");
 
 /** The model/agent call: records the inference egress, token usage, reasoning, and the answer. */
-function taskCall(opts: { thinking?: boolean } = {}): string {
+function taskCall(opts: { thinking?: boolean; maxTokens?: number } = {}): string {
   if (TASK_MODE === "agent") {
     return [
       `echo "ALLOW agent-cli://${AGENT_CMD} ${AGENT_CMD} RUN local"`,
@@ -38,7 +38,10 @@ function taskCall(opts: { thinking?: boolean } = {}): string {
   // Reasoning models (e.g. nemotron-super) spend most of the budget inside <think> before the
   // answer; 3000/1500 leaves nothing for the final content on the bigger (synthesis) prompts →
   // empty `content` → "model returned no content". Give generous headroom; env-tunable.
-  const maxTokens = parseInt(process.env.INFERENCE_MAX_TOKENS || (opts.thinking ? "8000" : "4000"), 10);
+  // A reasoning model (nemotron-super) will generate toward whatever budget it's given on an
+  // open-ended prompt, so the synthesis call passes an explicit cap (opts.maxTokens) to stop it
+  // promptly. Investigators keep the generous global budget for their reasoning headroom.
+  const maxTokens = opts.maxTokens ?? parseInt(process.env.INFERENCE_MAX_TOKENS || (opts.thinking ? "8000" : "4000"), 10);
   return [
     `export MODEL="${INFERENCE_MODEL}"`,
     `export THINK="${think}"`,
@@ -102,11 +105,13 @@ export function buildInvestigatorScript(source: SourceKind, hypothesis: string, 
 /** Synthesizer: correlate approved findings into a root cause + remediation runbook (Markdown). */
 export function buildSynthScript(title: string, symptoms: string, findings: { source: string; summary: string }[]): string {
   const blocks = findings.map((f) => `### Finding from ${f.source}\n${f.summary}`).join("\n\n");
-  const prompt = `You are the incident commander writing the post-incident RCA for "${title}". Symptoms: "${symptoms}". Correlate the investigator findings below into a single conclusion. Output ONLY Markdown with EXACTLY these sections and headings: "# Incident RCA — ${title}", "## Summary" (2-3 sentences), "## Root cause" (the single most likely cause, justified by the correlated evidence), "## Evidence" (bullet the key signal from each source), "## Remediation runbook" (a numbered list of concrete steps to resolve now), "## Prevention" (2-3 bullets to stop recurrence). No code fences, no extra commentary. Do not invent evidence not in the findings.`;
+  const prompt = `You are the incident commander writing the post-incident RCA for "${title}" (symptoms: "${symptoms}"). Correlate the investigator findings below into a single conclusion, grounded only in those findings. Write it in Markdown, beginning with the heading "# Incident RCA — ${title}". Include exactly these "## " sections, in this order, each heading followed by its content. The headings must be exactly "## Summary", "## Root cause", "## Evidence", "## Remediation runbook", "## Prevention" — do NOT append the guidance text to the headings. Guidance for each section's content:\n- Summary: 2-3 sentences.\n- Root cause: the single most likely cause, justified by the correlated evidence.\n- Evidence: the key signal from each source, as bullets.\n- Remediation runbook: a numbered list of concrete steps to resolve it now.\n- Prevention: 2-3 bullets to stop recurrence.\nBegin your answer with the "# Incident RCA" heading.`;
   return [
     `export PROMPT="$(printf %s '${b64(prompt)}' | base64 -d)"`,
     `printf %s '${b64(blocks)}' | base64 -d > /tmp/src.txt`,
     'echo "=== EGRESS ==="',
-    taskCall({ thinking: false }),
+    // thinking ON: nemotron-super is a reasoning model; "detailed thinking off" makes it stall on
+    // this synthesis prompt, whereas the investigators (thinking on) return in seconds. Mirror them.
+    taskCall({ thinking: true }),
   ].join("\n");
 }
