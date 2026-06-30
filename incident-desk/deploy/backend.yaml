@@ -31,11 +31,12 @@ spec:
             # OpenTelemetry traces → Tempo (deployed in the monitoring namespace)
             - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://tempo.monitoring.svc.cluster.local:4318" }
             - { name: OTEL_SERVICE_NAME, value: "incident-desk" }
-            # GitOps incident: GitHub PR-based remediation (PAT from the github-pat Secret)
-            - { name: GITHUB_OWNER, value: "ansjindal" }
-            - { name: GITHUB_REPO, value: "openshell-incident-gitops" }
-            - name: GITHUB_PAT
-              valueFrom: { secretKeyRef: { name: github-pat, key: GITHUB_PAT, optional: true } }
+            # GitOps incident: in-cluster Gitea PR-based remediation (token from the gitea-token Secret).
+            - { name: GIT_API_BASE, value: "http://gitea.gitea.svc.cluster.local:3000/api/v1" }
+            - { name: GITHUB_OWNER, value: "gitops" }
+            - { name: GITHUB_REPO, value: "incident-gitops" }
+            - name: GITEA_TOKEN
+              valueFrom: { secretKeyRef: { name: gitea-token, key: token, optional: true } }
             # Reuse pre-warmed sandboxes (skip ~minutes of create+Ready). Remove to create fresh.
             # 8 warm sandboxes: coordinator + up to ~4 workers + synthesizer + sender all reuse,
             # so even multi-worker question runs avoid fresh-sandbox creation latency.
