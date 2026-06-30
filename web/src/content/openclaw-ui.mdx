@@ -63,8 +63,14 @@ After that, the operator can approve devices normally and the deadlock is gone f
 In production you keep pairing on and approve teammates deliberately — every browser that can drive the agent is one a human admitted on the record. The same model scales: the trust boundary is explicit, and the egress seal behind it means an approved device still only gets a <em>governed</em> agent, never a privileged one.
 </Callout>
 
-## Where to look next
+## Where this Part goes next
 
-- **Use it:** open <a href="/openclaw">the Control UI</a>, pair your browser via <a href="/approvals">Approvals</a>, and chat with a fully sealed agent.
+This chapter is the overview. The next two are hands-on — you'll operate the *pre-provisioned* `openclaw-ui` agent that's already running on this box:
+
+- **[Give It a Soul](/learn/openclaw-soul)** — the workspace `.md` files (IDENTITY / SOUL / BOOTSTRAP) that shape it. Inspect and edit them live, and see why staging new ones takes a gateway restart.
+- **[Restart & Approve](/learn/openclaw-approvals)** — how the gateway is (re)started, how the host supervisor keeps it alive, and the device-pairing flow that lets your browser in (including the "scope upgrade pending" deadlock and the one-click fix).
+
+And the shared context:
+
 - **The seal it shares:** the isolation and credential model are the same ones the [Security](/learn/security) chapter lays out — gVisor, the policy proxy, and inference with no key in the agent.
 - **The governed fleet:** for the multi-agent, human-gated counterpart, see [The Incident Desk](/learn/incident-desk).

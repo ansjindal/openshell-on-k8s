@@ -1,0 +1,115 @@
+The UI agent you met in the overview isn't configured by a settings panel — it's shaped by **Markdown files in its workspace**. These files *are* the agent's memory and personality. Each session it "wakes up," reads them, and acts accordingly. No system-prompt black box — just text you can read and edit.
+
+Unlike a fleet specialist that you create blank, the `openclaw-ui` sandbox is **pre-provisioned and kept alive by automation** (role `18-incident-desk` creates it; the host `openclaw-ui.service` supervisor keeps its gateway up). So you're not building this agent from scratch — you're inspecting and customizing the workspace of an agent that's *already running*. Let's look at the real files, live, on this box.
+
+<Callout type="note" title="How you reach this agent's shell">
+Every command here execs into the running <code>openclaw-ui</code> sandbox through the OpenShell <strong>named fleet gateway</strong>: <code>openshell --gateway fleet sandbox exec -n openclaw-ui -- …</code>. The <code>--gateway fleet</code> is required — without it the CLI uses the workshop's default gateway endpoint and won't find this sandbox. (Same path the website's <a href="/approvals">Approvals</a> page and the supervisor use.)
+</Callout>
+
+## Where they live
+
+OpenClaw keeps these files in its **workspace** inside the sandbox — at `/sandbox/.openclaw/workspace` (`HOME` is `/sandbox`). List them through the sealed exec:
+
+```bash
+openshell --gateway fleet sandbox exec -n openclaw-ui -- sh -c 'ls -la /sandbox/.openclaw/workspace'
+```
+
+You'll see `IDENTITY.md`, `SOUL.md`, `BOOTSTRAP.md`, plus `AGENTS.md`, `TOOLS.md`, `USER.md`, `HEARTBEAT.md` — **and a `.git` directory**. That's not incidental: the workspace is a git repo, so the agent **version-controls its own memory**.
+
+## `IDENTITY.md` — *who* the agent is
+
+The shortest file, and the most fun: name, creature, vibe, emoji — the agent's sense of self. On a fresh OpenClaw image it ships as a **blank template** waiting to be filled in:
+
+```md
+# IDENTITY.md - Who Am I?
+
+_Fill this in during your first conversation. Make it yours._
+
+- **Name:**     _(pick something you like)_
+- **Creature:** _(AI? robot? familiar? ghost in the machine? something weirder?)_
+- **Vibe:**     _(how do you come across? sharp? warm? chaotic? calm?)_
+- **Emoji:**    _(your signature — pick one that feels right)_
+```
+
+That `Vibe:` line is doing real work — it's why an agent answers like a peer instead of a help desk. Read yours:
+
+```bash
+openshell --gateway fleet sandbox exec -n openclaw-ui -- cat /sandbox/.openclaw/workspace/IDENTITY.md
+```
+
+## `SOUL.md` — *how* it behaves
+
+The closest thing to an editable system prompt: values, boundaries, and tone. Its core sections:
+
+```md
+## Core Truths
+**Be genuinely helpful, not performatively helpful.** Skip "Great question!" — just help.
+**Have opinions.** An assistant with no personality is a search engine with extra steps.
+**Be resourceful before asking.** Read the file. Check the context. Try it. *Then* ask.
+**Earn trust through competence.** Be careful with external actions; be bold with internal ones.
+
+## Boundaries
+- Private things stay private. Period.
+- When in doubt, ask before acting externally.
+
+## Continuity
+Each session you wake up fresh — these files *are* your memory. Read them, update them.
+```
+
+Notice the **Boundaries** section: "ask before acting externally, be bold internally." That single paragraph is the agent's safety posture expressed in plain English — and you can rewrite it.
+
+## `BOOTSTRAP.md` — the first-run kickoff
+
+A fresh OpenClaw agent runs a "who am I?" interview on first boot — `BOOTSTRAP.md` is that script:
+
+```md
+# BOOTSTRAP.md - Hello, World
+_You just woke up. Time to figure out who you are._
+
+Start with something like:
+> "Hey. I just came online. Who am I? Who are you?"
+
+Then figure out together: your name, your nature, your vibe, your emoji.
+Write it into IDENTITY.md and USER.md.
+
+## When you are done
+Delete this file. You don't need a bootstrap script anymore — you're you now.
+```
+
+Because this box ships the **stock** workspace, the agent will greet you with that generic "who am I?" interview the first time you chat — which is exactly the opening to give it a persona.
+
+<Callout type="rh" title="This is the launchable's posture by design">
+The fleet specialists in <a href="/learn/incident-lab">Part III</a> each get a hand-written <code>IDENTITY.md</code>/<code>SOUL.md</code> staged at creation. The standalone UI agent ships the <strong>default</strong> soul — leaving it for you to shape, which is what makes it a good teaching target. Either way, behaviour lives in plain-text Markdown, not a hidden prompt.
+</Callout>
+
+## Make it yours
+
+Two ways to change these files.
+
+**Now, from the shell (no model needed).** Read — and write — them directly through the sealed exec. Give it a name and a vibe:
+
+```bash
+openshell --gateway fleet sandbox exec -n openclaw-ui -- sh -c 'cd /sandbox/.openclaw/workspace && printf "\n- Always confirm before any external action.\n" >> SOUL.md && tail -3 SOUL.md'
+```
+
+**Later, by *asking the agent*** — the real workspace-as-memory move: once you've [paired your browser](/learn/openclaw-approvals), open <a href="/openclaw">the Control UI</a> and say *"Open your SOUL.md and add a rule: always confirm before posting anything externally."* The agent edits its own brain (and, since the workspace is a git repo, commits the change).
+
+<Callout type="warn" title="Asking the agent needs it online">
+For the agent to act on that request it must be able to <strong>think</strong> — so its gateway must be running and your browser <strong>paired</strong> (next chapter). The shell-edit above works regardless, because it bypasses the agent entirely.
+</Callout>
+
+## Picking up new files: a gateway restart
+
+Here's the one operational gotcha. OpenClaw reads its workspace **per chat session**, so an edit you make is picked up by simply **starting a new chat** in the Control UI — *no* restart needed for content changes.
+
+But the things that aren't workspace files — the agent's **model, gateway auth, and provider config** in `/sandbox/.openclaw/openclaw.json` — are loaded by the **gateway process at startup**. Change those and the running gateway won't see them until it's **restarted**. That's the bridge to the next chapter: on this box the gateway is supervised, so "restart" means something specific.
+
+```bash
+openshell --gateway fleet sandbox exec -n openclaw-ui -- cat /sandbox/.openclaw/openclaw.json
+```
+
+You'll see the model pointed at `https://inference.local/v1` with the placeholder key `openshell-router` (the gateway swaps in the real key upstream — the agent never holds it) and the gateway `auth`/`remote` password the Control UI logs in with.
+
+<Callout type="tip" title="Why this matters for a multi-agent app">
+Each agent's behaviour lives in its own <code>SOUL.md</code> / <code>AGENTS.md</code> — so a multi-agent app gives every sandbox a different personality and set of boundaries, in plain English, version-controlled per agent. Next: how that gateway is (re)started, and how to let your browser in.
+</Callout>

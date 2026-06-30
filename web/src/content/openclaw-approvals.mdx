@@ -1,0 +1,94 @@
+You've seen what shapes the agent. Now the two operational moves that make it usable in the browser: **(re)starting its gateway** (and understanding why you rarely have to), and **approving your browser** so the Control UI trusts it.
+
+## How the gateway runs — and why you usually don't restart it
+
+The agent's Control UI is served by an **OpenClaw gateway running inside the `openclaw-ui` sandbox**, on port `18789`. On this box it's launched exactly like this (the same command the supervisor and the web app use):
+
+```bash-ref
+openclaw gateway run --port 18789 --bind lan --auth password --password <OPENCLAW_UI_PASSWORD> --allow-unconfigured
+```
+
+`--bind lan` so the host forward bridge can reach it, `--auth password` for the login, `--allow-unconfigured` so it comes up even before a chat is configured. You *could* run that yourself through the sealed exec — but here's the catch on this box:
+
+```bash
+openshell --gateway fleet sandbox exec -n openclaw-ui -- sh -c 'cat /sandbox/gw.log 2>/dev/null | tail -5'
+```
+
+If you try to launch a second one you'll see **`gateway already running (pid …)`** / **`Port 18789 is already in use`** — because a **host systemd supervisor** is already keeping one alive.
+
+<Callout type="rh" title="The supervisor owns the lifecycle">
+<code>openclaw-ui.service</code> (running <a href="https://github.com/ansjindal/openshell-on-k8s/blob/main/scripts/openclaw-ui-supervise.sh"><code>scripts/openclaw-ui-supervise.sh</code></a>, <code>Restart=always</code>) reconciles three things every ~15s: the <code>openclaw-ui</code> sandbox is Ready, the in-sandbox gateway is <em>listening on :18789</em>, and the host <code>openshell forward</code> bridge is up. If the gateway stops listening, the supervisor re-launches it with the command above; if the bridge drops, it re-establishes it. That's what makes <code>/openclaw</code> survive a crash or a node reboot — and why you fighting it with a manual <code>gateway run</code> just hits the port-in-use lock.
+</Callout>
+
+So the practical answer to "how do I restart it" is: **let the supervisor do it.** The way the website restarts it is the **bootstrap-admin** action below — it kills the process holding `:18789` and relaunches on the same port, in lock-step with the bridge. To force a clean cycle yourself you'd stop the supervised process and let the loop bring it back:
+
+```bash-ref
+# Force a restart by killing the listener; the supervisor relaunches within ~15s.
+openshell --gateway fleet sandbox exec -n openclaw-ui -- sh -c \
+  "OLD=\$(ss -ltnp 2>/dev/null | grep ':18789 ' | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2); [ -n \"\$OLD\" ] && kill \$OLD"
+```
+
+You restart for one reason: to **pick up a changed `openclaw.json`** (model / provider / auth — from the previous chapter). Workspace `.md` edits don't need it — a fresh chat session re-reads those.
+
+## Open the Control UI
+
+<a href="/openclaw">Open the OpenClaw Control UI</a> and log in with the gateway password (`openclaw-ui-ctl` by default, or whatever `OPENCLAW_UI_PASSWORD` was set to on this deploy). The path is deliberately indirect — browser → Envoy `/openclaw` route → selector-less Service + node-pinned Endpoints → the host forward bridge → the in-sandbox gateway — all kept alive by that supervisor.
+
+On a fresh browser it won't let you straight in. It says **"Device pairing required."** That's the front-door trust model.
+
+## The device-pairing trust model
+
+OpenClaw gives every browser a device identity (a keypair). A remote browser must be **approved once** by an operator before the gateway trusts it. This site surfaces that flow at <a href="/approvals">Approvals</a> (backed by [`api/devices`](https://github.com/ansjindal/openshell-on-k8s/blob/main/web/src/app/api/devices/route.ts)), which runs `openclaw devices …` **inside** the `openclaw-ui` sandbox over the same gateway-exec path:
+
+- **Pending** — a browser that asked to pair, with a request id.
+- **Approve / Reject** — an operator with the right scope acts on it.
+- **Paired** — approved devices and the scopes they hold.
+
+You can also drive it from the shell:
+
+```bash
+openshell --gateway fleet sandbox exec -n openclaw-ui -- openclaw devices list --password openclaw-ui-ctl
+```
+
+## The "scope upgrade pending" deadlock
+
+There's a chicken-and-egg trap on a brand-new gateway. A password-paired operator starts with **only** the `operator.pairing` scope — it can *request* pairing but can't *approve* anyone. So the very first device's `devices approve` fails with **"scope upgrade pending approval"**: the only device that could approve it is itself, and it isn't allowed to yet. Classic *who approves the approver.*
+
+<Callout type="warn" title="First device can't approve itself">
+This isn't a bug — it's the trust model being strict by default. The fix isn't to weaken pairing; it's a one-time, <strong>host-privileged</strong> bootstrap that grants the operator the admin scopes, run from <em>outside</em> the OpenClaw scope system (so it isn't subject to the deadlock).
+</Callout>
+
+## Enable approvals — the one-click bootstrap
+
+The **Enable approvals** button on the <a href="/approvals">Approvals</a> page breaks the deadlock. It calls the `bootstrap-admin` action, which — through the **host** gateway-exec path, not an OpenClaw operator scope — does three things:
+
+1. **Grants the admin scopes.** It rewrites the gateway's `paired.json` so the operator device holds the full set — `operator.pairing`, `operator.admin`, `operator.approvals`, `operator.read`, `operator.write` — and clears the pending table.
+2. **Restarts the in-sandbox gateway** so it reloads the new scopes, re-binding on the **same** `:18789` the host forward bridge points at (so `/openclaw` keeps working).
+3. **Confirms the listener is back** by polling the port, then reports success.
+
+After that the operator approves devices normally and the deadlock is gone for good. (The supervisor runs this at provisioning, so on a freshly deployed box you usually don't need the button — it's there for a hand-built agent or if you ever hit the deadlock.)
+
+## Pair and approve — the flow
+
+1. Open <a href="/openclaw">the Control UI</a>. A fresh browser shows **"Device pairing required."**
+2. On <a href="/approvals">Approvals</a> the request appears under **Pending**. If the operator isn't yet *admin-enabled*, click **Enable approvals** first.
+3. Click **Approve** on the pending request.
+4. Reload the Control UI — you're in. The device now shows under **Paired** with its scopes.
+
+Prefer the CLI? Approve the newest pending request directly:
+
+```bash
+openshell --gateway fleet sandbox exec -n openclaw-ui -- openclaw devices approve --latest --password openclaw-ui-ctl
+```
+
+<Callout type="rh" title="The real-world posture">
+In production you keep pairing on and approve teammates deliberately — every browser that can drive the agent is one a human admitted on the record. And the egress seal behind the door means an approved device still only gets a <em>governed</em> agent, never a privileged one: pairing protects the front door (who may talk to it), the policy proxy protects the back door (what it may reach).
+</Callout>
+
+## You've operated a sealed UI agent
+
+You inspected the workspace that shapes it, you understand how its supervised gateway (re)starts, and you've paired a browser through the real trust model. From here:
+
+- **Chat with it:** <a href="/openclaw">the Control UI</a> — and watch the [Security](/learn/security) seal hold: it reaches the model via `inference.local` with no key, and can't touch the cluster API.
+- **The governed fleet:** the multi-agent, human-gated counterpart is [The Incident Desk](/learn/incident-desk).
+- **Where next:** [Next Steps & Resources](/learn/next-steps).

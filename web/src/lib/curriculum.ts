@@ -49,17 +49,27 @@ export const CURRICULUM: Part[] = [
   },
   {
     id: "production",
-    title: "Part IV · Production Patterns",
-    subtitle: "Real apps on the platform: a governed incident-response fleet and an interactive agent UI",
+    title: "Part IV · The Incident Desk",
+    subtitle: "A real backend app: a governed incident-response fleet, end to end",
     accent: "rh",
     lessons: [
       { slug: "incident-desk", title: "The Incident Desk", blurb: "A real backend app driving a 7-agent governed fleet — each sealed to one telemetry backend — through two human gates to one of two remediation paths, incl. GitOps.", minutes: 12 },
+    ],
+  },
+  {
+    id: "ui-agent",
+    title: "Part V · The Governed UI Agent",
+    subtitle: "An interactive OpenClaw Control UI as a sealed agent — give it a soul, restart it, pair your browser",
+    accent: "nv",
+    lessons: [
       { slug: "openclaw-ui", title: "The Governed UI Agent & Approvals", blurb: "An interactive OpenClaw Control UI as a sealed agent, reached via an openshell-forward bridge; device pairing, the scope-upgrade deadlock, and the one-click Enable-approvals bootstrap.", minutes: 10 },
+      { slug: "openclaw-soul", title: "Give It a Soul", blurb: "The workspace .md files (IDENTITY/SOUL/BOOTSTRAP) that shape your pre-provisioned UI agent — inspect and edit them live; staging new ones takes a gateway restart.", minutes: 9, hasLab: true },
+      { slug: "openclaw-approvals", title: "Restart & Approve", blurb: "How the gateway is (re)started and how the host supervisor keeps it alive — then pair your browser: the scope-upgrade deadlock and the one-click bootstrap that breaks it.", minutes: 9, hasLab: true },
     ],
   },
   {
     id: "next",
-    title: "Part V · Going Further",
+    title: "Part VI · Going Further",
     subtitle: "Where to take it next",
     lessons: [
       { slug: "next-steps", title: "Next Steps & Resources", blurb: "Multi-node, monitoring, other agents, and where to go deeper.", minutes: 6 },
