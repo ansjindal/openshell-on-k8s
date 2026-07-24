@@ -1,21 +1,20 @@
 import Link from "next/link";
+import { publicBaseUrl } from "@/lib/public-base";
 
-// Read PUBLIC_BASE_URL at request time (it's a per-deployment runtime value),
-// not baked at build time.
+// Derive the base from the ACTUAL request host at request time, so links point at
+// wherever the user really is (launchpad, brevlab, …) instead of a possibly-stale
+// baked PUBLIC_BASE_URL. Must stay dynamic — headers() opts the route out of static.
 export const dynamic = "force-dynamic";
-
-// Public base URL fronting the Envoy ingress (Grafana/Headlamp/Keycloak live
-// behind it, path-routed). Injected into the teaching-site service by setup.sh
-// (PUBLIC_BASE_URL). Empty in local/dev → we show the relative paths + a hint.
-const BASE = process.env.PUBLIC_BASE_URL || "";
 
 type L = { name: string; href: string; desc: string; ext?: boolean; off?: boolean };
 
-const platform: L[] = [
-  { name: "OpenShell Console", href: "/console", desc: "Fleet & sandbox management — list/create sandboxes, view policy, logs, terminal. Part of this site." },
-  { name: "Grafana", href: BASE ? `${BASE}/grafana` : "/grafana", desc: "Dashboards & metrics (Prometheus + Loki + Tempo). Behind the Envoy ingress; SSO via Keycloak.", ext: true, off: !BASE },
-  { name: "Keycloak", href: BASE ? `${BASE}/auth` : "/auth", desc: "Single sign-on / identity. Admin console + the openshell realm.", ext: true, off: !BASE },
-];
+function platformLinks(base: string): L[] {
+  return [
+    { name: "OpenShell Console", href: "/console", desc: "Fleet & sandbox management — list/create sandboxes, view policy, logs, terminal. Part of this site." },
+    { name: "Grafana", href: base ? `${base}/grafana` : "/grafana", desc: "Dashboards & metrics (Prometheus + Loki + Tempo). Behind the Envoy ingress; SSO via Keycloak.", ext: true, off: !base },
+    { name: "Keycloak", href: base ? `${base}/auth` : "/auth", desc: "Single sign-on / identity. Admin console + the openshell realm.", ext: true, off: !base },
+  ];
+}
 
 const docs: L[] = [
   { name: "NVIDIA OpenShell", href: "https://docs.nvidia.com/openshell/", desc: "The agent control plane: gateway, sandboxes, inference routing.", ext: true },
@@ -42,7 +41,9 @@ function Card({ l }: { l: L }) {
   return <Link href={l.href}>{inner}</Link>;
 }
 
-export default function LinksPage() {
+export default async function LinksPage() {
+  const base = await publicBaseUrl();
+  const platform = platformLinks(base);
   return (
     <main className="mx-auto max-w-4xl px-6 py-16">
       <h1 className="text-3xl font-extrabold tracking-tight">Links</h1>
@@ -51,7 +52,7 @@ export default function LinksPage() {
       </p>
 
       <h2 className="mt-10 text-lg font-bold tracking-tight">Platform UIs</h2>
-      {!BASE && (
+      {!base && (
         <p className="mt-2 text-sm text-[var(--color-fg-mut)]">
           Grafana / Headlamp / Keycloak sit behind the Envoy ingress on the node&apos;s port 30080.
           Expose that port on Brev and set <code>PUBLIC_BASE_URL</code> for the teaching-site service
