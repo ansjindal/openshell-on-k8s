@@ -61,10 +61,17 @@ WORKSHOP_PORT="${WORKSHOP_PORT:-3000}"
 ENABLE_SSO="${ENABLE_SSO:-true}"
 ENABLE_HEADLAMP="${ENABLE_HEADLAMP:-false}"
 ENABLE_CONSOLE="${ENABLE_CONSOLE:-true}"
+# Track whether the operator gave these explicitly — a derived base built from the
+# DEFAULT domain silently bakes the launchpad host into every SSO URL (Keycloak
+# issuer, realm redirect URIs, AUTH_URL, Grafana), which breaks sign-in on any other
+# host (e.g. brevlab.com). We warn on that below instead of failing silently.
+[[ -n "${PUBLIC_BASE_URL:-}" ]] && PUBLIC_BASE_URL_EXPLICIT=1 || PUBLIC_BASE_URL_EXPLICIT=0
+[[ -n "${BREV_URL_DOMAIN:-}" ]] && BREV_URL_DOMAIN_EXPLICIT=1 || BREV_URL_DOMAIN_EXPLICIT=0
 PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-}"
 BREV_URL_PREFIX="${BREV_URL_PREFIX:-openshell}"
 # Domain that fronts exposed ports on this Brev/launchpad. The public URL is
-# https://<prefix>-<brevid>.<domain>. Override if your environment differs.
+# https://<prefix>-<brevid>.<domain>. Default targets NVIDIA launchpad (the
+# zero-config platform); set BREV_URL_DOMAIN or PUBLIC_BASE_URL for any other host.
 BREV_URL_DOMAIN="${BREV_URL_DOMAIN:-stg.apps.launchpad.nvidia.com}"
 ENVOY_WEB_NODEPORT="${ENVOY_WEB_NODEPORT:-30080}"
 ENVOY_GRPC_NODEPORT="${ENVOY_GRPC_NODEPORT:-30081}"
@@ -108,6 +115,27 @@ SSO_SECRETS_BLOCK=""
 if [[ "$ENABLE_SSO" == "true" ]]; then
   [[ -n "$PUBLIC_BASE_URL" ]] || die "ENABLE_SSO=true but PUBLIC_BASE_URL is empty and brevid could not be derived. Set PUBLIC_BASE_URL in .env (the public https URL fronting Envoy host port ${ENVOY_HOST_PORT})."
   log "SSO enabled — public base URL: ${PUBLIC_BASE_URL}"
+  # Loudly flag the silent-wrong-host footgun: base was DERIVED from the DEFAULT
+  # launchpad domain. Everything baked below (Keycloak issuer/redirect URIs,
+  # AUTH_URL, Grafana SSO, Links page fallback) will point at launchpad; sign-in
+  # fails if this box is actually served on another host (e.g. brevlab.com).
+  if [[ "$PUBLIC_BASE_URL_EXPLICIT" == "0" && "$BREV_URL_DOMAIN_EXPLICIT" == "0" ]]; then
+    warn "PUBLIC_BASE_URL was derived using the DEFAULT domain '${BREV_URL_DOMAIN}'."
+    warn "If this box is served on a different host, set BREV_URL_DOMAIN (e.g. 'brevlab.com')"
+    warn "or PUBLIC_BASE_URL in .env and re-run, or console/Grafana SSO will point at the wrong host."
+  fi
+  # The trap that actually breaks re-runs: an EXPLICIT PUBLIC_BASE_URL silently wins over
+  # BREV_URL_DOMAIN (the derivation above is skipped when PUBLIC_BASE_URL is already set).
+  # So editing BREV_URL_DOMAIN=brevlab.com while a stale PUBLIC_BASE_URL=…launchpad… lingers
+  # in .env changes nothing. Detect the host mismatch and say so loudly.
+  if [[ "$PUBLIC_BASE_URL_EXPLICIT" == "1" && "$BREV_URL_DOMAIN_EXPLICIT" == "1" ]]; then
+    pub_host="${PUBLIC_BASE_URL#*://}"; pub_host="${pub_host%%/*}"
+    if [[ "$pub_host" != *".${BREV_URL_DOMAIN}" && "$pub_host" != "$BREV_URL_DOMAIN" ]]; then
+      warn "PUBLIC_BASE_URL (${PUBLIC_BASE_URL}) is NOT under BREV_URL_DOMAIN (${BREV_URL_DOMAIN})."
+      warn "PUBLIC_BASE_URL wins and BREV_URL_DOMAIN is ignored — every SSO URL uses '${pub_host}'."
+      warn "Update PUBLIC_BASE_URL to the intended host, or clear it so BREV_URL_DOMAIN derives the base."
+    fi
+  fi
   command -v openssl >/dev/null 2>&1 || { $SUDO apt-get install -y openssl >/dev/null 2>&1 || true; }
   # Persist generated secrets so re-runs reuse them (Keycloak realm clients must
   # keep stable secrets). Stored gitignored alongside the repo.
