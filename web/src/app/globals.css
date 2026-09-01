@@ -24,6 +24,9 @@
   --color-code-fg: #d6e0ec;
   --color-term-bg: #0a0d07;
 
+  /* sticky site header — translucent over whatever scrolls under it */
+  --color-header-bg: rgba(10, 12, 16, 0.82);
+
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -47,6 +50,7 @@
   --color-code-bg: #eef1f6;
   --color-code-fg: #1f2937;
   --color-term-bg: #f3f5f9;
+  --color-header-bg: rgba(255, 255, 255, 0.82);
 }
 html { transition: background-color 0.15s ease; }
 

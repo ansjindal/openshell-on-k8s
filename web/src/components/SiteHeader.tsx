@@ -4,7 +4,7 @@ import { FIRST_SLUG } from "@/lib/curriculum";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-[var(--color-line)] bg-[rgba(10,12,16,0.82)] px-5 backdrop-blur">
+    <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-header-bg)] px-5 backdrop-blur">
       <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
         <span>🦞</span>
         <span className="hidden sm:inline">
