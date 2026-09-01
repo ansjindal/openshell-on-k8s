@@ -1,6 +1,15 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/SiteHeader";
+
+// Self-hosted via next/font (built into the JS bundle at build time) instead of a
+// Google Fonts <link> tag — no external request at page-load time, no render with a
+// fallback font before a late swap. That external-CDN swap was the source of visibly
+// inconsistent fonts/sizes between pages (whichever font had or hadn't finished
+// loading yet when each page painted).
+const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800"], variable: "--font-sans-loaded", display: "swap" });
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono-loaded", display: "swap" });
 
 export const metadata: Metadata = {
   title: "OpenShell on Kubernetes",
@@ -9,11 +18,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: `try{document.documentElement.dataset.theme=localStorage.getItem('oclaw-theme')||'dark';}catch(e){}` }} />
       </head>
       <body>
