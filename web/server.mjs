@@ -33,6 +33,9 @@ const handle = app.getRequestHandler();
 let sessions = 0;
 await app.prepare();
 
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
+
 // Run an author-supplied lab "Check" command and report pass/fail by exit code.
 // The client already has a full interactive shell over /ws/term, so this adds no
 // new exposure on this single-user lab box.
@@ -40,13 +43,21 @@ function runCheck(cmd) {
   return new Promise((resolve) => {
     const p = spawn("/bin/bash", ["-lc", cmd], {
       cwd: LAB_CWD,
-      env: { ...LAB_BASE_ENV, KUBECONFIG: LAB_KUBECONFIG, LAB_CWD },
+      // NO_COLOR + TERM=dumb: this isn't a TTY, but tools like the openshell CLI
+      // color their output regardless — leaving raw escape sequences ("[1m", "[32m")
+      // visible as literal text in the notebook-style output panel. Ask nicely first;
+      // ANSI_RE below strips whatever ignores that request.
+      env: { ...LAB_BASE_ENV, KUBECONFIG: LAB_KUBECONFIG, LAB_CWD, NO_COLOR: "1", TERM: "dumb" },
       timeout: 25000,
     });
     let out = "", errs = "";
     p.stdout.on("data", (d) => { out += d; });
     p.stderr.on("data", (d) => { errs += d; });
-    p.on("close", (code) => resolve({ exitCode: code ?? 1, stdout: out.slice(0, 4000), stderr: errs.slice(0, 4000) }));
+    p.on("close", (code) => resolve({
+      exitCode: code ?? 1,
+      stdout: out.replace(ANSI_RE, "").slice(0, 4000),
+      stderr: errs.replace(ANSI_RE, "").slice(0, 4000),
+    }));
     p.on("error", (e) => resolve({ exitCode: 1, stdout: "", stderr: String(e) }));
   });
 }
