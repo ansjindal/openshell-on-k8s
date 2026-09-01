@@ -84,8 +84,8 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   }, [code, grammar]);
 
   return (
-    <div className="group relative my-5 overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-code-bg)]">
-      <div className="flex items-center justify-between border-b border-[var(--color-line)] px-3 py-1.5">
+    <div className="group relative my-5 overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-code-bg)]">
+      <div className="flex items-center justify-between px-3 py-1.5">
         <span className="font-mono text-[11px] text-[var(--color-fg-mut)]">{label}</span>
         <div className="flex gap-2">
           {runnable && (
@@ -115,15 +115,15 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
           </button>
         </div>
       </div>
-      <pre className="whitespace-pre-wrap break-words p-4 font-mono text-[13px] leading-relaxed">
+      <pre className="whitespace-pre-wrap break-words bg-[var(--color-term-bg)] p-4 font-mono text-[13px] leading-relaxed">
         {html
           ? <code className={`hljs language-${grammar}`} style={{ background: "transparent", padding: 0 }} dangerouslySetInnerHTML={{ __html: html }} />
           : <code className="text-[var(--color-code-fg)]">{code}</code>}
       </pre>
 
       {output && (
-        <div className="border-t border-[var(--color-line)]">
-          <div className="flex items-center gap-2 bg-[var(--color-panel)] px-3 py-1.5">
+        <div>
+          <div className="flex items-center gap-2 px-3 py-1.5 text-[var(--color-fg-mut)]">
             <span
               className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${
                 output.exitCode === 0 ? "bg-[var(--color-nv-dim)] text-white" : "bg-red-600 text-white"
@@ -131,28 +131,30 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
             >
               {output.exitCode === 0 ? "✓" : "✕"}
             </span>
-            <span className="font-mono text-[10px] text-[var(--color-fg-mut)]">
-              exit {output.exitCode}
-            </span>
+            <span className="font-mono text-[10px]">exit {output.exitCode}</span>
             <button
               onClick={() => setCollapsed((c) => !c)}
-              className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--color-fg-mut)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
+              className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
               title={collapsed ? "Expand output" : "Collapse output"}
             >
               {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
             </button>
             <button
               onClick={() => setOutput(null)}
-              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--color-fg-mut)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
               title="Clear output"
             >
               <Trash2 size={13} />
             </button>
           </div>
           {!collapsed && (
-            <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words bg-[var(--color-term-bg)] p-3 font-mono text-[12px] leading-relaxed text-[var(--color-code-fg)]">
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words bg-[var(--color-term-bg)] px-4 pb-4 font-mono text-[12px] leading-relaxed text-[var(--color-term-fg)]">
               {output.stdout}
-              {output.stderr && <span className="text-red-400">{output.stdout ? "\n" : ""}{output.stderr}</span>}
+              {output.stderr && (
+                <span style={{ color: output.exitCode === 0 ? "var(--color-term-fg)" : "var(--color-rh-bright)" }}>
+                  {output.stdout ? "\n" : ""}{output.stderr}
+                </span>
+              )}
               {!output.stdout && !output.stderr && <span className="text-[var(--color-fg-mut)]">(no output)</span>}
             </pre>
           )}

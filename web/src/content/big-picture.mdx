@@ -1,5 +1,11 @@
 One VM runs the whole thing. From the bottom up, each layer hands a safer, more-managed surface to the one above — until at the top you have an AI agent that can only do what your policy allows.
 
+<div className="mb-4 inline-flex flex-wrap items-center gap-2 text-[11px]">
+  <span className="rounded-full border border-[var(--color-nv-dim)] px-2.5 py-1 font-mono text-[var(--color-nv-bright)]">OpenShell gateway <strong>0.0.116</strong></span>
+  <span className="rounded-full border border-[var(--color-line-2)] px-2.5 py-1 font-mono text-[var(--color-fg-mut)]">agent-sandbox <strong>v1.0.0</strong></span>
+  <span className="rounded-full border border-[var(--color-line-2)] px-2.5 py-1 font-mono text-[var(--color-fg-mut)]">k3s <strong>v1.34</strong></span>
+</div>
+
 <EndToEndFlow />
 
 For the detailed topology — where each object lives and how this setup maps to it — explore the deployment below:

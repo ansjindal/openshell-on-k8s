@@ -10,25 +10,14 @@ const BAR_H = 44; // px — the docked toolbar's own height, collapsed or not
 // bottom of the viewport (like an editor's integrated terminal) — collapsible
 // to just its toolbar, never squeezing the content column.
 export function LabSplit({ slug, children }: { children: ReactNode; slug?: string }) {
-  // Hidden by default — the shell appears only when the reader runs a command
-  // (Run-in-shell) or explicitly opens it. An explicit open/close is remembered;
-  // an auto-open from a command is transient (next page starts hidden again).
+  // Closed by default on every lesson, every time — "Run" shows output inline
+  // under each block now, so the shell is opt-in, for readers who want to
+  // customize a command or work interactively rather than run it as-is.
   const [show, setShow] = useState(false);
   const [minimized, setMinimized] = useState(false);
 
-  // Explicit user toggle — remembered across pages.
-  function setShowManual(next: boolean) {
-    setShow(next);
-    try { window.localStorage.setItem("oclaw:shell-open", String(next)); } catch {}
-  }
-
-  useEffect(() => {
-    const savedShow = window.localStorage.getItem("oclaw:shell-open");
-    if (savedShow === "true") setShow(true); // only an explicit prior open reveals it
-  }, []);
-
-  // Running a command (runInShell → oclaw:start-shell) reveals the shell so the
-  // reader can see the output. This open is transient — it isn't persisted.
+  // The "Shell" button on a code block (runInShell → oclaw:start-shell) opens
+  // the dock so the reader can see it run interactively.
   useEffect(() => {
     const onStart = () => { setShow(true); setMinimized(false); };
     window.addEventListener("oclaw:start-shell", onStart);
@@ -48,7 +37,7 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
 
       {!show && (
         <button
-          onClick={() => setShowManual(true)}
+          onClick={() => setShow(true)}
           className="fixed bottom-4 right-4 z-40 rounded-lg border border-[var(--color-nv-dim)] bg-[var(--color-panel)] px-4 py-2 text-sm font-semibold text-[var(--color-nv-bright)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition hover:bg-[var(--color-bg-2)]"
         >
           <span className="inline-flex items-center gap-2"><PanelBottomOpen size={15} /> Show shell</span>
@@ -70,7 +59,7 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
               {minimized ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
             </button>
             <button
-              onClick={() => setShowManual(false)}
+              onClick={() => setShow(false)}
               className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-line-2)] text-[var(--color-fg-mut)] transition hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
               title="Close shell"
             >
@@ -79,7 +68,7 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
           </div>
           {!minimized && (
             <div className="mx-auto max-w-6xl px-4 pb-3" style={{ height: EXPANDED_H }}>
-              <Terminal title={slug ? `lab · ${slug}` : "lab shell"} fill />
+              <Terminal title={slug ? `lab · ${slug}` : "lab shell"} fill autoStart />
             </div>
           )}
         </div>

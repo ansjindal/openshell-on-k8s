@@ -23,6 +23,8 @@
   --color-code-bg: #0b0e13;
   --color-code-fg: #d6e0ec;
   --color-term-bg: #0a0d07;
+  --color-term-fg: #d6e4c4;      /* matches the live terminal's xterm foreground */
+  --color-term-accent: #92e600;  /* matches the live terminal's xterm cursor/bright-green */
 
   /* sticky site header — translucent over whatever scrolls under it */
   --color-header-bg: rgba(10, 12, 16, 0.82);
@@ -50,6 +52,8 @@
   --color-code-bg: #eef1f6;
   --color-code-fg: #1f2937;
   --color-term-bg: #f3f5f9;
+  --color-term-fg: #1f2937;      /* matches the live terminal's xterm foreground */
+  --color-term-accent: #4d7a00;  /* matches the live terminal's xterm cursor/bright-green */
   --color-header-bg: rgba(255, 255, 255, 0.82);
 }
 html { transition: background-color 0.15s ease; }
