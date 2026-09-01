@@ -7,17 +7,31 @@ Good news: **the VM is already provisioned.** Ansible (`./scripts/setup.sh`) ins
 ```bash
 kubectl get nodes
 ```
+<ExpectedOutput>
+{`NAME             STATUS   ROLES           AGE    VERSION
+brev-u0p730nbc   Ready    control-plane   121m   v1.34.11+k3s1`}
+</ExpectedOutput>
 
 You should see a single node in `Ready` state. That's k3s — one node, but a full Kubernetes API.
 
 ## 2 · The control plane is running
 
-The OpenShell gateway and the agent-sandbox controller live in the `openshell` namespace. The agent sandboxes themselves run in a **separate** `openshell-sandboxes` namespace — empty until you create one:
+The OpenShell gateway and the agent-sandbox controller live in the `openshell` namespace. The agent sandboxes themselves run in a **separate** `openshell-sandboxes` namespace:
 
 ```bash
 kubectl -n openshell get pods
 kubectl -n openshell-sandboxes get pods
 ```
+<ExpectedOutput>
+{`NAME                        READY   STATUS    RESTARTS   AGE
+openshell-0                 1/1     Running   0          120m
+registry-5f8f5c7fd9-4d5q4   1/1     Running   0          116m
+NAME               READY   STATUS    RESTARTS   AGE
+default--agent-0   1/1     Running   0          115m`}
+</ExpectedOutput>
+<Callout type="note" title="Two pods in openshell, not one">
+`registry` is the skills registry (Verdaccio) — covered in [Skills](/learn/skills). `default--agent-0` in `openshell-sandboxes` is there because `CREATE_FLEET=true` (the default) creates an initial fleet at provisioning time — you're not creating your first sandbox from scratch, that already happened; the next lesson covers what it *is*.
+</Callout>
 
 Wait for everything in `openshell` to read `Running`. The gateway is what the `openshell` CLI talks to; the agent pods will show up in `openshell-sandboxes` once you create sandboxes in the next lesson.
 
@@ -28,14 +42,23 @@ The gateway is exposed as a NodePort service on **30808**:
 ```bash
 kubectl -n openshell get svc
 ```
+<ExpectedOutput>
+{`NAME        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                         AGE
+openshell   NodePort    10.43.146.230   <none>        8080:30808/TCP,9090:32140/TCP   120m
+registry    ClusterIP   10.43.66.174    <none>        4873/TCP                        116m`}
+</ExpectedOutput>
 
 Look for a service with `30808` in its `PORT(S)` column. That's the door the CLI knocks on:
 
 ```bash
 openshell sandbox list
 ```
+<ExpectedOutput>
+{`NAME     CREATED              PHASE
+agent-0  2026-09-01 12:58:33  Ready`}
+</ExpectedOutput>
 
-An empty list (no sandboxes yet) is a healthy answer — it means the CLI reached the gateway. We'll create one in the next lesson.
+A response with no error means the CLI reached the gateway over mTLS — that's the whole point of this check. (An empty list is *also* healthy, if `CREATE_FLEET=false`.)
 
 ## 4 · Inference is wired
 
@@ -44,6 +67,10 @@ LiteLLM runs in its own namespace:
 ```bash
 kubectl -n litellm get pods
 ```
+<ExpectedOutput>
+{`NAME                       READY   STATUS    RESTARTS   AGE
+litellm-5cc7566b6d-kctjb   1/1     Running   0          121m`}
+</ExpectedOutput>
 
 That's the OpenAI-compatible endpoint every agent will reach through `inference.local`.
 

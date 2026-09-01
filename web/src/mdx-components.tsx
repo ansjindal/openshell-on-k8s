@@ -2,6 +2,7 @@ import type { MDXComponents } from "mdx/types";
 import { Terminal } from "@/components/Terminal";
 import { Callout } from "@/components/Callout";
 import { CodeBlock } from "@/components/CodeBlock";
+import { ExpectedOutput } from "@/components/ExpectedOutput";
 import { EndToEndFlow } from "@/components/diagrams/EndToEndFlow";
 import { OpenShellRuntime } from "@/components/diagrams/OpenShellRuntime";
 import { OpenShellOnK8s } from "@/components/diagrams/OpenShellOnK8s";
@@ -18,6 +19,7 @@ import { FleetView } from "@/components/FleetView";
 const components: MDXComponents = {
   Terminal,
   Callout,
+  ExpectedOutput,
   EndToEndFlow,
   OpenShellRuntime,
   OpenShellOnK8s,
