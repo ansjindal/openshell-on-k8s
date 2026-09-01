@@ -1,18 +1,15 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Terminal } from "./Terminal";
-import { PanelRightClose, PanelRightOpen, RotateCcw, TerminalSquare } from "lucide-react";
+import { PanelRightClose, PanelRightOpen, TerminalSquare } from "lucide-react";
 
-// Hands-on lessons: content on the left, a live lab shell on the right.
-// The shell column is draggable (resize width) and sticky (stays in view on scroll).
-// On small screens it stacks below the content.
+// Hands-on lessons: content on top, a live lab shell stacked below it — full
+// width at every viewport size, so the content column never gets squeezed.
 export function LabSplit({ slug, children }: { children: ReactNode; slug?: string }) {
-  const [shellPct, setShellPct] = useState(44); // % width of the shell column (desktop)
   // Hidden by default — the shell appears only when the reader runs a command
   // (Run-in-shell) or explicitly opens it. An explicit open/close is remembered;
   // an auto-open from a command is transient (next page starts hidden again).
   const [show, setShow] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   // Explicit user toggle — remembered across pages.
   function setShowManual(next: boolean) {
@@ -22,9 +19,7 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
 
   useEffect(() => {
     const savedShow = window.localStorage.getItem("oclaw:shell-open");
-    const savedPct = Number(window.localStorage.getItem("oclaw:shell-pct"));
     if (savedShow === "true") setShow(true); // only an explicit prior open reveals it
-    if (Number.isFinite(savedPct) && savedPct >= 26 && savedPct <= 68) setShellPct(savedPct);
   }, []);
 
   // Running a command (runInShell → oclaw:start-shell) reveals the shell so the
@@ -34,29 +29,6 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
     window.addEventListener("oclaw:start-shell", onStart);
     return () => window.removeEventListener("oclaw:start-shell", onStart);
   }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem("oclaw:shell-pct", String(shellPct));
-  }, [shellPct]);
-
-  function startDrag(e: React.MouseEvent) {
-    e.preventDefault();
-    const move = (ev: MouseEvent) => {
-      const el = containerRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const pct = ((r.right - ev.clientX) / r.width) * 100;
-      setShellPct(Math.min(68, Math.max(26, pct)));
-    };
-    const up = () => {
-      document.body.style.cursor = "";
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
-    };
-    document.body.style.cursor = "col-resize";
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
-  }
 
   if (!show) {
     return (
@@ -72,42 +44,24 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
   }
 
   return (
-    <div ref={containerRef} className="flex w-full flex-col gap-4 lg:flex-row lg:gap-0" style={{ "--shell-w": `${shellPct}%` } as CSSProperties}>
-      <div className="prose min-w-0 flex-1 lg:pr-5">{children}</div>
+    <div className="flex w-full flex-col gap-4">
+      <div className="prose min-w-0 max-w-none xl:max-w-6xl">{children}</div>
 
-      <div
-        onMouseDown={startDrag}
-        className="group hidden w-3 shrink-0 cursor-col-resize items-stretch justify-center lg:flex"
-        title="Drag to resize the shell"
-      >
-        <span className="my-2 w-px rounded-full bg-[var(--color-line)] transition-colors group-hover:bg-[var(--color-nv)]" />
-      </div>
-
-      <div className="w-full shrink-0 lg:w-auto lg:basis-[var(--shell-w)]">
-        <div className="lg:sticky lg:top-16">
-          <div className="mb-2 flex items-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2.5 py-2">
-            <span className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-[var(--color-fg-dim)]">
-              <TerminalSquare size={15} className="text-[var(--color-nv-bright)]" />
-              <span className="truncate">Live lab shell</span>
-            </span>
-            <span className="ml-auto hidden text-[10px] text-[var(--color-fg-mut)] sm:inline">{Math.round(shellPct)}%</span>
-            <button
-              onClick={() => setShellPct(44)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-line-2)] text-[var(--color-fg-mut)] transition hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
-              title="Reset shell width"
-            >
-              <RotateCcw size={14} />
-            </button>
-            <button
-              onClick={() => setShowManual(false)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-line-2)] text-[var(--color-fg-mut)] transition hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
-              title="Hide shell"
-            >
-              <PanelRightClose size={15} />
-            </button>
-          </div>
-          <Terminal title={slug ? `lab · ${slug}` : "lab shell"} fill />
+      <div className="w-full">
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2.5 py-2">
+          <span className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-[var(--color-fg-dim)]">
+            <TerminalSquare size={15} className="text-[var(--color-nv-bright)]" />
+            <span className="truncate">Live lab shell</span>
+          </span>
+          <button
+            onClick={() => setShowManual(false)}
+            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-line-2)] text-[var(--color-fg-mut)] transition hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
+            title="Hide shell"
+          >
+            <PanelRightClose size={15} />
+          </button>
         </div>
+        <Terminal title={slug ? `lab · ${slug}` : "lab shell"} />
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
@@ -20,11 +21,29 @@ const inferenceProto = grpc.loadPackageDefinition(protoLoader.loadSync(path.join
 const OpenShellService = openshellProto.openshell.v1.OpenShell;
 const InferenceService = inferenceProto.openshell.inference.v1.Inference;
 
+// Note: use "localhost", not "127.0.0.1" — the gateway's server cert SANs
+// list localhost/openshell.* hostnames, not the bare loopback IP, and TLS
+// hostname verification will otherwise fail even with the right CA.
 const ENDPOINT = process.env.OPENSHELL_GATEWAY_ENDPOINT || "127.0.0.1:30808";
 const USE_TLS = process.env.OPENSHELL_GATEWAY_TLS === "true";
 
+// The gateway always terminates mTLS (see ansible/roles/09-openshell_gateway).
+// createSsl() with no arguments only does server-side verification against
+// the system trust store — it neither trusts the cert-manager-issued CA nor
+// presents a client certificate, so the handshake never completes (surfaces
+// to callers as "14 UNAVAILABLE ... ECONNRESET"). Load the same CA/client
+// cert/key scripts/setup.sh fetches for the CLI.
 function creds() {
-  return USE_TLS ? grpc.credentials.createSsl() : grpc.credentials.createInsecure();
+  if (!USE_TLS) return grpc.credentials.createInsecure();
+  const ca = process.env.OPENSHELL_GATEWAY_CA_FILE;
+  const key = process.env.OPENSHELL_GATEWAY_CLIENT_KEY_FILE;
+  const cert = process.env.OPENSHELL_GATEWAY_CLIENT_CERT_FILE;
+  if (!ca || !key || !cert) {
+    throw new Error(
+      "OPENSHELL_GATEWAY_TLS=true but OPENSHELL_GATEWAY_CA_FILE/CLIENT_KEY_FILE/CLIENT_CERT_FILE are not all set"
+    );
+  }
+  return grpc.credentials.createSsl(fs.readFileSync(ca), fs.readFileSync(key), fs.readFileSync(cert));
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

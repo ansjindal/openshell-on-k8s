@@ -331,6 +331,27 @@ deploy_workshop() {
 
   log "Installing the openshell-workshop systemd service on port ${WORKSHOP_PORT}"
   local run_user; run_user="$(id -un)"
+
+  # The console's BFF (web/src/lib/grpc.ts) talks gRPC straight to the gateway,
+  # which always terminates mTLS now — give it the same client cert material
+  # scripts/setup.sh already fetches for the CLI (see configure_lab_cli).
+  # Retry until the Secret's data is actually populated (cert-manager can
+  # create the Secret object before patching in its content).
+  local tls_dir="/etc/openshell-console-tls"
+  $SUDO mkdir -p "$tls_dir"
+  local crt=""
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    crt="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}' 2>/dev/null)"
+    [ -n "$crt" ] && break
+    sleep 3
+  done
+  echo "$crt" | base64 -d | $SUDO tee "$tls_dir/tls.crt" >/dev/null
+  kubectl -n openshell get secret openshell-client-tls -o jsonpath='{.data.tls\.key}' | base64 -d | $SUDO tee "$tls_dir/tls.key" >/dev/null
+  local ca; ca="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}')"
+  [ -n "$ca" ] || ca="$(kubectl -n openshell get secret openshell-server-tls -o jsonpath='{.data.ca\.crt}')"
+  echo "$ca" | base64 -d | $SUDO tee "$tls_dir/ca.crt" >/dev/null
+  $SUDO chown -R "${run_user}:${run_user}" "$tls_dir"
+  $SUDO chmod 600 "$tls_dir/tls.key"
   # Reconcile the workshop EndpointSlice to the CURRENT node InternalIP. Wired as an
   # ExecStartPost below so the Envoy upstream self-heals after a VM stop/relaunch (the node
   # IP can change) — without it the slice goes stale and Envoy 503s the workshop route.
@@ -363,8 +384,11 @@ Environment=KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 Environment=WORKSHOP_NS=${OPENSHELL_NS:-openshell}
 Environment=LAB_KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 Environment=LAB_CWD=${ROOT}
-Environment=OPENSHELL_GATEWAY_ENDPOINT=127.0.0.1:${GATEWAY_NODEPORT}
-Environment=OPENSHELL_GATEWAY_TLS=false
+Environment=OPENSHELL_GATEWAY_ENDPOINT=localhost:${GATEWAY_NODEPORT}
+Environment=OPENSHELL_GATEWAY_TLS=true
+Environment=OPENSHELL_GATEWAY_CA_FILE=${tls_dir}/ca.crt
+Environment=OPENSHELL_GATEWAY_CLIENT_CERT_FILE=${tls_dir}/tls.crt
+Environment=OPENSHELL_GATEWAY_CLIENT_KEY_FILE=${tls_dir}/tls.key
 Environment=PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
 Environment=AUTH_URL=${PUBLIC_BASE_URL}
 Environment=AUTH_SECRET=${CONSOLE_AUTH_SECRET:-}
