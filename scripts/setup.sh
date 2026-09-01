@@ -276,7 +276,17 @@ configure_lab_cli() {
     command -v kubectl >/dev/null 2>&1 || exit 0
     mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"
     mkdir -p "$mtls_dir"
-    kubectl -n openshell get secret openshell-client-tls -o jsonpath="{.data.tls\.crt}" 2>/dev/null | base64 -d > "$mtls_dir/tls.crt"
+    # The Secret object can exist before cert-manager finishes populating its
+    # data (create-then-patch) — an empty tls.crt here silently becomes an
+    # empty file, and `gateway add --local` then generates its own throwaway
+    # dev CA instead of erroring. Retry until the data is actually there.
+    crt=""
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      crt="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath="{.data.tls\.crt}" 2>/dev/null)"
+      [ -n "$crt" ] && break
+      sleep 3
+    done
+    echo "$crt" | base64 -d > "$mtls_dir/tls.crt"
     kubectl -n openshell get secret openshell-client-tls -o jsonpath="{.data.tls\.key}" 2>/dev/null | base64 -d > "$mtls_dir/tls.key"
     ca="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath="{.data.ca\.crt}" 2>/dev/null)"
     [ -n "$ca" ] || ca="$(kubectl -n openshell get secret openshell-server-tls -o jsonpath="{.data.ca\.crt}" 2>/dev/null)"

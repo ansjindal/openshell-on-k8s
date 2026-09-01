@@ -90,15 +90,24 @@
     # namespaces, and cert-manager only creates this one where the chart is
     # installed, so replicate it — otherwise every sandbox pod sits in
     # Init:0/2 forever on "secret openshell-client-tls not found".
-    - name: Wait for the client mTLS secret to exist
+    # The Secret object can exist before cert-manager finishes populating its
+    # data (create-then-patch) — checking only `get secret -o name` (existence)
+    # let earlier runs race ahead with an EMPTY tls.crt, which downstream (role
+    # 10, scripts/setup.sh) silently decoded into an empty file; `openshell
+    # gateway add --local` then found no valid cert material and fell back to
+    # self-generating its own throwaway dev CA instead of erroring — the CLI
+    # accepted it as "TLS certificates present" and every subsequent RPC failed
+    # with an opaque "invalid peer certificate: UnknownIssuer". Wait for actual
+    # non-empty cert data instead of just the object.
+    - name: Wait for the client mTLS secret to be populated
       ansible.builtin.command: >-
-        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o name
+        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls
+        -o jsonpath={.data.tls\.crt}
       register: _client_tls_secret
       changed_when: false
       retries: 15
       delay: 4
-      until: _client_tls_secret.rc == 0
-      when: k3s_sandbox_namespace != openshell_namespace
+      until: _client_tls_secret.rc == 0 and (_client_tls_secret.stdout | length) > 0
 
     - name: Copy the client mTLS secret into the sandbox namespace
       ansible.builtin.shell: |

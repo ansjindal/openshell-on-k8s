@@ -101,10 +101,23 @@ cmd_task() {
   fi
   [ "${#agents[@]}" -gt 0 ] || die "no agents — run 'fleet up' first"
 
+  # openclaw's one-shot invocation is `agent --agent main --message <text>`
+  # (it routes through openclaw's own Gateway for inference by default — no
+  # --local, no API keys needed in the sandbox shell; `main` is the default
+  # agent id every openclaw workspace ships with — confirm with
+  # `sandbox exec -- openclaw agents list`). claude/codex/opencode all use the
+  # more common `-p "<prompt>"` print-mode convention instead.
+  local -a agent_argv
+  if [ "${AGENT_CMD}" = "openclaw" ]; then
+    agent_argv=("${AGENT_CMD}" agent --agent main --message "${prompt}")
+  else
+    agent_argv=("${AGENT_CMD}" -p "${prompt}")
+  fi
+
   echo "Running '${AGENT_CMD}' on ${#agents[@]} agent(s) in parallel..."
   local pids=()
   for a in "${agents[@]}"; do
-    ( out="$("${OSH[@]}" sandbox exec -n "${a}" -- "${AGENT_CMD}" -p "${prompt}" 2>&1 || true)"
+    ( out="$("${OSH[@]}" sandbox exec -n "${a}" -- "${agent_argv[@]}" 2>&1 || true)"
       printf '\n── [%s] ───────────────\n%s\n' "${a}" "${out}" ) &
     pids+=("$!")
   done
