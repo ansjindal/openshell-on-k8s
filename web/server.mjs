@@ -35,30 +35,37 @@ await app.prepare();
 
 // eslint-disable-next-line no-control-regex
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
+const CHECK_MAX_OUTPUT = 20000;
 
-// Run an author-supplied lab "Check" command and report pass/fail by exit code.
-// The client already has a full interactive shell over /ws/term, so this adds no
-// new exposure on this single-user lab box.
-function runCheck(cmd) {
+// Run an author-supplied lab "Check"/notebook-run command, streaming chunks to
+// onChunk as they arrive (some commands, e.g. `sandbox create`, print progress
+// over many seconds — buffering the whole thing before responding means the
+// notebook-style output panel shows nothing until the command finishes).
+// The client already has a full interactive shell over /ws/term, so this adds
+// no new exposure on this single-user lab box.
+function runCheckStream(cmd, onChunk) {
   return new Promise((resolve) => {
     const p = spawn("/bin/bash", ["-lc", cmd], {
       cwd: LAB_CWD,
       // NO_COLOR + TERM=dumb: this isn't a TTY, but tools like the openshell CLI
       // color their output regardless — leaving raw escape sequences ("[1m", "[32m")
-      // visible as literal text in the notebook-style output panel. Ask nicely first;
-      // ANSI_RE below strips whatever ignores that request.
+      // visible as literal text in the output panel. Ask nicely first; ANSI_RE
+      // below strips whatever ignores that request.
       env: { ...LAB_BASE_ENV, KUBECONFIG: LAB_KUBECONFIG, LAB_CWD, NO_COLOR: "1", TERM: "dumb" },
       timeout: 25000,
     });
-    let out = "", errs = "";
-    p.stdout.on("data", (d) => { out += d; });
-    p.stderr.on("data", (d) => { errs += d; });
-    p.on("close", (code) => resolve({
-      exitCode: code ?? 1,
-      stdout: out.replace(ANSI_RE, "").slice(0, 4000),
-      stderr: errs.replace(ANSI_RE, "").slice(0, 4000),
-    }));
-    p.on("error", (e) => resolve({ exitCode: 1, stdout: "", stderr: String(e) }));
+    let total = 0;
+    const send = (stream, data) => {
+      if (total >= CHECK_MAX_OUTPUT) return;
+      let s = data.toString().replace(ANSI_RE, "");
+      if (total + s.length > CHECK_MAX_OUTPUT) s = s.slice(0, CHECK_MAX_OUTPUT - total);
+      total += s.length;
+      onChunk(stream, s);
+    };
+    p.stdout.on("data", (d) => send("stdout", d));
+    p.stderr.on("data", (d) => send("stderr", d));
+    p.on("close", (code) => resolve(code ?? 1));
+    p.on("error", (e) => { onChunk("stderr", String(e)); resolve(1); });
   });
 }
 
@@ -67,19 +74,25 @@ const server = createServer((req, res) => {
     let body = "";
     req.on("data", (c) => { body += c; if (body.length > 8192) req.destroy(); });
     req.on("end", async () => {
+      let cmd;
+      try { ({ cmd } = JSON.parse(body || "{}")); } catch { cmd = null; }
+      if (!cmd || typeof cmd !== "string") {
+        res.writeHead(400, { "content-type": "application/x-ndjson" });
+        res.end(JSON.stringify({ done: true, exitCode: 1, error: "missing cmd" }) + "\n");
+        return;
+      }
+      // Newline-delimited JSON: one {stream, chunk} line per burst of output,
+      // then a final {done: true, exitCode}. The client reads this as it
+      // arrives so long-running commands (sandbox create, …) show progress
+      // instead of one dump at the end.
+      res.writeHead(200, { "content-type": "application/x-ndjson", "cache-control": "no-cache" });
       try {
-        const { cmd } = JSON.parse(body || "{}");
-        if (!cmd || typeof cmd !== "string") {
-          res.writeHead(400, { "content-type": "application/json" });
-          res.end(JSON.stringify({ exitCode: 1, stderr: "missing cmd" }));
-          return;
-        }
-        const r = await runCheck(cmd);
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify(r));
+        const exitCode = await runCheckStream(cmd, (stream, chunk) => {
+          res.write(JSON.stringify({ stream, chunk }) + "\n");
+        });
+        res.end(JSON.stringify({ done: true, exitCode }) + "\n");
       } catch (e) {
-        res.writeHead(500, { "content-type": "application/json" });
-        res.end(JSON.stringify({ exitCode: 1, stderr: String(e) }));
+        res.end(JSON.stringify({ done: true, exitCode: 1, error: String(e) }) + "\n");
       }
     });
     return;

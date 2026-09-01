@@ -22,12 +22,46 @@ export function runInShell(text: string) {
   else queue.push(cmd);
 }
 
-export function runApiCheck(cmd: string): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  return fetch("/api/check", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ cmd }),
-  })
-    .then((r) => r.json())
-    .catch((e) => ({ exitCode: 1, stdout: "", stderr: String(e) }));
+// Streams a command's output as it's produced (NDJSON: one {stream, chunk} line
+// per burst, then a final {done: true, exitCode}) — long-running commands
+// (sandbox create, …) show progress instead of one dump once they finish.
+export async function runApiCheckStream(
+  cmd: string,
+  onChunk: (stream: "stdout" | "stderr", text: string) => void
+): Promise<{ exitCode: number }> {
+  try {
+    const r = await fetch("/api/check", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cmd }),
+    });
+    if (!r.body) {
+      const j = await r.json().catch(() => ({}));
+      return { exitCode: j.exitCode ?? 1 };
+    }
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let exitCode = 1;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, idx);
+        buf = buf.slice(idx + 1);
+        if (!line) continue;
+        try {
+          const obj = JSON.parse(line);
+          if (obj.done) exitCode = obj.exitCode ?? 1;
+          else if (obj.chunk) onChunk(obj.stream, obj.chunk);
+        } catch { /* ignore a partial/malformed line */ }
+      }
+    }
+    return { exitCode };
+  } catch (e) {
+    onChunk("stderr", String(e));
+    return { exitCode: 1 };
+  }
 }

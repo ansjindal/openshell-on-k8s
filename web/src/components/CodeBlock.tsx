@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect, type ReactNode, isValidElement } from "react";
+import { useState, useEffect, useRef, type ReactNode, isValidElement } from "react";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
 import yaml from "highlight.js/lib/languages/yaml";
 import json from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github-dark.css";
-import { ChevronDown, ChevronUp, Terminal as TerminalIcon, Trash2 } from "lucide-react";
-import { runInShell, runApiCheck } from "@/lib/labBus";
+import { ChevronDown, ChevronUp, Loader2, Terminal as TerminalIcon, Trash2 } from "lucide-react";
+import { runInShell, runApiCheckStream } from "@/lib/labBus";
 
 hljs.registerLanguage("bash", bash);
 hljs.registerLanguage("yaml", yaml);
@@ -55,14 +55,25 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   const lang = getLang(children);
   const [copied, setCopied] = useState(false);
   const [running, setRunning] = useState(false);
-  const [output, setOutput] = useState<{ stdout: string; stderr: string; exitCode: number } | null>(null);
+  const [output, setOutput] = useState<{ stdout: string; stderr: string; exitCode: number | null } | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const outputRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    if (running && outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
+  }, [output, running]);
 
   async function runInline() {
     setRunning(true);
     setCollapsed(false);
-    const r = await runApiCheck(code);
-    setOutput(r);
+    setOutput({ stdout: "", stderr: "", exitCode: null });
+    const { exitCode } = await runApiCheckStream(code, (stream, chunk) => {
+      setOutput((prev) => {
+        const base = prev ?? { stdout: "", stderr: "", exitCode: null };
+        return stream === "stdout" ? { ...base, stdout: base.stdout + chunk } : { ...base, stderr: base.stderr + chunk };
+      });
+    });
+    setOutput((prev) => ({ stdout: prev?.stdout ?? "", stderr: prev?.stderr ?? "", exitCode }));
     setRunning(false);
   }
 
@@ -115,7 +126,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
           </button>
         </div>
       </div>
-      <pre className="whitespace-pre-wrap break-words bg-[var(--color-term-bg)] p-4 font-mono text-[13px] leading-relaxed">
+      <pre className="whitespace-pre overflow-x-auto bg-[var(--color-term-bg)] p-4 font-mono text-[13px] leading-relaxed">
         {html
           ? <code className={`hljs language-${grammar}`} style={{ background: "transparent", padding: 0 }} dangerouslySetInnerHTML={{ __html: html }} />
           : <code className="text-[var(--color-code-fg)]">{code}</code>}
@@ -124,14 +135,23 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
       {output && (
         <div>
           <div className="flex items-center gap-2 px-3 py-1.5 text-[var(--color-fg-mut)]">
-            <span
-              className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${
-                output.exitCode === 0 ? "bg-[var(--color-nv-dim)] text-white" : "bg-red-600 text-white"
-              }`}
-            >
-              {output.exitCode === 0 ? "✓" : "✕"}
-            </span>
-            <span className="font-mono text-[10px]">exit {output.exitCode}</span>
+            {output.exitCode === null ? (
+              <>
+                <Loader2 size={13} className="animate-spin text-[var(--color-nv-bright)]" />
+                <span className="font-mono text-[10px]">running…</span>
+              </>
+            ) : (
+              <>
+                <span
+                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${
+                    output.exitCode === 0 ? "bg-[var(--color-nv-dim)] text-white" : "bg-red-600 text-white"
+                  }`}
+                >
+                  {output.exitCode === 0 ? "✓" : "✕"}
+                </span>
+                <span className="font-mono text-[10px]">exit {output.exitCode}</span>
+              </>
+            )}
             <button
               onClick={() => setCollapsed((c) => !c)}
               className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
@@ -148,10 +168,10 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
             </button>
           </div>
           {!collapsed && (
-            <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words bg-[var(--color-term-bg)] px-4 pb-4 font-mono text-[12px] leading-relaxed text-[var(--color-term-fg)]">
+            <pre ref={outputRef} className="max-h-64 overflow-auto whitespace-pre bg-[var(--color-term-bg)] px-4 pb-4 font-mono text-[12px] leading-relaxed text-[var(--color-term-fg)]">
               {output.stdout}
               {output.stderr && (
-                <span style={{ color: output.exitCode === 0 ? "var(--color-term-fg)" : "var(--color-rh-bright)" }}>
+                <span style={{ color: output.exitCode === null || output.exitCode === 0 ? "var(--color-term-fg)" : "var(--color-rh-bright)" }}>
                   {output.stdout ? "\n" : ""}{output.stderr}
                 </span>
               )}
