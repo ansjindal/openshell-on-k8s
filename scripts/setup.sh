@@ -256,13 +256,15 @@ TAGS_ARG=()
 ) || die "Ansible run failed — see the output above. Fix and re-run ./scripts/setup.sh"
 
 # ---- point the lab user's openshell CLI at the gateway ----------------------
-# The playbook configures the CLI as root, but the interactive lab shell (SSH + the
-# in-browser terminal) runs as the box's primary user — whose CLI otherwise has only the
-# default mtls "openshell" gateway that `install.sh` auto-creates on first run. That broke
-# bare `openshell …` two ways: (1) no `fleet` (plaintext NodePort) gateway, and (2) the
-# auto-created mtls gateway POISONS default gateway resolution — the CLI reaches for an mtls
-# CA that doesn't exist ("failed to read TLS CA …/mtls/ca.crt") even when fleet is selected.
-# Fix per user: add the plaintext fleet gateway, DROP the mtls default, select fleet.
+# The playbook configures the CLI as root (ansible/roles/10-inference_routing), but the
+# interactive lab shell (SSH + the in-browser terminal) runs as the box's primary user —
+# whose CLI otherwise has only the default mtls "openshell" gateway that `install.sh`
+# auto-creates on first run (a DIFFERENT CA than the cluster's, since it's a local
+# homebrew/docker gateway, not this cluster's). The gateway always terminates mTLS now
+# (see ansible/roles/09-openshell_gateway/files/values.yaml), so this user's CLI needs the
+# same client-cert bootstrap role 10 does for root: pull the cert out of the
+# openshell-client-tls Secret before registering, then select it and drop the poisoned
+# auto-created default.
 configure_lab_cli() {
   local u="$1"
   id "$u" >/dev/null 2>&1 || return 0
@@ -271,13 +273,27 @@ configure_lab_cli() {
   "${run[@]}" '
     export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
     command -v openshell >/dev/null 2>&1 || exit 0
-    openshell gateway add http://127.0.0.1:'"${GATEWAY_NODEPORT}"' --local --name fleet >/dev/null 2>&1 || true
-    openshell gateway remove openshell >/dev/null 2>&1 || true   # the auto-created mtls default
+    command -v kubectl >/dev/null 2>&1 || exit 0
+    mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"
+    mkdir -p "$mtls_dir"
+    kubectl -n openshell get secret openshell-client-tls -o jsonpath="{.data.tls\.crt}" 2>/dev/null | base64 -d > "$mtls_dir/tls.crt"
+    kubectl -n openshell get secret openshell-client-tls -o jsonpath="{.data.tls\.key}" 2>/dev/null | base64 -d > "$mtls_dir/tls.key"
+    ca="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath="{.data.ca\.crt}" 2>/dev/null)"
+    [ -n "$ca" ] || ca="$(kubectl -n openshell get secret openshell-server-tls -o jsonpath="{.data.ca\.crt}" 2>/dev/null)"
+    echo "$ca" | base64 -d > "$mtls_dir/ca.crt"
+    chmod 600 "$mtls_dir/tls.key"
+    # remove first: `gateway add` is a no-op (not an overwrite) against an
+    # existing name — a stale plaintext "fleet" from before mTLS would
+    # otherwise stick around and every CLI call would fail with an opaque
+    # transport error against the now-mTLS-only gateway.
+    openshell gateway remove fleet >/dev/null 2>&1 || true
+    openshell gateway add https://localhost:'"${GATEWAY_NODEPORT}"' --local --name fleet >/dev/null 2>&1 || true
+    openshell gateway remove openshell >/dev/null 2>&1 || true   # the auto-created mtls default (wrong CA)
     openshell gateway select fleet >/dev/null 2>&1 || true
   ' || true
 }
 LAB_USER="${LAB_USER:-$(stat -c '%U' "$ROOT" 2>/dev/null || echo ubuntu)}"
-log "Pointing ${LAB_USER}'s openshell CLI at the fleet gateway (plaintext :${GATEWAY_NODEPORT}; dropping the mtls default)"
+log "Pointing ${LAB_USER}'s openshell CLI at the fleet gateway (mtls :${GATEWAY_NODEPORT})"
 configure_lab_cli "$LAB_USER"
 [[ "$(id -un)" != "$LAB_USER" ]] && configure_lab_cli "$(id -un)"   # also the workshop/in-browser-terminal user
 

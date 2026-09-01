@@ -71,7 +71,7 @@
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
       args: { executable: /bin/bash }
       changed_when: false
-      tags: [litellm, postgres, gateway, kyverno, monitoring]
+      tags: [litellm, postgres, gateway, kyverno, monitoring, cert-manager]
     - name: Apply the gVisor RuntimeClass (API is up now)
       ansible.builtin.import_role:
         name: "01-gvisor"
@@ -111,6 +111,13 @@
   tags: [apiserver-oidc, dashboard]
   roles:
     - { role: "08-apiserver_oidc", when: apiserver_oidc_enabled | bool }
+
+- name: Component — cert-manager (issues the gateway's mTLS material, optional)
+  hosts: server
+  become: true
+  tags: [cert-manager, gateway]
+  roles:
+    - { role: "08b-cert_manager", when: cert_manager_enabled | bool }
 
 - name: Component — OpenShell gateway
   hosts: server

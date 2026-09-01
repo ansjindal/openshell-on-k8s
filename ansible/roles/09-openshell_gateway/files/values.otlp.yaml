@@ -1,0 +1,11 @@
+# Overlay applied when openshell_otlp_enabled (monitoring_enabled) — exports
+# gateway + sandbox-supervisor traces over OTLP/gRPC straight to Tempo's
+# in-cluster Service (ansible/roles/12-monitoring installs Tempo with its OTLP
+# receiver on 4317 enabled by chart default; already wired into Grafana via
+# the tempo datasource in that role). No collector hop needed.
+server:
+  otlp:
+    # Needs an explicit scheme — the gateway's tonic/OTLP gRPC exporter rejects
+    # a bare host:port with "transport error: invalid URI".
+    endpoint: "http://tempo.monitoring.svc.cluster.local:4317"
+    serviceName: "openshell-gateway"

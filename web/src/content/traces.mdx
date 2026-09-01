@@ -1,0 +1,21 @@
+The gateway and every sandbox supervisor it launches can export **OpenTelemetry traces** over OTLP/gRPC — a newer OpenShell capability this launchable wires straight into the observability stack from [Security](/learn/security): Grafana Tempo, already installed by the monitoring role, already registered as a Grafana datasource. No separate collector to stand up.
+
+## Generate a trace
+
+Run a task — every prompt-to-tool-call chain the fleet handles emits a span tree:
+
+```bash
+./scripts/fleet task "Write a haiku about Kubernetes pods" agent-0
+```
+
+## Find it in Tempo
+
+Open Grafana (`/grafana` behind SSO, or NodePort `30030` without it) → **Explore** → pick the **Tempo** datasource → **Search**, filter by service name `openshell-gateway`, and open the most recent trace. You'll see the span waterfall: the gateway receiving the request, the sandbox supervisor executing it, and the call out through `inference.local` to LiteLLM — the same request path [Inference Routing](/learn/inference) and [The Seal](/learn/policy) walked through from the CLI and the egress-policy sides; this is the same path from an observability angle.
+
+<Callout type="nv" title="One export, two lenses">
+The gateway's OTLP spans and the [fleet dashboard](/learn/console)'s Prometheus metrics describe the same traffic at different resolutions — metrics tell you a sandbox is slow, a trace tells you *which hop*.
+</Callout>
+
+## How it's wired
+
+`server.otlp.endpoint` on the gateway chart points directly at Tempo's in-cluster Service (`tempo.monitoring.svc.cluster.local:4317`) — no OTLP collector hop. It's only enabled when monitoring is on (`ENABLE_MONITORING=true`), since Tempo doesn't exist otherwise; see `ansible/roles/09-openshell_gateway/files/values.otlp.yaml` if you want to point it somewhere else, e.g. an external tracing backend.

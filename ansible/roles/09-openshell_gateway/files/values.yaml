@@ -1,17 +1,22 @@
 # Values for the official OpenShell gateway Helm chart.
-#   chart: oci://ghcr.io/nvidia/openshell/helm-chart   (see README.md for install)
+#   chart: oci://ghcr.io/nvidia/openshell/helm-chart   (see ansible/README.md)
 #
 # The gateway is the control plane: its Kubernetes compute driver turns sandbox
-# requests into agents.x-k8s.io Sandbox CRs (reconciled by component 00), and its
-# inference router serves https://inference.local to every sandbox.
+# requests into agents.x-k8s.io Sandbox CRs, and its inference router serves
+# https://inference.local to every sandbox.
 #
-# These are DEV-FRIENDLY defaults for a single-VM demo (no TLS, no OIDC) so the
-# CLI can talk to the gateway with no auth setup. DO NOT use as-is in production —
-# see components/30-openshell-gateway/README.md for the hardening switches.
+# mTLS is ON (chart default since 0.0.71+): the gateway always terminates mTLS
+# and requires a client certificate. Cert issuance is handed to cert-manager
+# (see values.mtls.yaml + ansible/roles/08b-cert_manager) rather than the
+# chart's built-in pkiInitJob — both work, cert-manager is used here since it's
+# one of the OpenShell capabilities this launchable showcases. The CLI side
+# (role 10-inference_routing) fetches the resulting client cert out of the
+# openshell-client-tls Secret into the CLI's mTLS cert directory before it
+# calls `openshell gateway add`.
 #
 # NOTE: key names follow the documented chart values; verify against
-#   helm show values oci://ghcr.io/nvidia/openshell/helm-chart
-# for your chart version and adjust if a key differs.
+#   helm show values oci://ghcr.io/nvidia/openshell/helm-chart --version {{ openshell_chart_version }}
+# before bumping the chart version further — they've shifted before.
 
 image:
   repository: ghcr.io/nvidia/openshell/gateway
@@ -53,13 +58,12 @@ server:
   # https://openshell.openshell.svc.cluster.local:8080). Hardcoding without a
   # scheme breaks the sandbox supervisor connection.
   grpcEndpoint: ""
-  # DEV: plaintext HTTP + unauthenticated CLI — matches the known-good reference
-  # deployment (k3s 1.35.x). NOTE: newer chart releases (>= 0.0.71) make the
-  # gateway ALWAYS terminate mTLS, which then needs client certs wired into the
-  # CLI and sandboxes; this launchable instead pins a compatible chart + k3s and
-  # keeps the simple plaintext path. (For a hardened setup, front the gateway with
-  # an mTLS-terminating proxy and flip disableTls.)
-  disableTls: true
+  # mTLS stays on (chart default) — see the file header. allowUnauthenticatedUsers
+  # only controls whether an OIDC bearer token is ALSO required on top of the
+  # client certificate; when SSO is off (auth_mode != oidc) leave it true so the
+  # CLI/console work with just the mTLS cert. values.oidc.yaml.j2 flips this to
+  # false when Keycloak is enabled.
+  disableTls: false
   auth:
     allowUnauthenticatedUsers: true
 

@@ -1,0 +1,32 @@
+[The Seal](/learn/policy) covered the common case: REST/WebSocket endpoints the supervisor's L7 proxy can terminate TLS on and filter by method + path. Not everything fits that shape — a raw database connection, an MQTT broker, anything that isn't HTTP. OpenShell's policy grammar has a second, plainer endpoint form for exactly that: a **direct TCP allow-list entry**, with no L7 inspection at all.
+
+## The two endpoint shapes
+
+Compare the full form from [The Seal](/learn/policy):
+
+```bash
+openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/node
+```
+
+against the bare form — just `host:port`, nothing else:
+
+```bash
+openshell policy update agent-0 --add-endpoint 'example.com:443' --dry-run
+```
+
+`--dry-run` prints the merged policy without sending it. Notice the difference in the rendered `network_policies` entry: the REST rule carries `protocol`, `tls: terminate`, `enforcement`, and `access` — the proxy is inspecting every request. The bare `host:port` entry carries none of that: no protocol, no TLS termination, no method/path filtering. It's a straight network-level allow, the same trust model as a firewall rule rather than an application gateway.
+
+<Callout type="nv" title="Why this exists">
+Not every workload speaks HTTP. A sandbox that needs to reach a Postgres instance, an MQTT broker, or a raw TCP service has no REST verbs or paths to filter on — L7 termination doesn't apply. The direct-TCP form gives it a real allow rule anyway, without pretending to inspect a protocol the proxy can't parse. Deny-by-default still holds: nothing here bypasses the seal, it just chooses a coarser enforcement point for traffic that has no finer one.
+</Callout>
+
+## Try it
+
+Grant `agent-0` direct TCP access to something and confirm it's live (drop `--dry-run` to actually apply it):
+
+```bash
+openshell policy update agent-0 --add-endpoint 'example.com:443'
+openshell policy get agent-0 --full -o json | grep -A4 example_com
+```
+
+Every other host:port is still denied — this rule adds exactly one exception, auditable like any other policy change ([`openshell policy list agent-0`](/learn/policy) shows the revision history).

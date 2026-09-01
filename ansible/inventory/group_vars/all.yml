@@ -31,6 +31,9 @@ gvisor_enabled: true
 #     timing lands on (gVisor apply / node-Ready wait) with "connection refused".
 # v1.34 is the latest mature minor that avoids BOTH. Set k3s_version for an exact pin
 # (takes precedence over the channel); leave it empty to track the channel.
+# follow-up: re-validate 1.35/1.36 against a current OpenShell gateway before bumping —
+# both bugs above were observed against older k3s/gateway builds and may be fixed, but
+# that hasn't been re-tested here. Not attempted in the 2026-09 chart/agent-sandbox bump.
 k3s_channel: "v1.34"
 k3s_version: ""
 # Namespace where agent sandbox pods land — kept SEPARATE from the gateway's
@@ -44,10 +47,26 @@ k3s_sandbox_namespace: openshell-sandboxes
 # PIN the version — do NOT track "latest". The CRD's storage version + API
 # (v1alpha1 vs v1beta1) must match what the OpenShell gateway speaks, or the
 # gateway rejects every supervisor bootstrap and sandboxes never reach Ready.
-# v0.5.0 (v1beta1) is verified working with this repo's gateway (0.0.0-dev).
-# Re-validate before bumping; a future release may change the API again.
-agent_sandbox_version: "v0.5.0"
-agent_sandbox_manifest_url: "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/{{ agent_sandbox_version }}/manifest.yaml"
+# v1.0.0 is verified working with openshell_chart_version 0.0.116 below (CRD
+# still serves v1beta1/storage=true, unchanged since v0.5.0 through 1.0.0; both
+# bumped together 2026-09 — re-validate CRD compatibility again before the next
+# bump of either). NOTE: the release asset was renamed from manifest.yaml to
+# sandbox.yaml starting v0.5.1 (manifest.yaml 404s on newer releases).
+agent_sandbox_version: "v1.0.0"
+agent_sandbox_manifest_url: "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/{{ agent_sandbox_version }}/sandbox.yaml"
+
+# ---- cert-manager (issues the gateway's mTLS material) ---------------------
+# The OpenShell chart (>= 0.0.71) always terminates mTLS on the gateway; it can
+# either self-issue certs via a built-in Job (pkiInitJob, the chart default) or
+# hand issuance to cert-manager (server.certManager.enabled) if cert-manager's
+# CRDs + controller are already installed — the chart does NOT install
+# cert-manager itself. This launchable installs cert-manager and uses it, both
+# for a more realistic PKI story and because it's one of the OpenShell features
+# being showcased here.
+cert_manager_enabled: true
+cert_manager_chart: "oci://quay.io/jetstack/charts/cert-manager"
+cert_manager_chart_version: "1.21.1"
+cert_manager_namespace: cert-manager
 
 # ---- LiteLLM (inference backend) -------------------------------------------
 litellm_chart: "oci://ghcr.io/berriai/litellm-helm"
@@ -82,12 +101,17 @@ litellm_extra_credentials: {}     # e.g. { OPENAI_KEY: "sk-..." }
 
 # ---- OpenShell gateway -----------------------------------------------------
 openshell_chart: "oci://ghcr.io/nvidia/openshell/helm-chart"
-# Chart version. "0.0.0-dev" matches the known-good reference deployment (it
-# pulls the gateway+supervisor :dev images, which work with plaintext on the
-# pinned k3s above). Released versions >= 0.0.71 enforce mandatory mTLS (see the
-# gateway values note). Keep chart + k3s versions tested together.
-openshell_chart_version: "0.0.0-dev"
+# Chart version. The chart tracks the same version as the OpenShell CLI/binary
+# (not an independent semver line) — pin a real tagged release rather than the
+# floating "0.0.0-dev" build. 0.0.116 pulls matched gateway+supervisor images and
+# terminates mTLS by default (see cert-manager section above + the gateway
+# role's values.yaml for how the client side is wired).
+openshell_chart_version: "0.0.116"
 openshell_namespace: openshell
+# Enable OpenTelemetry trace export from the gateway/supervisor over OTLP/gRPC.
+# Only useful when monitoring_enabled (Tempo is the OTLP receiver); the gateway
+# role points it straight at Tempo's Service, no collector hop needed.
+openshell_otlp_enabled: "{{ monitoring_enabled }}"
 # Pinned plaintext NodePort the gateway service is published on (see the gateway
 # values.yaml). The CLI/roles reach the gateway directly at 127.0.0.1:<this>,
 # so no kubectl port-forward is needed.

@@ -1,0 +1,12 @@
+# Overlay applied when cert_manager_enabled — hands gateway mTLS cert issuance
+# to cert-manager instead of the chart's built-in pkiInitJob. Requires
+# cert-manager's CRDs + controller already installed (ansible/roles/08b-cert_manager
+# runs before this role). The chart creates its own self-signed root
+# Issuer/Certificate chain and re-issues the server + client certs from it; the
+# default serverDnsNames (openshell, openshell.openshell.svc[.cluster.local],
+# localhost, openshell.localhost, *.openshell.localhost, host.docker.internal)
+# already cover this launchable's namespace (openshell) and how role
+# 10-inference_routing reaches the gateway (https://localhost:<nodeport>), so
+# nothing else needs overriding.
+certManager:
+  enabled: true

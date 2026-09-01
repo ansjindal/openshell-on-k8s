@@ -1,0 +1,31 @@
+---
+# cert-manager — issues the OpenShell gateway's mTLS material (see role
+# 09-openshell_gateway's values.mtls.yaml). Runs before the gateway role: the
+# chart's certManager.enabled path creates Issuer/Certificate CRs that need
+# cert-manager's CRDs + controller already present to reconcile.
+- name: cert-manager
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: cert_manager_enabled | bool
+  block:
+    - name: Ensure cert-manager namespace
+      ansible.builtin.shell: |
+        kubectl create namespace {{ cert_manager_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Install cert-manager (with CRDs)
+      ansible.builtin.shell: |
+        helm upgrade --install cert-manager {{ cert_manager_chart }} \
+          --version {{ cert_manager_chart_version }} \
+          --namespace {{ cert_manager_namespace }} \
+          --set crds.enabled=true \
+          --wait --timeout 6m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Wait for the cert-manager webhook to be ready
+      ansible.builtin.command: >-
+        kubectl -n {{ cert_manager_namespace }}
+        rollout status deployment/cert-manager-webhook --timeout=180s
+      changed_when: false

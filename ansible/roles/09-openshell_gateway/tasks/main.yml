@@ -36,6 +36,20 @@
         mode: "0644"
       when: gateway_db_backend | default('sqlite') == 'postgres'
 
+    - name: Copy mTLS overlay (when cert_manager_enabled)
+      ansible.builtin.copy:
+        src: values.mtls.yaml
+        dest: /tmp/openshell-values.mtls.yaml
+        mode: "0644"
+      when: cert_manager_enabled | bool
+
+    - name: Copy OTLP overlay (when openshell_otlp_enabled)
+      ansible.builtin.copy:
+        src: values.otlp.yaml
+        dest: /tmp/openshell-values.otlp.yaml
+        mode: "0644"
+      when: openshell_otlp_enabled | bool
+
     # Switching backends flips the workload kind (StatefulSet <-> Deployment).
     # Helm won't change an existing object's kind in place, so drop the stale
     # workload first when it doesn't match the target kind.
@@ -56,6 +70,8 @@
           {{ '-f /tmp/openshell-values.gvisor.yaml' if (gvisor_enabled | bool) else '' }} \
           {{ '-f /tmp/openshell-values.oidc.yaml' if (auth_mode == 'oidc') else '' }} \
           {{ '-f /tmp/openshell-values.postgres.yaml' if (gateway_db_backend | default('sqlite') == 'postgres') else '' }} \
+          {{ '-f /tmp/openshell-values.mtls.yaml' if (cert_manager_enabled | bool) else '' }} \
+          {{ '-f /tmp/openshell-values.otlp.yaml' if (openshell_otlp_enabled | bool) else '' }} \
           --wait --timeout 8m
       args: { executable: /bin/bash }
       changed_when: true
@@ -67,3 +83,41 @@
         --timeout=300s
       changed_when: false
       failed_when: false
+
+    # Sandbox pods mount openshell-client-tls to auth back to the gateway over
+    # mTLS, but they land in k3s_sandbox_namespace — a namespace SEPARATE from
+    # the gateway's release namespace by design (isolation). Secrets don't cross
+    # namespaces, and cert-manager only creates this one where the chart is
+    # installed, so replicate it — otherwise every sandbox pod sits in
+    # Init:0/2 forever on "secret openshell-client-tls not found".
+    - name: Wait for the client mTLS secret to exist
+      ansible.builtin.command: >-
+        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o name
+      register: _client_tls_secret
+      changed_when: false
+      retries: 15
+      delay: 4
+      until: _client_tls_secret.rc == 0
+      when: k3s_sandbox_namespace != openshell_namespace
+
+    - name: Copy the client mTLS secret into the sandbox namespace
+      ansible.builtin.shell: |
+        set -e
+        tls_crt="$(kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}')"
+        tls_key="$(kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.tls\.key}')"
+        ca_crt="$(kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}')"
+        cat <<EOF | kubectl apply -f -
+        apiVersion: v1
+        kind: Secret
+        type: kubernetes.io/tls
+        metadata:
+          name: openshell-client-tls
+          namespace: {{ k3s_sandbox_namespace }}
+        data:
+          tls.crt: $tls_crt
+          tls.key: $tls_key
+          ca.crt: $ca_crt
+        EOF
+      args: { executable: /bin/bash }
+      when: k3s_sandbox_namespace != openshell_namespace
+      changed_when: true

@@ -27,11 +27,41 @@
       no_log: true
       changed_when: false
 
+    # The gateway always terminates mTLS now (server.disableTls: false in
+    # 09-openshell_gateway/files/values.yaml — unconditional; cert_manager_enabled
+    # only chooses who ISSUES the certs, pkiInitJob or cert-manager, not whether
+    # TLS is on). `openshell gateway add --local https://...` looks for client
+    # cert material in its own config dir rather than taking cert/key flags — write
+    # it there from the openshell-client-tls Secret before adding the gateway.
+    # That's a kubernetes.io/tls Secret (tls.crt/tls.key + a ca.crt field the
+    # issuer stamps in); fall back to openshell-server-tls's ca.crt if the client
+    # Secret doesn't carry one (both are signed by the same chart-managed CA).
+    - name: Fetch client mTLS material into the CLI's config dir
+      ansible.builtin.shell: |
+        set -e
+        mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"
+        mkdir -p "$mtls_dir"
+        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls \
+          -o jsonpath='{.data.tls\.crt}' | base64 -d > "$mtls_dir/tls.crt"
+        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls \
+          -o jsonpath='{.data.tls\.key}' | base64 -d > "$mtls_dir/tls.key"
+        ca="$(kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}')"
+        [ -n "$ca" ] || ca="$(kubectl -n {{ openshell_namespace }} get secret openshell-server-tls -o jsonpath='{.data.ca\.crt}')"
+        echo "$ca" | base64 -d > "$mtls_dir/ca.crt"
+        chmod 600 "$mtls_dir/tls.key"
+      args: { executable: /bin/bash }
+      changed_when: false
+
     - name: Register gateway, create provider, and wire inference.local to LiteLLM
       ansible.builtin.shell: |
         set -e
-        # Reach the gateway directly on its pinned plaintext NodePort (no port-forward).
-        openshell gateway add http://127.0.0.1:{{ gateway_nodeport }} --local --name fleet 2>/dev/null || true
+        # Reach the gateway on its pinned NodePort (no port-forward). localhost
+        # is in the default cert SANs; a bare IP (127.0.0.1) is not.
+        # remove first: `gateway add` is a no-op (not an overwrite) against an
+        # existing name — a stale plaintext 'fleet' from before mTLS/a re-run
+        # with a different endpoint would otherwise stick around silently.
+        openshell gateway remove fleet 2>/dev/null || true
+        openshell gateway add https://localhost:{{ gateway_nodeport }} --local --name fleet 2>/dev/null || true
         openshell --gateway fleet provider create --name fleet --type openai \
           --config OPENAI_BASE_URL=http://litellm.{{ litellm_namespace }}.svc.cluster.local:4000/v1 \
           --credential OPENAI_API_KEY={{ ll_key.stdout }} 2>/dev/null || true
