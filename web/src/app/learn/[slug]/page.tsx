@@ -43,7 +43,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
       {current.hasLab ? (
         <LabSplit slug={current.slug}><Content components={mdxComponents} /></LabSplit>
       ) : (
-        <div className="prose max-w-3xl"><Content components={mdxComponents} /></div>
+        <div className="prose max-w-none xl:max-w-6xl"><Content components={mdxComponents} /></div>
       )}
 
       <nav className="mt-12 flex items-stretch justify-between gap-4 border-t border-[var(--color-line)] pt-6">

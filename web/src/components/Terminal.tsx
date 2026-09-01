@@ -20,7 +20,9 @@ export function Terminal({ title = "lab shell", fill = false }: { title?: string
   const [started, setStarted] = useState(false);
   const [session, setSession] = useState(0);
   const [err, setErr] = useState<string | null>(null);
-  const h = fill ? "h-[calc(100vh-9rem)] min-h-[440px]" : "h-[400px]";
+  // fill: parent controls height (e.g. the fixed bottom dock sets an explicit
+  // px/vh height on its wrapper) — the terminal just fills whatever it's given.
+  const h = fill ? "h-full" : "h-[400px]";
 
   // A command block (runInShell) can ask the shell to launch via this event.
   useEffect(() => {
@@ -71,8 +73,16 @@ export function Terminal({ title = "lab shell", fill = false }: { title?: string
         term.loadAddon(fit);
         term.open(hostRef.current!);
         fit.fit();
-        // follow light/dark toggles live
-        onTheme = () => { try { if (term) term.options.theme = xtermTheme(); } catch {} };
+        // follow light/dark toggles live — setting options.theme alone doesn't
+        // repaint already-rendered rows in some xterm versions, so force a
+        // refresh or the canvas stays stuck on whatever theme it started with.
+        onTheme = () => {
+          try {
+            if (!term) return;
+            term.options.theme = xtermTheme();
+            term.refresh(0, term.rows - 1);
+          } catch {}
+        };
         window.addEventListener("oclaw:theme", onTheme);
         term.write("\x1b[90mconnecting to " + url + " …\x1b[0m\r\n");
 

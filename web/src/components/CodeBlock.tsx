@@ -5,7 +5,8 @@ import bash from "highlight.js/lib/languages/bash";
 import yaml from "highlight.js/lib/languages/yaml";
 import json from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github-dark.css";
-import { runInShell } from "@/lib/labBus";
+import { ChevronDown, ChevronUp, Terminal as TerminalIcon, Trash2 } from "lucide-react";
+import { runInShell, runApiCheck } from "@/lib/labBus";
 
 hljs.registerLanguage("bash", bash);
 hljs.registerLanguage("yaml", yaml);
@@ -53,6 +54,17 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   const code = extractText(children).replace(/\n$/, "");
   const lang = getLang(children);
   const [copied, setCopied] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [output, setOutput] = useState<{ stdout: string; stderr: string; exitCode: number } | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+
+  async function runInline() {
+    setRunning(true);
+    setCollapsed(false);
+    const r = await runApiCheck(code);
+    setOutput(r);
+    setRunning(false);
+  }
 
   const isRef = REF_LANGS.includes(lang);
   const isShell = lang === "" || SHELL_LANGS.includes(lang);
@@ -78,11 +90,21 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
         <div className="flex gap-2">
           {runnable && (
             <button
-              onClick={() => runInShell(code)}
-              className="rounded border border-[var(--color-nv-dim)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-nv-bright)] hover:bg-[var(--color-panel)]"
-              title="Run this in the lab shell"
+              onClick={runInline}
+              disabled={running}
+              className="rounded border border-[var(--color-nv-dim)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-nv-bright)] hover:bg-[var(--color-panel)] disabled:opacity-60"
+              title="Run and show the output below, notebook-style"
             >
-              ▶ Run in shell
+              {running ? "Running…" : "▶ Run"}
+            </button>
+          )}
+          {runnable && (
+            <button
+              onClick={() => runInShell(code)}
+              className="inline-flex items-center gap-1 rounded border border-[var(--color-line-2)] px-2 py-0.5 text-[11px] text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]"
+              title="Run in the persistent lab shell instead (for stateful / interactive commands)"
+            >
+              <TerminalIcon size={11} /> Shell
             </button>
           )}
           <button
@@ -98,6 +120,44 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
           ? <code className={`hljs language-${grammar}`} style={{ background: "transparent", padding: 0 }} dangerouslySetInnerHTML={{ __html: html }} />
           : <code className="text-[var(--color-code-fg)]">{code}</code>}
       </pre>
+
+      {output && (
+        <div className="border-t border-[var(--color-line)]">
+          <div className="flex items-center gap-2 bg-[var(--color-panel)] px-3 py-1.5">
+            <span
+              className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${
+                output.exitCode === 0 ? "bg-[var(--color-nv-dim)] text-white" : "bg-red-600 text-white"
+              }`}
+            >
+              {output.exitCode === 0 ? "✓" : "✕"}
+            </span>
+            <span className="font-mono text-[10px] text-[var(--color-fg-mut)]">
+              exit {output.exitCode}
+            </span>
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--color-fg-mut)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
+              title={collapsed ? "Expand output" : "Collapse output"}
+            >
+              {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            </button>
+            <button
+              onClick={() => setOutput(null)}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--color-fg-mut)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-fg)]"
+              title="Clear output"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+          {!collapsed && (
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words bg-[var(--color-term-bg)] p-3 font-mono text-[12px] leading-relaxed text-[var(--color-code-fg)]">
+              {output.stdout}
+              {output.stderr && <span className="text-red-400">{output.stdout ? "\n" : ""}{output.stderr}</span>}
+              {!output.stdout && !output.stderr && <span className="text-[var(--color-fg-mut)]">(no output)</span>}
+            </pre>
+          )}
+        </div>
+      )}
     </div>
   );
 }
