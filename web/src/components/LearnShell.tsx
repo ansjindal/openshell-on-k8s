@@ -14,6 +14,10 @@ export function LearnShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     window.localStorage.setItem("oclaw:lesson-sidebar-open", String(open));
+    // LabSplit's fixed-bottom shell dock needs to know the sidebar's width to
+    // avoid covering it — same-tab localStorage writes don't fire a "storage"
+    // event, so broadcast explicitly.
+    window.dispatchEvent(new CustomEvent("oclaw:sidebar", { detail: open }));
   }, [open]);
 
   return (

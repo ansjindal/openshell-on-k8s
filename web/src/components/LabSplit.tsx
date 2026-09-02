@@ -8,13 +8,18 @@ const BAR_H = 44; // px — the docked toolbar's own height, collapsed or not
 
 // Hands-on lessons: content full-width, with a live lab shell docked to the
 // bottom of the viewport (like an editor's integrated terminal) — collapsible
-// to just its toolbar, never squeezing the content column.
+// to just its toolbar, never squeezing the content column. The dock's `left`
+// offset (lg:left-[304px] below) must match LearnShell's sidebar `w-[304px]`.
 export function LabSplit({ slug, children }: { children: ReactNode; slug?: string }) {
   // Closed by default on every lesson, every time — "Run" shows output inline
   // under each block now, so the shell is opt-in, for readers who want to
   // customize a command or work interactively rather than run it as-is.
   const [show, setShow] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  // Spans the content area only (not the lessons sidebar) — mirrors
+  // LearnShell's own sidebar-open state, broadcast via oclaw:sidebar since
+  // they're siblings with no shared store.
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // The "Shell" button on a code block (runInShell → oclaw:start-shell) opens
   // the dock so the reader can see it run interactively.
@@ -22,6 +27,14 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
     const onStart = () => { setShow(true); setMinimized(false); };
     window.addEventListener("oclaw:start-shell", onStart);
     return () => window.removeEventListener("oclaw:start-shell", onStart);
+  }, []);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("oclaw:lesson-sidebar-open");
+    if (saved === "false") setSidebarOpen(false);
+    const onSidebar = (e: Event) => setSidebarOpen((e as CustomEvent<boolean>).detail);
+    window.addEventListener("oclaw:sidebar", onSidebar);
+    return () => window.removeEventListener("oclaw:sidebar", onSidebar);
   }, []);
 
   return (
@@ -45,8 +58,10 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
       )}
 
       {show && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-line)] bg-[var(--color-bg)] shadow-[0_-8px_24px_rgba(0,0,0,0.18)]">
-          <div className="mx-auto flex max-w-6xl items-center gap-2 px-4" style={{ height: BAR_H }}>
+        <div
+          className={`fixed bottom-0 right-0 left-0 z-40 border-t border-[var(--color-line)] bg-[var(--color-bg)] shadow-[0_-8px_24px_rgba(0,0,0,0.18)] ${sidebarOpen ? "lg:left-[304px]" : ""}`}
+        >
+          <div className="flex items-center gap-2 px-4" style={{ height: BAR_H }}>
             <TerminalSquare size={15} className="text-[var(--color-nv-bright)]" />
             <span className="truncate text-xs font-semibold text-[var(--color-fg-dim)]">
               Live lab shell{slug ? ` · ${slug}` : ""}
@@ -67,7 +82,7 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
             </button>
           </div>
           {!minimized && (
-            <div className="mx-auto max-w-6xl px-4 pb-3" style={{ height: EXPANDED_H }}>
+            <div className="px-4 pb-3" style={{ height: EXPANDED_H }}>
               <Terminal title={slug ? `lab · ${slug}` : "lab shell"} fill autoStart />
             </div>
           )}
