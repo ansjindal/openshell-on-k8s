@@ -73,16 +73,12 @@ export function Terminal({ title = "lab shell", fill = false, autoStart = false 
         term.loadAddon(fit);
         term.open(hostRef.current!);
         fit.fit();
-        // follow light/dark toggles live — setting options.theme alone doesn't
-        // repaint already-rendered rows in some xterm versions, so force a
-        // refresh or the canvas stays stuck on whatever theme it started with.
-        onTheme = () => {
-          try {
-            if (!term) return;
-            term.options.theme = xtermTheme();
-            term.refresh(0, term.rows - 1);
-          } catch {}
-        };
+        // follow light/dark toggles live. Patching term.options.theme in place
+        // doesn't reliably repaint the DOM renderer's base background (only new
+        // content picks it up, leaving old rows/empty space stuck on whatever
+        // theme the terminal was created with) — force a full reconnect instead,
+        // which is guaranteed correct at the cost of a brief WS drop.
+        onTheme = () => setSession((n) => n + 1);
         window.addEventListener("oclaw:theme", onTheme);
         term.write("\x1b[90mconnecting to " + url + " …\x1b[0m\r\n");
 

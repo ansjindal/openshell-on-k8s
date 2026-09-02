@@ -1,15 +1,21 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BookOpen, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 
-// Full-width learn shell with a collapsible lesson sidebar.
+const MIN_W = 220, MAX_W = 480, DEFAULT_W = 304;
+
+// Full-width learn shell with a collapsible, drag-resizable lesson sidebar.
 export function LearnShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(true);
+  const [width, setWidth] = useState(DEFAULT_W);
+  const dragging = useRef(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("oclaw:lesson-sidebar-open");
     if (saved === "false") setOpen(false);
+    const savedW = Number(window.localStorage.getItem("oclaw:lesson-sidebar-width"));
+    if (Number.isFinite(savedW) && savedW >= MIN_W && savedW <= MAX_W) setWidth(savedW);
   }, []);
 
   useEffect(() => {
@@ -17,13 +23,35 @@ export function LearnShell({ children }: { children: ReactNode }) {
     // LabSplit's fixed-bottom shell dock needs to know the sidebar's width to
     // avoid covering it — same-tab localStorage writes don't fire a "storage"
     // event, so broadcast explicitly.
-    window.dispatchEvent(new CustomEvent("oclaw:sidebar", { detail: open }));
-  }, [open]);
+    window.dispatchEvent(new CustomEvent("oclaw:sidebar", { detail: { open, width } }));
+  }, [open, width]);
+
+  function startDrag(e: React.MouseEvent) {
+    e.preventDefault();
+    dragging.current = true;
+    const move = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      setWidth(Math.min(MAX_W, Math.max(MIN_W, ev.clientX)));
+    };
+    const up = () => {
+      dragging.current = false;
+      document.body.style.cursor = "";
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setWidth((w) => { window.localStorage.setItem("oclaw:lesson-sidebar-width", String(w)); return w; });
+    };
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  }
 
   return (
     <div className="relative flex w-full">
       {open && (
-        <aside className="hidden w-[304px] shrink-0 border-r border-[var(--color-line)] bg-[var(--color-bg)] lg:block">
+        <aside
+          className="hidden shrink-0 border-r border-[var(--color-line)] bg-[var(--color-bg)] lg:block"
+          style={{ width }}
+        >
           <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-4 py-4">
             <div className="mb-4 flex items-center gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-fg-mut)]">
@@ -41,6 +69,15 @@ export function LearnShell({ children }: { children: ReactNode }) {
             <Sidebar />
           </div>
         </aside>
+      )}
+      {open && (
+        <div
+          onMouseDown={startDrag}
+          className="sticky top-14 z-10 hidden h-[calc(100vh-3.5rem)] w-1.5 shrink-0 cursor-col-resize items-stretch justify-center lg:flex"
+          title="Drag to resize the lessons sidebar"
+        >
+          <span className="w-px bg-[var(--color-line)] transition-colors hover:bg-[var(--color-nv)]" />
+        </div>
       )}
       {!open && (
         <button
