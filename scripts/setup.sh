@@ -619,10 +619,10 @@ $( [[ "${ENABLE_OPENCLAW_UI}" == "true" ]] && printf '
 $( [[ "${ENABLE_SSO}" == "true" ]] && printf '
   ONE public host — expose ONLY Envoy host port %s on Brev as %s
     Site/lessons: %s/
-    Console     : %s/console     (login via Keycloak)
+    Console     : %s/console     (%s)
     Grafana     : %s/grafana     (login via Keycloak)
     Keycloak    : %s/auth        (admin: admin / see .sso-secrets.env)
     Gateway gRPC: %s:%s          (Envoy GRPCRoute; remote openshell CLI)
-' "${ENVOY_HOST_PORT}" "${PUBLIC_BASE_URL}" "${PUBLIC_BASE_URL}" "${PUBLIC_BASE_URL}" "${PUBLIC_BASE_URL}" "${PUBLIC_BASE_URL}" "${NODE_IP:-<vm-ip>}" "${ENVOY_GRPC_NODEPORT}" )
+' "${ENVOY_HOST_PORT}" "${PUBLIC_BASE_URL}" "${PUBLIC_BASE_URL}" "${PUBLIC_BASE_URL}" "$( [[ "${ENABLE_CONSOLE_SSO}" == "true" ]] && echo "login via Keycloak" || echo "open, no login" )" "${PUBLIC_BASE_URL}" "${PUBLIC_BASE_URL}" "${NODE_IP:-<vm-ip>}" "${ENVOY_GRPC_NODEPORT}" )
   Re-run after editing .env:  ./scripts/setup.sh
 EOF

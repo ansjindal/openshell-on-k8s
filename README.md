@@ -53,7 +53,7 @@ returns an edge 503, since launchpad only forwards low ports):
 | Path | What | Auth |
 |------|------|------|
 | `/` | Teaching site — lessons + live terminal | launchpad/public |
-| `/console` | **OpenShell Console** — fleet & sandbox management | Keycloak |
+| `/console` | **OpenShell Console** — fleet & sandbox management | open (set `ENABLE_CONSOLE_SSO=true` for Keycloak) |
 | `/grafana` | Dashboards & metrics | Keycloak |
 | `/auth` | Keycloak (realm `openshell`) | — |
 

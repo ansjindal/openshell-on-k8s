@@ -31,7 +31,6 @@ export const CURRICULUM: Part[] = [
       { slug: "workspace", title: "Give It a Soul: Workspace Files", blurb: "IDENTITY/SOUL/BOOTSTRAP Markdown shape the agent — seed and customize them.", minutes: 8, hasLab: true },
       { slug: "skills", title: "Skills: Governed Capabilities", blurb: "Install from ClawHub (gated, per-package) vs your in-cluster registry (the locked single source); publish your own.", minutes: 12, hasLab: true },
       { slug: "run-a-task", title: "Run a Task", blurb: "Hand the fleet a prompt and read the logs.", minutes: 8, hasLab: true },
-      { slug: "traces", title: "OTLP Traces: Watch a Live Task", blurb: "Every sandbox action emits an OTLP trace — follow one from prompt to tool call in Grafana Tempo.", minutes: 6, hasLab: true },
       { slug: "console", title: "The Console", blurb: "The embedded OpenShell Console — sandboxes, policies, and inference in the browser, same gateway as the CLI.", minutes: 6, hasLab: true },
     ],
   },
