@@ -23,7 +23,7 @@ const TITLES: Record<string, string> = {
   "/console/inference": "Inference", "/console/policies": "Policies",
 };
 
-export function Shell({ children, oidcEnabled = false, user = null, pendingDrafts = 0 }: { children: ReactNode; oidcEnabled?: boolean; user?: ShellUser | null; pendingDrafts?: number }) {
+export function Shell({ children, oidcEnabled = false, user = null, pendingDrafts = 0, openclawUiUrl = null }: { children: ReactNode; oidcEnabled?: boolean; user?: ShellUser | null; pendingDrafts?: number; openclawUiUrl?: string | null }) {
   const pathname = usePathname() || "/console";
   const active = (href: string) => (href === "/console" ? pathname === "/console" : pathname.startsWith(href));
   const title = TITLES[pathname] ?? Object.entries(TITLES).find(([h]) => h !== "/console" && pathname.startsWith(h))?.[1] ?? "Console";
@@ -49,6 +49,11 @@ export function Shell({ children, oidcEnabled = false, user = null, pendingDraft
           ))}
         </nav>
         <div className="side-foot">
+          {openclawUiUrl && (
+            <a href={openclawUiUrl} target="_blank" rel="noreferrer" className="nav-item">
+              <span className="label">OpenClaw UI ↗</span>
+            </a>
+          )}
           <Link href="/" className="nav-item">
             <span className="label">← Back to lessons</span>
           </Link>

@@ -416,6 +416,8 @@ Environment=OIDC_CLIENT_ID=openshell-ui
 Environment=OIDC_CLIENT_SECRET=${CONSOLE_CLIENT_SECRET:-}
 Environment=OIDC_ROLES_CLAIM=groups
 Environment=OIDC_ADMIN_ROLE=openshell-admin
+Environment=ENABLE_OPENCLAW_UI=${ENABLE_OPENCLAW_UI}
+Environment=OPENCLAW_UI_PORT=${OPENCLAW_UI_PORT}
 ExecStart=$(command -v node) ${web}/server.mjs
 ExecStartPost=-/usr/local/bin/openshell-workshop-endpoint.sh
 Restart=on-failure
