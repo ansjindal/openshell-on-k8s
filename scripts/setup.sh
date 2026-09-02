@@ -51,7 +51,7 @@ ENABLE_MONITORING="${ENABLE_MONITORING:-true}"
 CREATE_FLEET="${CREATE_FLEET:-true}"
 FLEET_SIZE="${FLEET_SIZE:-1}"
 GATEWAY_NODEPORT="${GATEWAY_NODEPORT:-30808}"
-ENABLE_OPENCLAW_UI="${ENABLE_OPENCLAW_UI:-false}"
+ENABLE_OPENCLAW_UI="${ENABLE_OPENCLAW_UI:-true}"
 OPENCLAW_UI_PORT="${OPENCLAW_UI_PORT:-30789}"
 OPENCLAW_GATEWAY_PASSWORD="${OPENCLAW_GATEWAY_PASSWORD:-openshell-wad26}"
 # The browser-facing URL for the OpenClaw UI. On Brev/launchpad this is its own
@@ -84,7 +84,7 @@ BREV_URL_PREFIX="${BREV_URL_PREFIX:-openshell}"
 # Domain that fronts exposed ports on this Brev/launchpad. The public URL is
 # https://<prefix>-<brevid>.<domain>. Default targets NVIDIA launchpad (the
 # zero-config platform); set BREV_URL_DOMAIN or PUBLIC_BASE_URL for any other host.
-BREV_URL_DOMAIN="${BREV_URL_DOMAIN:-stg.apps.launchpad.nvidia.com}"
+BREV_URL_DOMAIN="${BREV_URL_DOMAIN:-brevlab.com}"
 ENVOY_WEB_NODEPORT="${ENVOY_WEB_NODEPORT:-30080}"
 ENVOY_GRPC_NODEPORT="${ENVOY_GRPC_NODEPORT:-30081}"
 # Host port the launchpad/Brev "Secure Link" actually tunnels for the web ingress.

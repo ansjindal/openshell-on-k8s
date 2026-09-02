@@ -73,7 +73,7 @@ after editing `.env`.
 > why `3001` exists.) The public URL is auto-derived as
 > `https://<BREV_URL_PREFIX>-<brevid>.<BREV_URL_DOMAIN>`.
 
-If `ENABLE_OPENCLAW_UI=true`, add a **second, separate** Secure Link service for `30789`
+`ENABLE_OPENCLAW_UI` defaults to `true`, so add a **second, separate** Secure Link service for `30789`
 (OpenClaw's UI can't be folded into the `3001` Envoy host — it's a raw `openshell forward`
 tunnel, not an HTTP path Envoy can route to, and Brev doesn't let you reach an arbitrary
 port on the same public host — it's one HTTPS subdomain per exposed port). Name that
@@ -107,7 +107,7 @@ Set these as the Launchable's environment configuration (or in `.env`):
 | `ENABLE_MONITORING` | Prometheus + Grafana + Loki + Alloy + Tempo | `true` |
 | `ENABLE_SSO` | Keycloak + apiserver-OIDC + Envoy ingress + Grafana/Console SSO (one public host) | `true` |
 | `PUBLIC_BASE_URL` | public https host fronting Envoy via port `3001` (OIDC issuer); empty = auto-derive | `""` |
-| `BREV_URL_PREFIX` / `BREV_URL_DOMAIN` | pieces of the auto-derived URL | `openshell` / `stg.apps.launchpad.nvidia.com` |
+| `BREV_URL_PREFIX` / `BREV_URL_DOMAIN` | pieces of the auto-derived URL | `openshell` / `brevlab.com` |
 | `ENVOY_HOST_PORT` | **low** host port the public URL maps to (socat → Envoy) | `3001` |
 | `CREATE_FLEET` | create an initial OpenClaw sandbox fleet | `true` |
 | `FLEET_SIZE` | how many sandboxes | `1` |

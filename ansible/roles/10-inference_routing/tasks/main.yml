@@ -39,6 +39,16 @@
     # time, regardless of pre-existing files). So the real k3s-issued certs MUST
     # be written AFTER `gateway add`, not before, or every call fails with
     # "invalid peer certificate: UnknownIssuer".
+    # Retried + NOT silently swallowed (unlike most other best-effort tasks in
+    # this role): found live on a fresh instance's first-time bring-up that a
+    # transient failure here (the gateway's NodePort not yet fully serving TLS
+    # the instant this role runs, even though the pod itself is Ready) used to
+    # be swallowed by a bare `|| true`, leaving NO gateway registered at all
+    # for root — which then cascaded into 16-sandboxes' "created agent-0"
+    # message being a lie (the underlying `sandbox create` failed against the
+    # unregistered gateway, but that role's own `|| echo "... (attach
+    # skipped)"` fallback prints a success-shaped message on outright failure
+    # too, so the fleet silently never existed until this was diagnosed).
     - name: Register the gateway (before certs — see comment above)
       ansible.builtin.shell: |
         set -e
@@ -48,9 +58,14 @@
         # existing name — a stale plaintext 'fleet' from before mTLS/a re-run
         # with a different endpoint would otherwise stick around silently.
         openshell gateway remove fleet 2>/dev/null || true
-        openshell gateway add https://localhost:{{ gateway_nodeport }} --local --name fleet 2>/dev/null || true
+        openshell gateway add https://localhost:{{ gateway_nodeport }} --local --name fleet
       args: { executable: /bin/bash }
+      register: _gateway_add
+      retries: 10
+      delay: 5
+      until: _gateway_add.rc == 0
       changed_when: false
+      failed_when: false
 
     # That's a kubernetes.io/tls Secret (tls.crt/tls.key + a ca.crt field the
     # issuer stamps in); fall back to openshell-server-tls's ca.crt if the client
