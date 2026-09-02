@@ -56,9 +56,18 @@ ensure_gateway() {
   # there — verified live: same fixed dev-CA fingerprint every time,
   # regardless of pre-existing files. So `add` must run BEFORE the real
   # k3s-issued certs are written, not after, or every call fails with
-  # "invalid peer certificate: UnknownIssuer".
+  # "invalid peer certificate: UnknownIssuer". It ALSO requires the cert
+  # files to already exist as a precondition (content doesn't matter —
+  # verified live empty files satisfy it) or it errors outright with "mTLS
+  # certificates ... were not found"; touch placeholders first. Retry +
+  # verify since a from-scratch $HOME can transiently fail this a few times.
+  touch "${mtls_dir}/tls.crt" "${mtls_dir}/tls.key" "${mtls_dir}/ca.crt"
   openshell gateway remove fleet >/dev/null 2>&1 || true
-  openshell gateway add "https://localhost:${GATEWAY_NODEPORT}" --local --name fleet >/dev/null 2>&1 || true
+  for _ in 1 2 3 4 5; do
+    openshell gateway add "https://localhost:${GATEWAY_NODEPORT}" --local --name fleet >/dev/null 2>&1
+    openshell gateway list 2>/dev/null | grep -q fleet && break
+    sleep 3
+  done
   kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}' 2>/dev/null | base64 -d > "${mtls_dir}/tls.crt"
   kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.tls\.key}' 2>/dev/null | base64 -d > "${mtls_dir}/tls.key"
   local ca; ca="$(kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"

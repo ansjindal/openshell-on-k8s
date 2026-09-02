@@ -318,7 +318,17 @@ configure_lab_cli() {
     # `add` clobbers them and every call fails with "invalid peer certificate:
     # UnknownIssuer" — the endpoint here is a k3s NodePort, not an actual
     # local Docker gateway, so nothing about that dev CA is usable anyway.
-    openshell gateway add https://localhost:'"${GATEWAY_NODEPORT}"' --local --name fleet >/dev/null 2>&1 || true
+    # It ALSO requires the cert files to already exist as a precondition
+    # (content does not matter — verified live empty files satisfy it) or it
+    # errors outright with "mTLS certificates ... were not found"; touch
+    # placeholders first, then retry+verify (a from-scratch $HOME can
+    # transiently fail this a few times).
+    touch "$mtls_dir/tls.crt" "$mtls_dir/tls.key" "$mtls_dir/ca.crt"
+    for _ in 1 2 3 4 5; do
+      openshell gateway add https://localhost:'"${GATEWAY_NODEPORT}"' --local --name fleet >/dev/null 2>&1
+      openshell gateway list 2>/dev/null | grep -q fleet && break
+      sleep 3
+    done
     openshell gateway remove openshell >/dev/null 2>&1 || true   # the auto-created mtls default (same dev CA)
     # The Secret object can exist before cert-manager finishes populating its
     # data (create-then-patch) — an empty tls.crt here silently becomes an
