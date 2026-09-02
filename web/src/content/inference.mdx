@@ -27,18 +27,26 @@ A JSON model list means the endpoint and key work. **401** → bad or expired ke
 curl -sS "$OPENSHELL_BASE_URL/models" -H "Authorization: Bearer $OPENSHELL_API_KEY" | grep -o '"id":"[^"]*"' | head -20
 ```
 
-## 3. Apply it — re-render LiteLLM
+## 3. Apply it
 
-LiteLLM holds the key + model for the whole cluster, so the agents never do. You **don't** re-run the whole cluster setup — just the LiteLLM step. The `litellm` tag re-renders its config (key + `model_list`) from `.env` and rolls the deployment, nothing else:
+LiteLLM holds the key + model for the whole cluster, so the agents never do — everything funnels through one `litellm-secrets` Secret + the chart's `model_list`. You **don't** re-run the whole cluster setup for this.
+
+**Rotating just the key** (the model is already loaded in LiteLLM) — direct `kubectl`, no Ansible: preserve the existing `LITELLM_MASTER_KEY` (the gateway's own provider credential references it; regenerate it and inference silently breaks until the gateway is re-pointed), replace `UPSTREAM_API_KEY`, and restart:
 
 ```bash
-ANSIBLE_TAGS=litellm ./scripts/setup.sh
+existing_master_key="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)"
+kubectl -n litellm create secret generic litellm-secrets \
+  --from-literal=LITELLM_MASTER_KEY="$existing_master_key" \
+  --from-literal=UPSTREAM_API_KEY="$OPENSHELL_API_KEY" \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n litellm rollout restart deploy/litellm
+kubectl -n litellm rollout status deploy/litellm --timeout=120s
 ```
 
-If **only the key** changed (the model is already loaded in LiteLLM), the config doesn't change at all — a plain rollout restart picks up the new secret:
+**Adding a new model** (not just rotating the key) needs the chart's `model_list` re-rendered too — that's templated from `.env`/`litellm_models`, not something to hand-edit safely. For that, use the `litellm` Ansible tag (re-renders the same Secret + chart values from `.env` and rolls the deployment, nothing else in the cluster):
 
-```bash
-kubectl -n litellm rollout restart deploy/litellm
+```bash-ref
+ANSIBLE_TAGS=litellm ./scripts/setup.sh
 ```
 
 ## 4. Confirm the active route
@@ -61,11 +69,13 @@ Inside the sandbox, the agent calls `https://inference.local`. The in-sandbox **
 
 Get a shell in your agent and hit the local endpoint:
 
-```bash
+```bash-interactive
 ./scripts/fleet shell agent-0
 ```
 
-```bash
+Once inside (the prompt changes to `sandbox@…`):
+
+```bash-ref
 curl -s https://inference.local/v1/models
 ```
 

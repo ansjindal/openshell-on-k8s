@@ -14,29 +14,33 @@ You should see the pod backing `agent-0`, `Running`.
 
 The friendliest way is the fleet helper:
 
-```bash
+```bash-interactive
 ./scripts/fleet shell agent-0
 ```
 
-That drops you into a shell **inside the sandbox**, on the other side of the gVisor boundary. Try a few things:
+That drops you into a shell **inside the sandbox**, on the other side of the gVisor boundary. Once you're in (the prompt changes to `sandbox@…`), try a few things:
 
-```bash
+```bash-ref
 whoami
 uname -a
 ls /
 ```
 
+<Callout type="note" title="Type these, don't Run them">
+These only prove anything typed *inside* the sandbox prompt above — running them via Run/Shell from the lab shell would just show you the lab VM's own filesystem, not the sandbox's, and defeat the point.
+</Callout>
+
 You're running as a non-root user, inside runsc's user-space kernel — not the host. Type `exit` to come back out.
 
 ## The other doors
 
-`fleet shell` is a convenience wrapper. Two equivalent ways to run a command inside the sandbox:
+`fleet shell` is a convenience wrapper. Two equivalent ways to run a command inside the sandbox — the first is a genuine one-shot (safe to Run), the second opens another interactive prompt (Shell only):
 
 ```bash
 openshell sandbox exec -n agent-0 -- whoami
 ```
 
-```bash
+```bash-interactive
 kubectl -n openshell-sandboxes exec -it pod/default--agent-0 -- /bin/sh
 ```
 

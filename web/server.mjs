@@ -53,6 +53,12 @@ function runCheckStream(cmd, onChunk) {
       // below strips whatever ignores that request.
       env: { ...LAB_BASE_ENV, KUBECONFIG: LAB_KUBECONFIG, LAB_CWD, NO_COLOR: "1", TERM: "dumb" },
       timeout: 25000,
+      // stdin 'ignore', not the 'pipe' default: node never writes to or closes
+      // a piped child stdin, so anything that reads stdin until EOF before
+      // exiting (openshell sandbox exec included) hangs forever waiting for a
+      // close that was never going to come. 'ignore' gives the child an
+      // already-closed stdin, so a read returns EOF immediately.
+      stdio: ["ignore", "pipe", "pipe"],
     });
     let total = 0;
     const send = (stream, data) => {

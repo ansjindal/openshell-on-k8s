@@ -39,9 +39,14 @@ const SHELL_LANGS = ["bash", "sh", "shell", "console", "zsh"];
 // Reference fences: highlighted like bash but NEVER runnable (for commands we show but
 // don't want run from this lesson — e.g. "inspect/change later", or commands set elsewhere).
 const REF_LANGS = ["bash-ref", "sh-ref", "ref"];
+// Interactive fences: genuinely need a real PTY (an attached shell prompt,
+// `sandbox create` with no trailing command, etc.) — "Run" (the one-shot,
+// non-interactive /api/check exec) can't work here even with stdin closed;
+// it'll just sit until the server-side timeout kills it. Shell-only.
+const INTERACTIVE_LANGS = ["bash-interactive", "sh-interactive"];
 // Map a fence language to a registered highlight.js grammar (or null = render plain).
 function hljsLang(lang: string): string | null {
-  if (lang === "" || SHELL_LANGS.includes(lang) || REF_LANGS.includes(lang)) return "bash";
+  if (lang === "" || SHELL_LANGS.includes(lang) || REF_LANGS.includes(lang) || INTERACTIVE_LANGS.includes(lang)) return "bash";
   if (lang === "yaml" || lang === "yml") return "yaml";
   if (lang === "json") return "json";
   return null; // text, md, … → no highlighting
@@ -78,10 +83,15 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   }
 
   const isRef = REF_LANGS.includes(lang);
+  const isInteractive = INTERACTIVE_LANGS.includes(lang);
   const isShell = lang === "" || SHELL_LANGS.includes(lang);
   const hasCommand = code.split("\n").some((l) => l.trim() !== "" && !/^\s*#/.test(l));
-  const runnable = isShell && hasCommand && !isRef; // reference fences are never runnable
-  const label = isRef ? "reference" : (lang || "shell");
+  // Reference fences: neither button. Interactive fences: Shell only — "Run"
+  // (the one-shot exec) can't complete against something waiting on a real
+  // PTY/prompt. Everything else shell-like: both.
+  const runnableInline = isShell && hasCommand && !isRef;
+  const runnableShell = (isShell || isInteractive) && hasCommand && !isRef;
+  const label = isRef ? "reference" : isInteractive ? "interactive" : (lang || "shell");
 
   const grammar = hljsLang(lang);
   // Highlight AFTER mount, not during render. Server (and the client's first render)
@@ -99,7 +109,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
       <div className="flex items-center justify-between px-3 py-1.5">
         <span className="font-mono text-[11px] text-[var(--color-fg-mut)]">{label}</span>
         <div className="flex gap-2">
-          {runnable && (
+          {runnableInline && (
             <button
               onClick={runInline}
               disabled={running}
@@ -109,11 +119,11 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
               {running ? "Running…" : "▶ Run"}
             </button>
           )}
-          {runnable && (
+          {runnableShell && (
             <button
               onClick={() => runInShell(code)}
               className="inline-flex items-center gap-1 rounded border border-[var(--color-line-2)] px-2 py-0.5 text-[11px] text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]"
-              title="Run in the persistent lab shell instead (for stateful / interactive commands)"
+              title={isInteractive ? "Run in the persistent lab shell — this needs a real interactive session" : "Run in the persistent lab shell instead (for stateful / interactive commands)"}
             >
               <TerminalIcon size={11} /> Shell
             </button>

@@ -27,13 +27,16 @@ That's why there's no `kubectl` inside a sandbox, and why a compromised agent ca
 
 ## Grant an endpoint (when a task needs one)
 
-To let a sandbox reach a new host, add an endpoint rule — e.g. allow the GitHub API over REST for `node`:
+The format is `host:port[:access[:protocol[:enforcement[:options]]]]`. Enforcement is one of two values: **`enforce`** actually blocks anything the rule doesn't allow; **`audit`** logs what *would* have been blocked without blocking it — useful for working out a new rule's real traffic pattern before locking it down.
 
-```bash-ref
-openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/node
+No agent is wired up yet at this point in the course, so grant `curl` (not `node`) access to something and prove it live — a rule is scoped to the exact binaries you name via `--binary`, so testing with a different binary than the one you granted would just fail, same as if you'd never added the rule:
+
+```bash
+openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl
+openshell sandbox exec -n agent-0 -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/
 ```
 
-The format is `host:port[:access[:protocol[:enforcement[:options]]]]`. In **enforce + rest** mode the proxy terminates TLS and can gate by HTTP path (`--add-deny 'host:443:GET:/secret/**'`) — that's the L7 control the [Skills](/learn/skills) lesson uses to vet a package registry package-by-package. (A few options — like `allow_encoded_slash` for scoped npm packages — aren't settable from the CLI; they live in the policy YAML the sandbox ships with.)
+`HTTP 200` (or `301`) means it's live. In **enforce + rest** mode the proxy terminates TLS and can gate by HTTP path (`--add-deny 'host:443:GET:/secret/**'`) — that's the L7 control the [Skills](/learn/skills) lesson uses to vet a package registry package-by-package. (A few options — like `allow_encoded_slash` for scoped npm packages — aren't settable from the CLI; they live in the policy YAML the sandbox ships with.)
 
 <Callout type="rh" title="The policy is the contract">
 Kernel isolation (gVisor) says <em>how strong</em> the box is; the egress policy says <em>what it may reach</em>. Together they make a sandbox something you can hand untrusted agent code — and <em>prove</em> what it can and cannot do, with every decision on the audit log.
