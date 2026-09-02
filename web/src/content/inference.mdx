@@ -30,10 +30,10 @@ curl -sS "$OPENSHELL_BASE_URL/models" -H "Authorization: Bearer $OPENSHELL_API_K
 
 ## 3. Apply it
 
-LiteLLM holds the key + model for the whole cluster, so the agents never do — everything funnels through one `litellm-secrets` Secret + the chart's `model_list`. You **don't** re-run the whole cluster setup for this — one Ansible tag re-renders just that Secret + the chart's `model_list` from `.env` (key rotation *and* model changes, in one path) and rolls the deployment, nothing else in the cluster:
+LiteLLM holds the key + model for the whole cluster, so the agents never do — everything funnels through one `litellm-secrets` Secret + the chart's `model_list`. You **don't** re-run the whole cluster setup for this — two targeted Ansible tags re-render that Secret + the chart's `model_list` from `.env` (key rotation *and* model changes, in one path) **and** re-point the gateway's own active inference route (`openshell inference get`) — skip the second tag and LiteLLM serves the new model correctly, but `inference get` keeps reporting the old one. This re-render (Helm upgrade + rollout wait) can run past the in-page "Run" button's exec window — use the shell for it, not Run (verified live: it can report a false "exit 1" there even though the underlying re-render actually finished and succeeded):
 
-```bash
-ANSIBLE_TAGS=litellm ./scripts/setup.sh
+```bash-interactive
+ANSIBLE_TAGS=litellm,inference ./scripts/setup.sh
 ```
 
 ## 4. Confirm the active route
@@ -76,7 +76,7 @@ Because everything funnels through LiteLLM, you change the model in **one place*
 openshell inference set --model <model-id>
 ```
 
-To add a *new* model or rotate the key, edit `.env` and re-run just the LiteLLM step — `ANSIBLE_TAGS=litellm ./scripts/setup.sh` (steps 1–3) — it propagates to every managed sandbox; the agents never need to know.
+To add a *new* model or rotate the key, edit `.env` and re-run just the LiteLLM step — `ANSIBLE_TAGS=litellm,inference ./scripts/setup.sh` (steps 1–3) — it propagates to every managed sandbox; the agents never need to know.
 
 <Callout type="note" title="Why front it with LiteLLM?">
 One OpenAI-compatible endpoint means agents speak a single, stable API no matter what model is behind it. Switch providers or models centrally; the sandboxes — and their <code>inference.local</code> calls — don't change.
