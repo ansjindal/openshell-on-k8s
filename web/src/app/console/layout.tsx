@@ -2,8 +2,29 @@ import type { ReactNode } from "react";
 import { Shell } from "@/components/console/Shell";
 import { ConsoleProviders } from "./providers";
 import { SignInScreen } from "@/components/console/SignInScreen";
-import { oidcEnabled, rawConsoleSession } from "@/lib/console-session";
+import { oidcEnabled, rawConsoleSession, consoleSession } from "@/lib/console-session";
+import { callGateway } from "@/lib/grpc";
 import "./console.css";
+
+// Fleets in this launchable are small (1-5 sandboxes), so an N+1 gRPC call
+// per page load is cheap — cheaper than adding a dedicated aggregate RPC.
+async function pendingDraftCount(token?: string): Promise<number> {
+  try {
+    const { sandboxes } = await callGateway<{ sandboxes?: { metadata?: { name?: string } }[] }>(
+      "listSandboxes", { limit: 200 }, token,
+    );
+    const names = (sandboxes ?? []).map((s) => s.metadata?.name).filter(Boolean) as string[];
+    const counts = await Promise.all(names.map(async (name) => {
+      try {
+        const draft = await callGateway<{ chunks?: { status?: string }[] }>("getDraftPolicy", { name, statusFilter: "" }, token);
+        return (draft.chunks ?? []).filter((c) => (c.status || "pending") === "pending").length;
+      } catch { return 0; }
+    }));
+    return counts.reduce((a, b) => a + b, 0);
+  } catch {
+    return 0;
+  }
+}
 
 // Nested layout for the embedded OpenShell console. The root layout already
 // renders <html>/<body>, so this only scopes the console's styles under
@@ -38,10 +59,13 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
     ? { name: session?.user?.name || session?.user?.email || "Signed in", isAdmin: Boolean(session?.isAdmin) }
     : null;
 
+  const { accessToken, isAdmin } = await consoleSession();
+  const pendingDrafts = isAdmin ? await pendingDraftCount(accessToken) : 0;
+
   return (
     <div className="console-root">
       <ConsoleProviders>
-        <Shell oidcEnabled={enabled} user={user}>{children}</Shell>
+        <Shell oidcEnabled={enabled} user={user} pendingDrafts={pendingDrafts}>{children}</Shell>
       </ConsoleProviders>
     </div>
   );

@@ -182,3 +182,11 @@
   tags: [sandboxes, fleet]
   roles:
     - { role: "16-sandboxes", when: sandboxes_enabled | default(false) | bool }
+
+# OpenClaw UI port-forward — needs the target sandbox to already exist.
+- name: Component — OpenClaw UI port-forward (optional)
+  hosts: server
+  become: true
+  tags: [openclaw-ui]
+  roles:
+    - { role: "18-openclaw-forward", when: openclaw_ui_enabled | bool }

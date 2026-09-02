@@ -43,11 +43,12 @@ service:
   nodePort: 30808
 
 server:
-  # The image each sandbox pod runs (the OpenShell sandbox runtime). Pinned to a build that
-  # ships the OpenClaw plugin CLI (init/build/search) so the skills chapter — author, build,
-  # publish to the in-cluster registry, install — works end-to-end. The community :latest tag
-  # lagged at 2026.3.11, which has no plugin-authoring CLI.
-  sandboxImage: ghcr.io/ansjindal/openclaw-sandbox:2026.6.10
+  # The image each sandbox pod runs (the OpenShell sandbox runtime). Built from
+  # images/openclaw-sandbox/Dockerfile (community base + a pinned OpenClaw npm version),
+  # published via .github/workflows/build-openclaw-sandbox.yml. Pinned (not :latest) so the
+  # skills chapter — author, build, publish to the in-cluster registry, install — stays on a
+  # tested OpenClaw version instead of drifting with the community base image's own tag.
+  sandboxImage: ghcr.io/ansjindal/openclaw-sandbox:2026.8.2
   sandboxImagePullPolicy: IfNotPresent
   # Namespace for sandbox pods. Empty = the Helm release namespace (openshell) —
   # the chart only creates sandbox RBAC inside it; it does NOT create a separate

@@ -51,6 +51,8 @@ ENABLE_MONITORING="${ENABLE_MONITORING:-true}"
 CREATE_FLEET="${CREATE_FLEET:-true}"
 FLEET_SIZE="${FLEET_SIZE:-1}"
 GATEWAY_NODEPORT="${GATEWAY_NODEPORT:-30808}"
+ENABLE_OPENCLAW_UI="${ENABLE_OPENCLAW_UI:-false}"
+OPENCLAW_UI_PORT="${OPENCLAW_UI_PORT:-30789}"
 ENABLE_WORKSHOP="${ENABLE_WORKSHOP:-true}"
 WORKSHOP_PORT="${WORKSHOP_PORT:-3000}"
 # SSO + ingress bundle. Default ON: Brev does NOT inject Launchable env-config into
@@ -239,6 +241,8 @@ monitoring_enabled: ${ENABLE_MONITORING}
 sandboxes_enabled: ${CREATE_FLEET}
 fleet_size: ${FLEET_SIZE}
 gateway_nodeport: ${GATEWAY_NODEPORT}
+openclaw_ui_enabled: ${ENABLE_OPENCLAW_UI}
+openclaw_ui_port: ${OPENCLAW_UI_PORT}
 ${SSO_SECRETS_BLOCK}
 EOF
 chmod 600 "$SECRETS"
@@ -544,6 +548,11 @@ $( [[ "${ENABLE_WORKSHOP}" == "true" ]] && printf '
 
   Inference routing : agent → https://inference.local → LiteLLM → ${OPENSHELL_BASE_URL}
   Model             : ${OPENSHELL_MODEL}
+$( [[ "${ENABLE_OPENCLAW_UI}" == "true" ]] && printf '
+  OpenClaw UI (chat / device pairing, forwarded from agent-0)
+    http://%s:%s/
+    expose port %s on Brev to open it from your browser
+' "${NODE_IP:-<vm-ip>}" "${OPENCLAW_UI_PORT}" "${OPENCLAW_UI_PORT}" )
 $( [[ "${ENABLE_SSO}" == "true" ]] && printf '
   ONE public host — expose ONLY Envoy host port %s on Brev as %s
     Site/lessons: %s/

@@ -1,0 +1,44 @@
+---
+# Exposes OpenClaw's own web control UI (the chat/device-pairing interface
+# `openclaw gateway run --port <N>` serves inside the sandbox) to a browser.
+# That port lives inside the sandbox's sealed network namespace — no plain
+# k3s Service/NodePort/Ingress can reach it — so the only way out is a
+# persistent `openshell forward` tunnel (gateway -> supervisor -> sandbox ->
+# host port), supervised here as a systemd unit. Optional; runs only when
+# openclaw_ui_enabled. Must run AFTER the target sandbox exists (16-sandboxes).
+- name: OpenClaw UI port-forward
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Install the openshell CLI (if missing)
+      ansible.builtin.shell: |
+        set -e
+        command -v openshell >/dev/null 2>&1 && exit 0
+        curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+        ln -sf "$HOME/.local/bin/openshell" /usr/local/bin/openshell 2>/dev/null || true
+      args: { executable: /bin/bash }
+      changed_when: false
+      failed_when: false
+
+    - name: Render the openclaw-forward systemd unit
+      ansible.builtin.template:
+        src: openclaw-forward.service.j2
+        dest: /etc/systemd/system/openclaw-forward.service
+        owner: root
+        group: root
+        mode: "0644"
+      register: openclaw_forward_unit
+
+    - name: Enable and (re)start openclaw-forward
+      ansible.builtin.systemd:
+        name: openclaw-forward
+        daemon_reload: true
+        enabled: true
+        state: restarted
+
+    - name: OpenClaw UI forward summary
+      ansible.builtin.debug:
+        msg:
+          - "OpenClaw UI forwarded: host port {{ openclaw_ui_port }} -> sandbox {{ openclaw_ui_agent }}."
+          - "Open Brev port {{ openclaw_ui_port }}, or locally: http://localhost:{{ openclaw_ui_port }}/"
+          - "Managed by systemd unit 'openclaw-forward' (Restart=always — self-heals once the sandbox is Ready)."

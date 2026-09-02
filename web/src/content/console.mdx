@@ -39,6 +39,14 @@ You normally **don't** need this — a fresh launch wires `demo` correctly. Run 
 - **Policies** — a sandbox's effective egress policy, in a panel — the [Seal](/learn/policy) lesson, point-and-click.
 - **Inference / Providers** — the active model + provider the gateway routes to — the [Inference](/learn/inference) lesson's `openshell inference get / set`, as a form.
 
+## Approve or deny a policy change
+
+An agent can propose its own egress-policy changes as it works — new endpoints it wants, gated behind your review instead of applied silently. Open a sandbox's **Draft review** tab to see pending chunks and **Approve**, **Reject** (with a reason the agent sees), **Approve all**, or **Undo** a decision, with full history. The **Sandboxes** nav item shows a count badge whenever any sandbox has drafts waiting on you.
+
+## OpenClaw's own UI
+
+Separately from the console, **OpenClaw** (the agent framework every sandbox ships with) has its own web control UI — chat, device pairing — running *inside* the sandbox's sealed network namespace. It's not reachable by a normal Service or Ingress, so this launchable forwards it out over a dedicated port when you opt in (`ENABLE_OPENCLAW_UI=true` in `.env`, port `OPENCLAW_UI_PORT`, default `30789`) — expose that port on Brev the same way you did the gateway's.
+
 ## Same gateway, same rules
 
 The console is not a backdoor. It connects to the gateway over gRPC — the site's BFF holds that connection, so the **browser never receives cluster credentials** — and every action runs through the same supervisor + policy path as the CLI. A sandbox you create in the console is identical to one from `openshell sandbox create`: same gVisor seal, same egress policy, same audit log.

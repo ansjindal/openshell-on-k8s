@@ -57,6 +57,10 @@ returns an edge 503, since launchpad only forwards low ports):
 | `/grafana` | Dashboards & metrics | Keycloak |
 | `/auth` | Keycloak (realm `openshell`) | — |
 
+Optionally, expose one more port to reach **OpenClaw's own web UI** (chat, device pairing) — it
+runs inside the sandbox's sealed network namespace so it can't be path-routed through Envoy like
+the rest; set `ENABLE_OPENCLAW_UI=true` and expose `OPENCLAW_UI_PORT` (default `30789`).
+
 Or drive it straight from the VM:
 
 ```bash
@@ -73,9 +77,9 @@ kubectl -n openshell-sandboxes get pods  # agent sandboxes
 
 | Component | Namespace | Notes |
 |---|---|---|
-| **k3s** | — | single-node Kubernetes, pinned `v1.35.5` (newer minors break the supervisor bootstrap) |
+| **k3s** | — | single-node Kubernetes, tracks `v1.34` (the latest mature minor at time of writing) |
 | **gVisor** (`runsc`) | — | RuntimeClass every sandbox pod runs under |
-| **agent-sandbox controller** | `agent-sandbox-system` | pinned `v0.5.0`; reconciles `Sandbox` CRs → pods |
+| **agent-sandbox controller** | `agent-sandbox-system` | pinned `v1.0.0`; reconciles `Sandbox` CRs → pods |
 | **LiteLLM** | `litellm` | one OpenAI-compatible endpoint in front of the model |
 | **OpenShell gateway** | `openshell` | control plane: creates sandboxes, routes `inference.local` |
 | **OpenClaw sandboxes** | `openshell-sandboxes` | the agents, as native gVisor pods |
@@ -93,6 +97,7 @@ Everything is driven by `.env` (see [.env.example](.env.example)):
 - `ENABLE_SSO` — Keycloak + apiserver-OIDC + Envoy ingress + Grafana/Console SSO under one host.
 - `PUBLIC_BASE_URL` / `BREV_URL_PREFIX` / `BREV_URL_DOMAIN` — the public host (auto-derived per instance when empty).
 - `CREATE_FLEET`, `FLEET_SIZE`, `AGENT_CMD` — the initial agent fleet.
+- `ENABLE_OPENCLAW_UI`, `OPENCLAW_UI_PORT` — forward OpenClaw's own web UI to a host port (optional).
 
 Running **other agents** instead of OpenClaw: the gateway's `sandboxImage` and the `AGENT_CMD`
 your tasks invoke are both configurable. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

@@ -32,7 +32,8 @@ for v in OPENSHELL_API_KEY OPENSHELL_BASE_URL OPENSHELL_MODEL \
          ENABLE_GVISOR ENABLE_KYVERNO ENABLE_MONITORING ENABLE_SSO ENABLE_HEADLAMP \
          PUBLIC_BASE_URL BREV_URL_PREFIX BREV_URL_DOMAIN \
          ENVOY_WEB_NODEPORT ENVOY_GRPC_NODEPORT ENVOY_HOST_PORT \
-         CREATE_FLEET FLEET_SIZE AGENT_CMD ENABLE_WORKSHOP WORKSHOP_PORT GATEWAY_NODEPORT ANSIBLE_TAGS; do
+         CREATE_FLEET FLEET_SIZE AGENT_CMD ENABLE_WORKSHOP WORKSHOP_PORT GATEWAY_NODEPORT \
+         ENABLE_OPENCLAW_UI OPENCLAW_UI_PORT ANSIBLE_TAGS; do
   [ -n "${!v:-}" ] && printf '%s=%q\n' "$v" "${!v}" >> .env
 done
 chmod 600 .env
@@ -63,12 +64,18 @@ after editing `.env`.
 |---------|------|--------|
 | `3001`  | Envoy ingress — `/` (teaching site) · `/console` · `/grafana` · `/auth` (Keycloak) | **expose this** (the single public host) |
 | `3000`  | Teaching site directly (no SSO routing) — handy for local checks | optional |
+| `30789` | OpenClaw's own web UI (chat, device pairing), only if `ENABLE_OPENCLAW_UI=true` | optional |
 
 > Expose `3001` as an **HTTP "Secure Link"**; the launchable runs a socat forwarder on this
 > **low** host port → the in-cluster Envoy ingress. (NVIDIA launchpad only forwards low host
 > ports — pointing a public URL at the high NodePort `30080` returns an edge **503**, which is
 > why `3001` exists.) The public URL is auto-derived as
 > `https://<BREV_URL_PREFIX>-<brevid>.<BREV_URL_DOMAIN>`.
+
+If `ENABLE_OPENCLAW_UI=true`, add a **second, separate** Secure Link service for `30789`
+(OpenClaw's UI can't be folded into the `3001` Envoy host — it's a raw `openshell forward`
+tunnel, not an HTTP path Envoy can route to). It gets its own public URL, independent of the
+main one.
 
 **With SSO off**, expose `3000` (teaching site, incl. `/console`). Everything also works from
 the VM terminal (`kubectl`, `openshell`, `./scripts/fleet`).
@@ -101,3 +108,5 @@ Set these as the Launchable's environment configuration (or in `.env`):
 | `ENABLE_WORKSHOP` | build + serve the teaching website (+ embedded `/console`) | `true` |
 | `WORKSHOP_PORT` | port for the teaching site | `3000` |
 | `ENVOY_WEB_NODEPORT` | in-cluster Envoy NodePort (internal; not the public port) | `30080` |
+| `ENABLE_OPENCLAW_UI` | forward OpenClaw's own web UI (sealed inside the sandbox netns) to a host port | `false` |
+| `OPENCLAW_UI_PORT` | host port OpenClaw's UI is forwarded to, if enabled | `30789` |

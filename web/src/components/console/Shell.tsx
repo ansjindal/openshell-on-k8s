@@ -23,7 +23,7 @@ const TITLES: Record<string, string> = {
   "/console/inference": "Inference", "/console/policies": "Policies",
 };
 
-export function Shell({ children, oidcEnabled = false, user = null }: { children: ReactNode; oidcEnabled?: boolean; user?: ShellUser | null }) {
+export function Shell({ children, oidcEnabled = false, user = null, pendingDrafts = 0 }: { children: ReactNode; oidcEnabled?: boolean; user?: ShellUser | null; pendingDrafts?: number }) {
   const pathname = usePathname() || "/console";
   const active = (href: string) => (href === "/console" ? pathname === "/console" : pathname.startsWith(href));
   const title = TITLES[pathname] ?? Object.entries(TITLES).find(([h]) => h !== "/console" && pathname.startsWith(h))?.[1] ?? "Console";
@@ -40,6 +40,11 @@ export function Shell({ children, oidcEnabled = false, user = null }: { children
           {NAV.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} className={`nav-item ${active(href) ? "active" : ""}`}>
               <Icon /><span className="label">{label}</span>
+              {href === "/console/sandboxes" && pendingDrafts > 0 && (
+                <span className="badge admin" style={{ marginLeft: "auto" }} title={`${pendingDrafts} pending draft policy change${pendingDrafts === 1 ? "" : "s"}`}>
+                  {pendingDrafts}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
