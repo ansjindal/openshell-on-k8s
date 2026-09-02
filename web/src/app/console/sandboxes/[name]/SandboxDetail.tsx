@@ -166,6 +166,7 @@ function PolicyView({ blocks, policyObj }: { blocks: [string, any][]; policyObj:
 function DraftsView({ name }: { name: string }) {
   const [data, setData] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -180,14 +181,24 @@ function DraftsView({ name }: { name: string }) {
   useEffect(() => { load(); }, [load]);
 
   async function act(action: string, body: any = {}) {
-    setBusy(action + (body.chunkId || "")); setErr(null);
+    setBusy(action + (body.chunkId || "")); setErr(null); setInfo(null);
     const r = await fetch(api(`/api/sandboxes/${encodeURIComponent(name)}/drafts`), {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, ...body }),
     });
     const d = await r.json();
     setBusy(null);
-    if (!r.ok) setErr(d.error ?? "action failed");
-    else load();
+    if (!r.ok) { setErr(d.error ?? "action failed"); return; }
+    // approve-all can legitimately approve 0 chunks (harness-privileged or
+    // low-confidence rules are intentionally excluded from bulk approval) —
+    // without this the button looked like it silently did nothing.
+    if (action === "approve-all" && typeof d.chunksSkipped === "number") {
+      setInfo(
+        d.chunksSkipped > 0
+          ? `Approved ${d.chunksApproved ?? 0}, skipped ${d.chunksSkipped} (needs individual review — e.g. a harness-privileged binary or low confidence).`
+          : `Approved ${d.chunksApproved ?? 0}.`,
+      );
+    }
+    load();
   }
 
   const chunks: any[] = data?.chunks ?? [];
@@ -206,6 +217,7 @@ function DraftsView({ name }: { name: string }) {
       </div>
 
       {err && <div className="alert error" style={{ marginBottom: 12 }}><IconAlert /><div>{err}</div></div>}
+      {info && <div className="alert info" style={{ marginBottom: 12 }}><IconInfo /><div>{info}</div></div>}
       {data?.rollingSummary && <div className="alert info" style={{ marginBottom: 14 }}><IconInfo /><div>{data.rollingSummary}</div></div>}
 
       {chunks.length === 0 && !err ? (
@@ -286,7 +298,11 @@ function DevicesView({ name }: { name: string }) {
     });
     const d = await r.json();
     setBusy(null);
-    if (!r.ok) setErr(d.error ?? "action failed");
+    // The route can return HTTP 200 with { ok: false, output } (e.g. the
+    // pairing request expired between page load and clicking Approve) — check
+    // the JSON body's own ok flag, not just the HTTP status, or a real
+    // failure here silently looks like nothing happened.
+    if (!r.ok || d.ok === false) setErr(d.error ?? d.output ?? "action failed");
     else load();
   }
 
