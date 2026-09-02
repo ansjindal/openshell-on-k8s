@@ -71,53 +71,17 @@
       changed_when: "'[gateway] ready' in _openclaw_ui_start.stdout"
       failed_when: false
 
-    # With --auth password, the first device to pair only gets the
-    # operator.pairing scope — it can REQUEST pairing but can't APPROVE its own
-    # or anyone else's request, so a fresh gateway deadlocks the very first
-    # browser ("who approves the approver?"). Fix: have the CLI itself pair as
-    # an operator device (forces an entry into devices/paired.json even though
-    # not yet approved), then patch that entry's scopes directly to admin, then
-    # restart so the running gateway reloads it. From then on that operator can
-    # approve pairing requests from the console/CLI/Control UI itself — matches
-    # the sibling nemoclaw-openshift-launchable's Skills-lab-tested approach.
-    - name: Force an initial device-pairing attempt (so there is something to bootstrap)
-      ansible.builtin.shell: |
-        set -e
-        script="openclaw devices list --url ws://127.0.0.1:{{ openclaw_ui_port }} --password '{{ openclaw_gateway_password }}' >/dev/null 2>&1 || true; sleep 2; echo done"
-        b64="$(printf '%s' "$script" | base64 | tr -d '\n')"
-        openshell --gateway fleet sandbox exec -n {{ openclaw_ui_agent }} -- sh -c "echo $b64 | base64 -d | sh"
-      args: { executable: /bin/bash }
-      changed_when: false
-      failed_when: false
-
-    - name: Bootstrap the paired operator device to admin scope
-      ansible.builtin.shell: |
-        set -e
-        js='const fs=require("fs");const dir="/sandbox/.openclaw/devices";const p=dir+"/paired.json";if(!fs.existsSync(p)){console.log("no paired devices yet");process.exit(0);}const d=JSON.parse(fs.readFileSync(p,"utf8"));const want=["operator.pairing","operator.admin","operator.approvals","operator.read","operator.write"];for(const k in d){d[k].scopes=want;d[k].approvedScopes=want;if(d[k].tokens&&d[k].tokens.operator){d[k].tokens.operator.scopes=want;}}fs.writeFileSync(p,JSON.stringify(d));try{fs.writeFileSync(dir+"/pending.json","{}");}catch(e){}console.log("admin-bootstrapped "+Object.keys(d).length+" device(s)");'
-        jsb64="$(printf '%s' "$js" | base64 | tr -d '\n')"
-        script="echo $jsb64 | base64 -d > /sandbox/bootstrap-admin.js && node /sandbox/bootstrap-admin.js"
-        b64="$(printf '%s' "$script" | base64 | tr -d '\n')"
-        openshell --gateway fleet sandbox exec -n {{ openclaw_ui_agent }} -- sh -c "echo $b64 | base64 -d | sh"
-      args: { executable: /bin/bash }
-      register: _openclaw_admin_bootstrap
-      changed_when: "'admin-bootstrapped' in _openclaw_admin_bootstrap.stdout"
-      failed_when: false
-
-    - name: Restart the Control UI gateway to load the bootstrapped admin device
-      ansible.builtin.shell: |
-        set -e
-        script='cd /sandbox
-        [ -f gateway.pid ] && kill "$(cat gateway.pid)" 2>/dev/null
-        sleep 1
-        setsid nohup openclaw gateway run --port {{ openclaw_ui_port }} --bind lan --auth password --password "{{ openclaw_gateway_password }}" --allow-unconfigured > /sandbox/gateway.log 2>&1 < /dev/null &
-        echo $! > /sandbox/gateway.pid
-        sleep 6
-        tail -5 /sandbox/gateway.log'
-        b64="$(printf '%s' "$script" | base64 | tr -d '\n')"
-        openshell --gateway fleet sandbox exec -n {{ openclaw_ui_agent }} -- sh -c "echo $b64 | base64 -d | sh"
-      args: { executable: /bin/bash }
-      when: "'admin-bootstrapped' in _openclaw_admin_bootstrap.stdout"
-      changed_when: true
+    # NOTE on device pairing: an earlier version of this task tried to port the
+    # sibling nemoclaw-openshift-launchable's admin-bootstrap trick (patch a
+    # devices/paired.json file to grant the first device admin scope, working
+    # around a "first browser can't approve its own pairing" deadlock on older
+    # OpenClaw). Verified live against OpenClaw 2026.8.2 that this doesn't
+    # apply here: device-pairing state now lives in a SQLite DB
+    # (.openclaw/state/openclaw.sqlite), no devices/paired.json exists at all,
+    # AND `--auth password` auto-pairs a correctly-authenticated client
+    # immediately (confirmed via `openclaw devices list`: status "Paired", not
+    # "Pending") — there's no separate approval step to unblock. Dropped the
+    # bootstrap entirely rather than ship a step that silently no-ops.
 
     - name: Render the openclaw-forward systemd unit
       ansible.builtin.template:
@@ -141,5 +105,4 @@
           - "OpenClaw UI forwarded: host port {{ openclaw_ui_port }} -> sandbox {{ openclaw_ui_agent }}."
           - "Open Brev port {{ openclaw_ui_port }}, or locally: http://localhost:{{ openclaw_ui_port }}/"
           - "Control UI password: {{ openclaw_gateway_password }} (override via OPENCLAW_GATEWAY_PASSWORD in .env)."
-          - "First browser still needs its device-pairing request approved from inside the UI/CLI (the bootstrapped operator device can approve it)."
           - "Managed by systemd unit 'openclaw-forward' (Restart=always — self-heals once the sandbox is Ready)."
