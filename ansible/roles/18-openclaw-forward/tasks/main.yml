@@ -30,6 +30,25 @@
       register: _openshell_bin
       changed_when: false
 
+    # 16-sandboxes' `sandbox create` returns as soon as the gateway ACCEPTS the
+    # create request, not once the pod is actually Ready — on a fresh node the
+    # sandbox image pull alone can take several minutes. Found live on a fresh
+    # instance's first-ever provision: every `sandbox exec` task below ran
+    # against a still-Init sandbox, failed silently (each wrapped in `|| true`
+    # for idempotent re-runs), and the whole role completed "successfully"
+    # with the Control UI simply never started — no error anywhere, just an
+    # unreachable port. Wait for the phase to actually be Ready first.
+    - name: Wait for the sandbox to be Ready before configuring it
+      ansible.builtin.shell: |
+        set -e
+        openshell --gateway fleet sandbox list 2>/dev/null | awk -v n="{{ openclaw_ui_agent }}" '$1==n{print $NF}'
+      args: { executable: /bin/bash }
+      register: _openclaw_sandbox_phase
+      retries: 60
+      delay: 10
+      until: "'Ready' in _openclaw_sandbox_phase.stdout"
+      changed_when: false
+
     # `openclaw gateway run` only ever binds a port INSIDE the sandbox — nothing
     # starts it automatically, and a bare sandbox has no systemd to supervise it.
     # Everything below runs the in-sandbox setup once via `sandbox exec`, piping
