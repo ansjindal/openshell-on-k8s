@@ -69,7 +69,12 @@ up() {
   sleep 2
   for i in "${!NM[@]}"; do
     name="${NM[$i]}"
-    openshell sandbox create --name "$name" --policy "/tmp/fleet-${name}.policy.yaml" --from "$IMAGE" --no-tty -- true </dev/null >"/tmp/fleet-${name}.log" 2>&1 &
+    # `-- sleep infinity`, not `-- true`: newer supervisors (0.0.111+, "canonical
+    # main process for sandboxes") end the pod's main container as soon as its
+    # initial command exits — `true` exits immediately, so the pod goes straight
+    # to phase Error/Completed instead of staying Ready (same class of bug
+    # already fixed in ansible/roles/16-sandboxes and scripts/fleet).
+    openshell sandbox create --name "$name" --policy "/tmp/fleet-${name}.policy.yaml" --from "$IMAGE" --no-tty -- sleep infinity </dev/null >"/tmp/fleet-${name}.log" 2>&1 &
   done
   echo "   …creating; waiting for each to reach Ready (they bootstrap concurrently)…"
 
