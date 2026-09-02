@@ -187,7 +187,23 @@ function DraftsView({ name }: { name: string }) {
     });
     const d = await r.json();
     setBusy(null);
-    if (!r.ok) { setErr(d.error ?? "action failed"); return; }
+    if (!r.ok) {
+      // Individual approve/reject can fail with "review token does not match"
+      // on some gateway builds — the vendored proto here is missing a
+      // review_token field the running gateway expects on PolicyChunk/the
+      // approve request (confirmed live via the openshell CLI binary's own
+      // embedded field names). "Approve all"/"Clear all" don't hit this path.
+      // Until that's fixed, the reliable workaround is granting the same
+      // endpoint directly: `openshell policy update <sandbox> --add-endpoint
+      // '<host>:<port>:...' --binary <path>` (see the rule shown above).
+      const raw = String(d.error ?? "action failed");
+      setErr(
+        raw.includes("review token")
+          ? `${raw} — known gateway-version issue with individual approve/reject; use "Approve all safe" or grant this endpoint directly with 'openshell policy update ${name} --add-endpoint ...' instead.`
+          : raw,
+      );
+      return;
+    }
     // approve-all can legitimately approve 0 chunks (harness-privileged or
     // low-confidence rules are intentionally excluded from bulk approval) —
     // without this the button looked like it silently did nothing.
