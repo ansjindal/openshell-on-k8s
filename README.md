@@ -94,7 +94,7 @@ Everything is driven by `.env` (see [.env.example](.env.example)):
 
 - `OPENSHELL_API_KEY` / `OPENSHELL_BASE_URL` / `OPENSHELL_MODEL` — the inference backend.
 - `ENABLE_GVISOR`, `ENABLE_KYVERNO`, `ENABLE_MONITORING` — stack toggles.
-- `ENABLE_SSO` — Keycloak + apiserver-OIDC + Envoy ingress + Grafana/Console SSO under one host.
+- `ENABLE_SSO` — Keycloak + apiserver-OIDC + Envoy ingress + Grafana SSO under one host. The console itself stays open (no login) unless `ENABLE_CONSOLE_SSO=true`.
 - `PUBLIC_BASE_URL` / `BREV_URL_PREFIX` / `BREV_URL_DOMAIN` — the public host (auto-derived per instance when empty).
 - `CREATE_FLEET`, `FLEET_SIZE`, `AGENT_CMD` — the initial agent fleet.
 - `ENABLE_OPENCLAW_UI`, `OPENCLAW_UI_PORT` — forward OpenClaw's own web UI to a host port (optional).

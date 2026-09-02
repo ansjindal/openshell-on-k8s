@@ -8,12 +8,12 @@ The console is part of the teaching site, behind the one public URL:
 https://<your-launchpad-host>/console
 ```
 
-With SSO on, log in via Keycloak; on a bare lab box (no SSO) it's open.
+The console itself is open by default — no login wall — even when SSO is on for Grafana/Keycloak elsewhere. Set `ENABLE_CONSOLE_SSO=true` to gate the console behind Keycloak too.
 
 <Callout type="note" title="Your Keycloak logins — and how to get the passwords">
 Two accounts exist on every SSO-enabled box (passwords are generated per box, kept in <code>.sso-secrets.env</code>):
 
-- **`demo`** — the workshop login for the **Console and Grafana** (it carries the `openshell-admin` role → create/delete). Password: <code>KC_DEMO_PASSWORD</code>.
+- **`demo`** — the workshop login for **Grafana** (and the console too, if you set `ENABLE_CONSOLE_SSO=true`) — it carries the `openshell-admin` role → create/delete. Password: <code>KC_DEMO_PASSWORD</code>.
 - **`admin`** — the **Keycloak admin console** itself (manage realms/users). Password: <code>KC_ADMIN_PASSWORD</code>.
 
 Print them from the lab shell on the right:

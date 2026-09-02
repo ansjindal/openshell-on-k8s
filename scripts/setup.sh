@@ -73,6 +73,11 @@ WORKSHOP_PORT="${WORKSHOP_PORT:-3000}"
 ENABLE_SSO="${ENABLE_SSO:-true}"
 ENABLE_HEADLAMP="${ENABLE_HEADLAMP:-false}"
 ENABLE_CONSOLE="${ENABLE_CONSOLE:-true}"
+# Keeps Keycloak/Grafana behind SSO (still gated by ENABLE_SSO) while the
+# OpenShell Console itself runs open (no login) — a learner clicking around
+# their own single-tenant lab box doesn't need a login wall on the console
+# specifically. Set true to gate the console behind Keycloak too.
+ENABLE_CONSOLE_SSO="${ENABLE_CONSOLE_SSO:-false}"
 # Track whether the operator gave these explicitly — a derived base built from the
 # DEFAULT domain silently bakes the launchpad host into every SSO URL (Keycloak
 # issuer, realm redirect URIs, AUTH_URL, Grafana), which breaks sign-in on any other
@@ -446,11 +451,11 @@ Environment=OPENSHELL_GATEWAY_CLIENT_KEY_FILE=${tls_dir}/tls.key
 Environment=PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
 Environment=AUTH_URL=${PUBLIC_BASE_URL}
 Environment=AUTH_SECRET=${CONSOLE_AUTH_SECRET:-}
-Environment=OIDC_ISSUER=${PUBLIC_BASE_URL:+${PUBLIC_BASE_URL}/auth/realms/openshell}
+Environment=OIDC_ISSUER=$( [[ "${ENABLE_CONSOLE_SSO}" == "true" ]] && printf '%s' "${PUBLIC_BASE_URL:+${PUBLIC_BASE_URL}/auth/realms/openshell}" )
 # Server-side OIDC back-channel that bypasses the launchpad Pomerium proxy (which 302s
 # server-side fetches to the public host → console SSO dies with error=Configuration).
 # Points at the box-local Envoy, which routes /auth → Keycloak without Pomerium in the path.
-Environment=OIDC_INTERNAL_ISSUER=${PUBLIC_BASE_URL:+http://localhost:${ENVOY_HOST_PORT}/auth/realms/openshell}
+Environment=OIDC_INTERNAL_ISSUER=$( [[ "${ENABLE_CONSOLE_SSO}" == "true" ]] && printf '%s' "${PUBLIC_BASE_URL:+http://localhost:${ENVOY_HOST_PORT}/auth/realms/openshell}" )
 Environment=OIDC_CLIENT_ID=openshell-ui
 Environment=OIDC_CLIENT_SECRET=${CONSOLE_CLIENT_SECRET:-}
 Environment=OIDC_ROLES_CLAIM=groups

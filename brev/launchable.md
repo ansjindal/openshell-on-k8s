@@ -29,7 +29,7 @@ cd "$REPO"
 chmod +x scripts/setup.sh scripts/fleet 2>/dev/null || true
 : > .env
 for v in OPENSHELL_API_KEY OPENSHELL_BASE_URL OPENSHELL_MODEL \
-         ENABLE_GVISOR ENABLE_KYVERNO ENABLE_MONITORING ENABLE_SSO ENABLE_HEADLAMP \
+         ENABLE_GVISOR ENABLE_KYVERNO ENABLE_MONITORING ENABLE_SSO ENABLE_CONSOLE_SSO ENABLE_HEADLAMP \
          PUBLIC_BASE_URL BREV_URL_PREFIX BREV_URL_DOMAIN \
          ENVOY_WEB_NODEPORT ENVOY_GRPC_NODEPORT ENVOY_HOST_PORT \
          CREATE_FLEET FLEET_SIZE AGENT_CMD ENABLE_WORKSHOP WORKSHOP_PORT GATEWAY_NODEPORT \
@@ -105,7 +105,8 @@ Set these as the Launchable's environment configuration (or in `.env`):
 | `ENABLE_GVISOR` | runsc sandbox isolation | `true` |
 | `ENABLE_KYVERNO` | policy guardrails (require-gvisor) | `true` |
 | `ENABLE_MONITORING` | Prometheus + Grafana + Loki + Alloy + Tempo | `true` |
-| `ENABLE_SSO` | Keycloak + apiserver-OIDC + Envoy ingress + Grafana/Console SSO (one public host) | `true` |
+| `ENABLE_SSO` | Keycloak + apiserver-OIDC + Envoy ingress + Grafana SSO (one public host) | `true` |
+| `ENABLE_CONSOLE_SSO` | also gate the OpenShell Console behind Keycloak (it's open by default even with SSO on) | `false` |
 | `PUBLIC_BASE_URL` | public https host fronting Envoy via port `3001` (OIDC issuer); empty = auto-derive | `""` |
 | `BREV_URL_PREFIX` / `BREV_URL_DOMAIN` | pieces of the auto-derived URL | `openshell` / `brevlab.com` |
 | `ENVOY_HOST_PORT` | **low** host port the public URL maps to (socat → Envoy) | `3001` |
