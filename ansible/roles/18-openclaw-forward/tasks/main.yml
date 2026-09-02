@@ -72,6 +72,47 @@
       changed_when: false
       failed_when: false
 
+    # Closes the long-documented KNOWN GAP (.env.example): OpenClaw's own model
+    # calls don't route through inference.local via env vars the way
+    # claude/codex/opencode do — it needs its own provider onboarded. Uses
+    # inference_model (the same model LiteLLM is already configured to serve,
+    # from 10-inference_routing) with a PLACEHOLDER apiKey, never the real
+    # upstream key — the whole point of inference.local is that the sandbox's
+    # policy proxy injects the real credential, so the agent never holds it.
+    #
+    # baseUrl MUST include /v1 — verified live: OpenClaw's OpenAI-completions
+    # client builds requests as `${baseUrl}/chat/completions`; with a bare
+    # `https://inference.local` that lands on `/chat/completions` (no /v1),
+    # which falls OUTSIDE the supervisor's special-cased inference.local
+    # interception path and hits the normal egress policy instead — which then
+    # denies it (no allow-rule for that bare host/binary), surfacing as a
+    # misleading "authentication failed, HTTP 403" in OpenClaw's UI when the
+    # gateway log's actual rawError is "connection not allowed by policy".
+    - name: Onboard OpenClaw's own provider to route through inference.local
+      ansible.builtin.shell: |
+        set -e
+        payload='openclaw onboard --non-interactive --accept-risk --skip-health --skip-ui --skip-daemon --skip-channels --skip-hooks --skip-search --skip-skills --skip-bootstrap --auth-choice custom-api-key --custom-provider-id litellm --custom-base-url https://inference.local/v1 --custom-api-key unused --custom-model-id {{ inference_model }} --custom-compatibility openai --custom-text-input'
+        b64="$(printf '%s' "$payload" | base64 | tr -d '\n')"
+        openshell --gateway fleet sandbox exec -n {{ openclaw_ui_agent }} -- sh -c "echo $b64 | base64 -d | sh"
+      args: { executable: /bin/bash }
+      changed_when: false
+      failed_when: false
+
+    # Without this, plain `openclaw agent`/other bare CLI calls (no explicit
+    # --url/--password, unlike the devices-list/-approve tasks above which
+    # always pass them) fall back to config defaults (port 18789, no password)
+    # instead of the port/auth this gateway actually runs with — verified live
+    # ("Gateway not reachable at ws://127.0.0.1:18789").
+    - name: Point the CLI's own gateway target at this gateway's real port + password
+      ansible.builtin.shell: |
+        set -e
+        payload='openclaw config set gateway.port {{ openclaw_ui_port }} && openclaw config set gateway.auth.password "{{ openclaw_gateway_password }}"'
+        b64="$(printf '%s' "$payload" | base64 | tr -d '\n')"
+        openshell --gateway fleet sandbox exec -n {{ openclaw_ui_agent }} -- sh -c "echo $b64 | base64 -d | sh"
+      args: { executable: /bin/bash }
+      changed_when: false
+      failed_when: false
+
     - name: Start (or restart) the in-sandbox OpenClaw Control UI gateway
       ansible.builtin.shell: |
         set -e
