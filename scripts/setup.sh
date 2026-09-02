@@ -54,6 +54,15 @@ GATEWAY_NODEPORT="${GATEWAY_NODEPORT:-30808}"
 ENABLE_OPENCLAW_UI="${ENABLE_OPENCLAW_UI:-false}"
 OPENCLAW_UI_PORT="${OPENCLAW_UI_PORT:-30789}"
 OPENCLAW_GATEWAY_PASSWORD="${OPENCLAW_GATEWAY_PASSWORD:-openshell-wad26}"
+# The browser-facing URL for the OpenClaw UI. On Brev/launchpad this is its own
+# Secure Link (a SEPARATE subdomain, not the same host on a different port —
+# unlike GATEWAY_NODEPORT/etc. this one can't be "same host, expose the port"
+# because Brev's edge only terminates HTTPS per-subdomain-per-port-mapping, not
+# per-arbitrary-port on one host). Auto-derived below like PUBLIC_BASE_URL, using
+# a different prefix (OPENCLAW_UI_URL_PREFIX) on the same <brevid>.<domain>. Set
+# OPENCLAW_UI_URL directly to override (e.g. a non-Brev host).
+OPENCLAW_UI_URL="${OPENCLAW_UI_URL:-}"
+OPENCLAW_UI_URL_PREFIX="${OPENCLAW_UI_URL_PREFIX:-openclaw}"
 ENABLE_WORKSHOP="${ENABLE_WORKSHOP:-true}"
 WORKSHOP_PORT="${WORKSHOP_PORT:-3000}"
 # SSO + ingress bundle. Default ON: Brev does NOT inject Launchable env-config into
@@ -88,12 +97,18 @@ ENVOY_HOST_PORT="${ENVOY_HOST_PORT:-3001}"
 
 # Auto-derive the public URL when SSO is on and no explicit URL was given:
 #   https://<prefix>-<brevid>.<domain>   (brevid = host's "brev-XXXX" suffix)
+# brevid itself doesn't depend on SSO — OPENCLAW_UI_URL below needs it too.
 brevid="$(hostname | sed -n 's/^brev-//p')"
 [[ -z "$brevid" ]] && brevid="${BREV_ENV_ID:-}"
 if [[ "$ENABLE_SSO" == "true" && -z "$PUBLIC_BASE_URL" ]]; then
   if [[ -n "$brevid" ]]; then
     PUBLIC_BASE_URL="https://${BREV_URL_PREFIX}-${brevid}.${BREV_URL_DOMAIN}"
   fi
+fi
+OPENCLAW_UI_URL_EXPLICIT=0
+[[ -n "${OPENCLAW_UI_URL}" ]] && OPENCLAW_UI_URL_EXPLICIT=1
+if [[ "$ENABLE_OPENCLAW_UI" == "true" && -z "$OPENCLAW_UI_URL" && -n "$brevid" ]]; then
+  OPENCLAW_UI_URL="https://${OPENCLAW_UI_URL_PREFIX}-${brevid}.${BREV_URL_DOMAIN}"
 fi
 
 # ---- preflight --------------------------------------------------------------
@@ -107,6 +122,12 @@ memgb="$(awk '/MemTotal/ {printf "%.0f", $2/1024/1024}' /proc/meminfo 2>/dev/nul
 log "Host: ${cores} vCPU, ${memgb} GB RAM, arch $(uname -m)"
 [[ "$cores" =~ ^[0-9]+$ && "$cores" -lt 4 ]] && warn "Fewer than 4 vCPU — the stack will be slow."
 [[ "$memgb" =~ ^[0-9]+$ && "$memgb" -lt 8 ]] && warn "Less than 8 GB RAM — expect pressure; 16 GB recommended."
+
+if [[ "$ENABLE_OPENCLAW_UI" == "true" && "$OPENCLAW_UI_URL_EXPLICIT" == "0" && "$BREV_URL_DOMAIN_EXPLICIT" == "0" ]]; then
+  warn "OPENCLAW_UI_URL was derived using the DEFAULT domain '${BREV_URL_DOMAIN}'."
+  warn "If this box is served on a different host (e.g. brevlab.com), set BREV_URL_DOMAIN"
+  warn "or OPENCLAW_UI_URL directly in .env and re-run, or the console's OpenClaw UI link will be wrong."
+fi
 
 if [[ -z "$OPENSHELL_API_KEY" ]]; then
   warn "OPENSHELL_API_KEY is empty — the cluster + gateway will deploy, but the agent"
@@ -418,6 +439,7 @@ Environment=OIDC_ROLES_CLAIM=groups
 Environment=OIDC_ADMIN_ROLE=openshell-admin
 Environment=ENABLE_OPENCLAW_UI=${ENABLE_OPENCLAW_UI}
 Environment=OPENCLAW_UI_PORT=${OPENCLAW_UI_PORT}
+Environment=OPENCLAW_UI_URL=${OPENCLAW_UI_URL}
 ExecStart=$(command -v node) ${web}/server.mjs
 ExecStartPost=-/usr/local/bin/openshell-workshop-endpoint.sh
 Restart=on-failure
@@ -563,10 +585,13 @@ $( [[ "${ENABLE_WORKSHOP}" == "true" ]] && printf '
   Model             : ${OPENSHELL_MODEL}
 $( [[ "${ENABLE_OPENCLAW_UI}" == "true" ]] && printf '
   OpenClaw UI (chat / device pairing, forwarded from agent-0)
-    http://%s:%s/
+    local : http://%s:%s/
+    public: %s
     password: %s (override via OPENCLAW_GATEWAY_PASSWORD in .env)
-    expose port %s on Brev to open it from your browser
-' "${NODE_IP:-<vm-ip>}" "${OPENCLAW_UI_PORT}" "${OPENCLAW_GATEWAY_PASSWORD}" "${OPENCLAW_UI_PORT}" )
+    On Brev/launchpad: add a SEPARATE Secure Link for port %s (its own
+    subdomain, e.g. "%s" — same pattern as the main site, NOT the same host on
+    a different port) — see brev/launchable.md.
+' "${NODE_IP:-<vm-ip>}" "${OPENCLAW_UI_PORT}" "${OPENCLAW_UI_URL:-<set OPENCLAW_UI_URL or BREV_URL_DOMAIN in .env>}" "${OPENCLAW_GATEWAY_PASSWORD}" "${OPENCLAW_UI_PORT}" "${OPENCLAW_UI_URL_PREFIX}" )
 $( [[ "${ENABLE_SSO}" == "true" ]] && printf '
   ONE public host — expose ONLY Envoy host port %s on Brev as %s
     Site/lessons: %s/

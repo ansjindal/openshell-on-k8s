@@ -4,26 +4,7 @@ import { ConsoleProviders } from "./providers";
 import { SignInScreen } from "@/components/console/SignInScreen";
 import { oidcEnabled, rawConsoleSession, consoleSession } from "@/lib/console-session";
 import { callGateway } from "@/lib/grpc";
-import { publicBaseUrl } from "@/lib/public-base";
 import "./console.css";
-
-// OpenClaw's own Control UI lives on a separate forwarded port (not path-routed
-// through Envoy — see ansible/roles/18-openclaw-forward), so this can only ever
-// be a same-host-different-port link. Reuse the actual request host (not the
-// deploy-time PUBLIC_BASE_URL) so it self-corrects on whatever domain is really
-// serving this page, same reasoning as publicBaseUrl() itself.
-async function openclawUiUrl(): Promise<string | null> {
-  if (process.env.ENABLE_OPENCLAW_UI !== "true") return null;
-  const port = process.env.OPENCLAW_UI_PORT || "30789";
-  const base = await publicBaseUrl();
-  if (!base) return null;
-  try {
-    const hostname = new URL(base).hostname;
-    return `http://${hostname}:${port}/`;
-  } catch {
-    return null;
-  }
-}
 
 // Fleets in this launchable are small (1-5 sandboxes), so an N+1 gRPC call
 // per page load is cheap — cheaper than adding a dedicated aggregate RPC.
@@ -80,7 +61,10 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
 
   const { accessToken, isAdmin } = await consoleSession();
   const pendingDrafts = isAdmin ? await pendingDraftCount(accessToken) : 0;
-  const openclawUrl = await openclawUiUrl();
+  // OPENCLAW_UI_URL is a separate Brev Secure Link (its own subdomain), auto-derived
+  // and written into this process's env by scripts/setup.sh — not the same-host-
+  // different-port guess a plain request-host derivation would produce.
+  const openclawUrl = process.env.OPENCLAW_UI_URL || null;
 
   return (
     <div className="console-root">

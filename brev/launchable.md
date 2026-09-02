@@ -33,7 +33,8 @@ for v in OPENSHELL_API_KEY OPENSHELL_BASE_URL OPENSHELL_MODEL \
          PUBLIC_BASE_URL BREV_URL_PREFIX BREV_URL_DOMAIN \
          ENVOY_WEB_NODEPORT ENVOY_GRPC_NODEPORT ENVOY_HOST_PORT \
          CREATE_FLEET FLEET_SIZE AGENT_CMD ENABLE_WORKSHOP WORKSHOP_PORT GATEWAY_NODEPORT \
-         ENABLE_OPENCLAW_UI OPENCLAW_UI_PORT OPENCLAW_GATEWAY_PASSWORD ANSIBLE_TAGS; do
+         ENABLE_OPENCLAW_UI OPENCLAW_UI_PORT OPENCLAW_GATEWAY_PASSWORD \
+         OPENCLAW_UI_URL OPENCLAW_UI_URL_PREFIX ANSIBLE_TAGS; do
   [ -n "${!v:-}" ] && printf '%s=%q\n' "$v" "${!v}" >> .env
 done
 chmod 600 .env
@@ -74,8 +75,13 @@ after editing `.env`.
 
 If `ENABLE_OPENCLAW_UI=true`, add a **second, separate** Secure Link service for `30789`
 (OpenClaw's UI can't be folded into the `3001` Envoy host — it's a raw `openshell forward`
-tunnel, not an HTTP path Envoy can route to). It gets its own public URL, independent of the
-main one.
+tunnel, not an HTTP path Envoy can route to, and Brev doesn't let you reach an arbitrary
+port on the same public host — it's one HTTPS subdomain per exposed port). Name that
+Secure Link's prefix `openclaw` (matches `OPENCLAW_UI_URL_PREFIX`'s default) so it lands on
+`https://openclaw-<brevid>.<BREV_URL_DOMAIN>` — the same `<brevid>` and domain the main
+site uses with a different prefix. `scripts/setup.sh` auto-derives `OPENCLAW_UI_URL` to that
+exact URL and renders it as a link in the console/site header; if you pick a different Secure
+Link prefix, set `OPENCLAW_UI_URL_PREFIX` (or `OPENCLAW_UI_URL` directly) in `.env` to match.
 
 **With SSO off**, expose `3000` (teaching site, incl. `/console`). Everything also works from
 the VM terminal (`kubectl`, `openshell`, `./scripts/fleet`).
