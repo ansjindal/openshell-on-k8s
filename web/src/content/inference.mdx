@@ -36,6 +36,14 @@ LiteLLM holds the key + model for the whole cluster, so the agents never do — 
 ANSIBLE_TAGS=litellm,inference ./scripts/setup.sh
 ```
 
+<Callout type="note" title="If OpenClaw's own UI still shows the old model">
+There's a *third* piece of state, separate from both of the above: if `ENABLE_OPENCLAW_UI=true`, OpenClaw's Control UI has its own onboarded default model (`agents.defaults.model.primary`), set once when that sandbox first provisions and never touched by the two tags above. `openshell inference get` and the actual `inference.local` routing will already be correct at this point — only OpenClaw's own chat UI selector stays stale. Re-run with the `openclaw-ui` tag added to pick it up too:
+
+```bash-interactive
+ANSIBLE_TAGS=litellm,inference,openclaw-ui ./scripts/setup.sh
+```
+</Callout>
+
 ## 4. Confirm the active route
 
 Ask the gateway what inference is wired to — this reflects whatever you set in `.env`, not a hardcoded default:
