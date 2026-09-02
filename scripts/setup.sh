@@ -440,6 +440,7 @@ Environment=OIDC_ADMIN_ROLE=openshell-admin
 Environment=ENABLE_OPENCLAW_UI=${ENABLE_OPENCLAW_UI}
 Environment=OPENCLAW_UI_PORT=${OPENCLAW_UI_PORT}
 Environment=OPENCLAW_UI_URL=${OPENCLAW_UI_URL}
+Environment=OPENCLAW_GATEWAY_PASSWORD=${OPENCLAW_GATEWAY_PASSWORD}
 ExecStart=$(command -v node) ${web}/server.mjs
 ExecStartPost=-/usr/local/bin/openshell-workshop-endpoint.sh
 Restart=on-failure

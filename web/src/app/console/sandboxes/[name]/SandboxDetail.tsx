@@ -26,10 +26,10 @@ function phasePill(phase: string) {
   return <span className={`pill ${tone}`}><span className="dot" />{text}</span>;
 }
 
-type Tab = "overview" | "policy" | "network" | "drafts" | "terminal" | "logs";
+type Tab = "overview" | "policy" | "network" | "drafts" | "devices" | "terminal" | "logs";
 
-export function SandboxDetail({ data, isAdmin, initialTab }: { data: Data; isAdmin?: boolean; initialTab?: string }) {
-  const valid: Tab[] = ["overview", "policy", "network", "drafts", "terminal", "logs"];
+export function SandboxDetail({ data, isAdmin, initialTab, openclawUiEnabled }: { data: Data; isAdmin?: boolean; initialTab?: string; openclawUiEnabled?: boolean }) {
+  const valid: Tab[] = ["overview", "policy", "network", "drafts", "devices", "terminal", "logs"];
   const [tab, setTab] = useState<Tab>(valid.includes(initialTab as Tab) ? (initialTab as Tab) : "overview");
   const blocks = Object.entries(data.networkPolicies);
 
@@ -40,6 +40,7 @@ export function SandboxDetail({ data, isAdmin, initialTab }: { data: Data; isAdm
         <button className={`tab ${tab === "policy" ? "active" : ""}`} onClick={() => setTab("policy")}>Policy</button>
         <button className={`tab ${tab === "network" ? "active" : ""}`} onClick={() => setTab("network")}>Network</button>
         {isAdmin && <button className={`tab ${tab === "drafts" ? "active" : ""}`} onClick={() => setTab("drafts")}>Draft review</button>}
+        {isAdmin && openclawUiEnabled && <button className={`tab ${tab === "devices" ? "active" : ""}`} onClick={() => setTab("devices")}>Device pairing</button>}
         {isAdmin && <button className={`tab ${tab === "terminal" ? "active" : ""}`} onClick={() => setTab("terminal")}>Terminal</button>}
         <button className={`tab ${tab === "logs" ? "active" : ""}`} onClick={() => setTab("logs")}>Logs</button>
       </div>
@@ -85,6 +86,7 @@ export function SandboxDetail({ data, isAdmin, initialTab }: { data: Data; isAdm
       {tab === "policy" && <PolicyView blocks={blocks} policyObj={data.policyObj} />}
       {tab === "network" && <NetworkView name={data.name} />}
       {tab === "drafts" && isAdmin && <DraftsView name={data.name} />}
+      {tab === "devices" && isAdmin && openclawUiEnabled && <DevicesView name={data.name} />}
       {tab === "terminal" && isAdmin && <Terminal name={data.name} />}
       {tab === "logs" && <LogsView name={data.name} />}
     </>
@@ -256,6 +258,76 @@ function DraftsView({ name }: { name: string }) {
           </div>
         </div>
       )}
+    </div></div>
+  );
+}
+
+/* ---------------- Device pairing (OpenClaw Control UI) ---------------- */
+function DevicesView({ name }: { name: string }) {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setErr(null);
+    try {
+      const r = await fetch(api(`/api/sandboxes/${encodeURIComponent(name)}/devices`));
+      const d = await r.json();
+      if (!r.ok) setErr(d.error ?? "failed to load device requests");
+      else setData(d);
+    } catch (e) { setErr(String(e)); }
+  }, [name]);
+  useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [load]);
+
+  async function act(action: string, body: any = {}) {
+    setBusy(action + (body.requestId || "")); setErr(null);
+    const r = await fetch(api(`/api/sandboxes/${encodeURIComponent(name)}/devices`), {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, ...body }),
+    });
+    const d = await r.json();
+    setBusy(null);
+    if (!r.ok) setErr(d.error ?? "action failed");
+    else load();
+  }
+
+  const pending: any[] = data?.pending ?? [];
+
+  return (
+    <div className="panel"><div className="panel-body">
+      <div className="logbar">
+        <span style={{ fontWeight: 600 }}>OpenClaw Control UI — device pairing</span>
+        <button className="ghost sm" onClick={load}>Refresh</button>
+        {pending.length > 0 && <button className="sm" disabled={!!busy} onClick={() => act("approve-all")}>Approve all</button>}
+        {typeof data?.paired === "number" && <span className="muted" style={{ fontSize: 12 }}>{data.paired} paired device{data.paired === 1 ? "" : "s"}</span>}
+      </div>
+
+      {err && <div className="alert error" style={{ marginBottom: 12 }}><IconAlert /><div>{err}</div></div>}
+
+      {pending.length === 0 && !err ? (
+        <div className="empty">
+          <div className="ic"><IconShield width={22} height={22} /></div>
+          <h3>No pending device requests</h3>
+          <p>When a browser or CLI tries to connect to OpenClaw&apos;s own Control UI, its pairing request appears here for you to approve or reject.</p>
+        </div>
+      ) : pending.map((d) => {
+        const id = d.requestId ?? d.id;
+        const deviceLabel = String(d.deviceId ?? d.device ?? id ?? "").slice(0, 16);
+        const scopes: string[] = d.scopes ?? d.roles ?? [];
+        return (
+          <div className="policy-block" key={id}>
+            <h4 style={{ justifyContent: "space-between" }}>
+              <span className="mono" style={{ fontSize: 13 }}>{deviceLabel}…</span>
+              {d.remoteIp && <span className="muted" style={{ fontSize: 11.5 }}>{d.remoteIp}</span>}
+            </h4>
+            {scopes.length > 0 && <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>{scopes.join(", ")}</div>}
+            {d.isRepair && <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>scope upgrade request</div>}
+            <div className="actionbar" style={{ marginTop: 12 }}>
+              <button className="sm" disabled={busy === "approve" + id} onClick={() => act("approve", { requestId: id })}>{busy === "approve" + id ? "…" : "Approve"}</button>
+              <button className="danger sm" disabled={busy === "reject" + id} onClick={() => act("reject", { requestId: id })}>{busy === "reject" + id ? "…" : "Reject"}</button>
+            </div>
+          </div>
+        );
+      })}
     </div></div>
   );
 }

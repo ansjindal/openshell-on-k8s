@@ -59,7 +59,7 @@ export default async function SandboxDetailPage({ params, searchParams }: { para
       {!data.found ? (
         <div className="alert error">Sandbox not found, or the gateway returned an error.</div>
       ) : (
-        <SandboxDetail data={data} isAdmin={s.isAdmin} initialTab={tab} />
+        <SandboxDetail data={data} isAdmin={s.isAdmin} initialTab={tab} openclawUiEnabled={process.env.ENABLE_OPENCLAW_UI === "true"} />
       )}
     </>
   );
