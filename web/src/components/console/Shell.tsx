@@ -35,6 +35,11 @@ export function Shell({ children, oidcEnabled = false, user = null, pendingDraft
           <span className="logo"><IconLogo width={16} height={16} /></span>
           <span className="text">OpenShell<span className="sub">Console</span></span>
         </div>
+        {openclawUiUrl && (
+          <a href={openclawUiUrl} target="_blank" rel="noreferrer" className="nav-item">
+            <span className="label">OpenClaw UI ↗</span>
+          </a>
+        )}
         <nav className="nav">
           <div className="nav-label">Manage</div>
           {NAV.map(({ href, label, icon: Icon }) => (
