@@ -45,7 +45,9 @@ An agent can propose its own egress-policy changes as it works — new endpoints
 
 ## OpenClaw's own UI
 
-Separately from the console, **OpenClaw** (the agent framework every sandbox ships with) has its own web control UI — chat, device pairing — running *inside* the sandbox's sealed network namespace. It's not reachable by a normal Service or Ingress, so this launchable forwards it out over a dedicated port when you opt in (`ENABLE_OPENCLAW_UI=true` in `.env`, port `OPENCLAW_UI_PORT`, default `30789`) — expose that port on Brev the same way you did the gateway's.
+Separately from the console, **OpenClaw** (the agent framework every sandbox ships with) has its own web control UI — chat, device pairing — running *inside* the sandbox's sealed network namespace. It's not reachable by a normal Service or Ingress, so this launchable forwards it out over a dedicated port when you opt in (`ENABLE_OPENCLAW_UI=true` in `.env`, port `OPENCLAW_UI_PORT`, default `30789`) — expose that port on Brev the same way you did the gateway's. It's protected by its own password (`OPENCLAW_GATEWAY_PASSWORD`, default `openshell-wad26`), separate from Keycloak.
+
+The first browser to connect still has to get its own device-pairing request approved — a fresh gateway has no admin device yet to approve *anyone*, so this launchable bootstraps one operator device to admin scope automatically at provision time, letting that first pairing request be approved from inside the Control UI itself instead of getting stuck.
 
 ## Same gateway, same rules
 

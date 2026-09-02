@@ -59,6 +59,28 @@ openshell policy update agent-0 --add-deny 'clawhub.ai:443:GET:/api/v1/packages/
 
 It's a **blocklist** — deny rules win over allow rules, so `badpkg` is refused while the rest of ClawHub still installs. Every decision lands on the [Live](/learn/live) policy log with the rule that decided it, the exact package URL, and the binary.
 
+## 2b. The second gate: enabled, not just installed
+
+Registry and egress control **where a skill can come from**. There's a separate gate for **whether an installed skill runs at all** — OpenClaw tracks each plugin's enabled state independently of whether it's on disk, so an installed-but-unwanted skill (or one you're mid-review on) stays inert:
+
+```bash
+openshell sandbox exec -n agent-0 -- openclaw plugins disable openclaw-hello-world
+```
+<ExpectedOutput>
+{`Disabled plugin "openclaw-hello-world". Restart the gateway to apply.`}
+</ExpectedOutput>
+
+Confirm it, and flip it back on:
+
+```bash
+openshell sandbox exec -n agent-0 -- openclaw config get plugins.entries.openclaw-hello-world.enabled
+openshell sandbox exec -n agent-0 -- openclaw plugins enable openclaw-hello-world
+```
+
+<Callout type="note" title="Restart to apply">
+Both commands say <em>"Restart the gateway to apply"</em> — the running agent process caches its plugin set at start, so a disable/enable takes effect on its next restart, same as changing which plugins are wired into `openclaw.json` by hand. That's the trade: a lighter-weight switch than uninstalling, at the cost of not being instantaneous.
+</Callout>
+
 ## 3. Publish your own skill to the in-cluster registry
 
 The production move: skills come from your **in-cluster registry**, under the `@workshop` npm scope. First authenticate the sandbox to it — create the publish user and write `/sandbox/.npmrc`. It's one line (`sandbox exec` rejects newlines), so `node` creates the user from inside the pod and `printf` writes the file:

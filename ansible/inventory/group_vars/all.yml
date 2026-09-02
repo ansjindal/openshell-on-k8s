@@ -230,3 +230,7 @@ sandboxes_enabled: false       # set true (or --tags sandboxes) to create the fl
 openclaw_ui_enabled: false
 openclaw_ui_port: 30789
 openclaw_ui_agent: "agent-0"   # matches sandbox_name_prefix-0's default in 16-sandboxes
+# Password for the in-sandbox `openclaw gateway run --auth password` process (the
+# CONTROL UI's own login, unrelated to Keycloak/the console). Override via .env's
+# OPENCLAW_GATEWAY_PASSWORD for anything beyond a local demo box.
+openclaw_gateway_password: "openshell-wad26"
