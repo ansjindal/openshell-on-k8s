@@ -16,7 +16,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; REPO="$(cd "$HERE/.." && pwd)"
 [[ -f "$REPO/.env" ]] && set -a && . "$REPO/.env" && set +a || true
-IMAGE="${OPENCLAW_SANDBOX_IMAGE:-ghcr.io/ansjindal/openclaw-sandbox:2026.6.10}"
+IMAGE="${OPENCLAW_SANDBOX_IMAGE:-ghcr.io/ansjindal/openclaw-sandbox:2026.8.2}"
 MODEL="${OPENSHELL_MODEL:-${NEMOCLAW_MODEL:-}}"; PROVIDER="${OPENSHELL_PROVIDER:-fleet}"
 API="${OPENSHELL_INFERENCE_API:-${NEMOCLAW_INFERENCE_API:-openai-completions}}"
 ROLES="$REPO/manifests/openclaw/fleet-roles"
