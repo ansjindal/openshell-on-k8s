@@ -33,8 +33,14 @@ No agent is wired up yet at this point in the course, so grant `curl` (not `node
 
 ```bash
 openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl
+```
+
+```bash
 openshell sandbox exec -n agent-0 -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/
 ```
+<ExpectedOutput>
+{`HTTP 200`}
+</ExpectedOutput>
 
 `HTTP 200` (or `301`) means it's live. In **enforce + rest** mode the proxy terminates TLS and can gate by HTTP path (`--add-deny 'host:443:GET:/secret/**'`) — that's the L7 control the [Skills](/learn/skills) lesson uses to vet a package registry package-by-package. (A few options — like `allow_encoded_slash` for scoped npm packages — aren't settable from the CLI; they live in the policy YAML the sandbox ships with.)
 

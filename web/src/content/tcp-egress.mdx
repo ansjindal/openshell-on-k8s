@@ -8,13 +8,36 @@ Compare the full form from [The Seal](/learn/policy):
 openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --dry-run
 ```
 
+`--dry-run` prints the merged policy without sending it — look for the new rule in `network_policies`:
+
+<ExpectedOutput>
+{`allow_api_github_com_443:
+  name: allow_api_github_com_443
+  endpoints:
+  - host: api.github.com
+    port: 443
+    protocol: rest
+    enforcement: enforce
+    access: read-only
+  binaries:
+  - path: /usr/bin/curl`}
+</ExpectedOutput>
+
 against the bare form — just `host:port`, nothing else:
 
 ```bash
 openshell policy update agent-0 --add-endpoint 'example.com:443' --binary /usr/bin/curl --dry-run
 ```
 
-`--dry-run` prints the merged policy without sending it. Notice the difference in the rendered `network_policies` entry: the REST rule carries `protocol`, `tls: terminate`, `enforcement`, and `access` — the proxy is inspecting every request. The bare `host:port` entry carries none of that: no protocol, no TLS termination, no method/path filtering. It's a straight network-level allow, the same trust model as a firewall rule rather than an application gateway.
+<ExpectedOutput>
+{`allow_example_com_443:
+  name: allow_example_com_443
+  endpoints:
+  - host: example.com
+    port: 443`}
+</ExpectedOutput>
+
+That's the whole difference. The REST rule carries `protocol`, `enforcement`, and `access` — the proxy is inspecting every request. The bare `host:port` entry carries none of that: no protocol, no TLS termination, no method/path filtering. It's a straight network-level allow, the same trust model as a firewall rule rather than an application gateway.
 
 <Callout type="nv" title="Why this exists">
 Not every workload speaks HTTP. A sandbox that needs to reach a Postgres instance, an MQTT broker, or a raw TCP service has no REST verbs or paths to filter on — L7 termination doesn't apply. The direct-TCP form gives it a real allow rule anyway, without pretending to inspect a protocol the proxy can't parse. Deny-by-default still holds: nothing here bypasses the seal, it just chooses a coarser enforcement point for traffic that has no finer one.
@@ -24,11 +47,19 @@ Not every workload speaks HTTP. A sandbox that needs to reach a Postgres instanc
 
 Grant `agent-0` direct TCP access to something and prove it's live — no agent is wired up yet at this point in the course, so `curl` from inside the sandbox is the honest test (that's *why* `--binary /usr/bin/curl` above, not `/usr/bin/node`: a rule is scoped to the exact binaries you name — grant it to a process that isn't the one making the request and the connection is denied same as if you'd never added the rule at all).
 
-Drop `--dry-run` to actually apply it, then exec `curl` inside the sandbox:
+Drop `--dry-run` to actually apply it:
 
 ```bash
 openshell policy update agent-0 --add-endpoint 'example.com:443' --binary /usr/bin/curl
+```
+
+Then exec `curl` inside the sandbox to prove it's live:
+
+```bash
 openshell sandbox exec -n agent-0 -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://example.com/
 ```
+<ExpectedOutput>
+{`HTTP 200`}
+</ExpectedOutput>
 
 `HTTP 200` is the endpoint working. Every other host:port is still denied — try the same `curl` against, say, `https://example.org/` and watch it fail. Confirm the rule itself with `openshell policy get agent-0 --full -o json | grep -A4 example_com`, and see the change auditable like any other, with [`openshell policy list agent-0`](/learn/policy).
