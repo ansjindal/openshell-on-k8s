@@ -100,9 +100,14 @@
     # with an opaque "invalid peer certificate: UnknownIssuer". Wait for actual
     # non-empty cert data instead of just the object.
     - name: Wait for the client mTLS secret to be populated
-      ansible.builtin.command: >-
-        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls
-        -o jsonpath={.data.tls\.crt}
+      # ansible.builtin.command shlex-splits its args, which silently eats the
+      # backslash in `tls\.crt` (no escaping needed/possible there) — kubectl
+      # then reads jsonpath={.data.tls.crt} (a nested, nonexistent path) and
+      # returns rc=0 with empty stdout instead of erroring, so this looked like
+      # a slow-secret race rather than the arg-parsing bug it actually is. Use
+      # ansible.builtin.shell (a real shell, single-quoted) like the task below.
+      ansible.builtin.shell: |
+        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}'
       register: _client_tls_secret
       changed_when: false
       retries: 15
