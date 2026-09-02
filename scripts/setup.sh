@@ -358,6 +358,14 @@ configure_lab_cli "$LAB_USER"
 # cluster. Best-effort: a failure here must NOT fail the provision — the stack
 # is already up. Set ENABLE_WORKSHOP=false to skip.
 deploy_workshop() {
+  # Every kubectl call below (console cert fetch, EndpointSlice reconcile)
+  # needs this — verified live it was NEVER exported before this function's
+  # own cert-fetch block ran, so every `kubectl get secret ...` in it failed
+  # silently (falls back to a nonexistent default kubeconfig, all wrapped in
+  # 2>/dev/null), writing empty (0-byte) cert files every single time —
+  # deterministic, not a timing race. The console then failed every gRPC call
+  # with an opaque OpenSSL "PEM routines::no start line" trying to parse them.
+  export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
   local web="$ROOT/web"
   [[ -d "$web" ]] || { warn "web/ not present — skipping teaching site."; return 0; }
 
