@@ -68,9 +68,17 @@ cmd_up() {
   local existing; existing="$("${OSH[@]}" sandbox list 2>/dev/null | awk 'NR>1{print $1}')"
   for i in $(seq 0 $((n - 1))); do
     if echo "${existing}" | grep -qx "agent-${i}"; then echo "  agent-${i} (already exists)"; continue; fi
-    # --no-tty -- true: create + detach instead of attaching an interactive shell
-    # (default). Without --no-keep the sandbox persists after the command exits.
-    timeout 90 "${OSH[@]}" sandbox create --name "agent-${i}" --provider "${PROVIDER}" --no-tty -- true >/dev/null 2>&1 \
+    # --no-tty: create + detach instead of attaching an interactive shell
+    # (default). The initial command must actually keep running: newer
+    # supervisors (0.0.111+, "canonical main process for sandboxes") end the
+    # pod's main container as soon as its command exits — `true` used to
+    # leave the pod persisting anyway, it no longer does (this exact class of
+    # bug was already fixed in ansible/roles/16-sandboxes, which creates the
+    # *initial* fleet at provisioning time — this is the separate runtime
+    # `fleet up` path, missed until caught live: agent-1/agent-2 created via
+    # `fleet up 3` sat in phase Error, pod status Completed).
+    # `sleep infinity` keeps the pod alive to exec/attach into afterward.
+    timeout 90 "${OSH[@]}" sandbox create --name "agent-${i}" --provider "${PROVIDER}" --no-tty -- sleep infinity >/dev/null 2>&1 \
       && echo "  created agent-${i}" \
       || echo "  created agent-${i} (attach skipped — check 'fleet status')"
   done
