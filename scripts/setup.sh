@@ -398,16 +398,24 @@ deploy_workshop() {
   # create the Secret object before patching in its content).
   local tls_dir="/etc/openshell-console-tls"
   $SUDO mkdir -p "$tls_dir"
-  local crt=""
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
+  # Retry the WHOLE fetch-and-write as one unit, verifying the files actually
+  # landed non-empty afterward — not just that the first field's initial read
+  # was non-empty. Found live (running 44 instances concurrently under load)
+  # that a single field being non-empty at one instant didn't guarantee the
+  # other two (tls.key, ca.crt — each its own separate, previously
+  # un-retried kubectl call) still were moments later; console gRPC then
+  # failed every call with an opaque OpenSSL "PEM routines::no start line."
+  local crt tls_key_data ca
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
     crt="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}' 2>/dev/null)"
-    [ -n "$crt" ] && break
-    sleep 3
+    tls_key_data="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath='{.data.tls\.key}' 2>/dev/null)"
+    ca="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"
+    [ -n "$ca" ] || ca="$(kubectl -n openshell get secret openshell-server-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"
+    [ -n "$crt" ] && [ -n "$tls_key_data" ] && [ -n "$ca" ] && break
+    sleep 4
   done
   echo "$crt" | base64 -d | $SUDO tee "$tls_dir/tls.crt" >/dev/null
-  kubectl -n openshell get secret openshell-client-tls -o jsonpath='{.data.tls\.key}' | base64 -d | $SUDO tee "$tls_dir/tls.key" >/dev/null
-  local ca; ca="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}')"
-  [ -n "$ca" ] || ca="$(kubectl -n openshell get secret openshell-server-tls -o jsonpath='{.data.ca\.crt}')"
+  echo "$tls_key_data" | base64 -d | $SUDO tee "$tls_dir/tls.key" >/dev/null
   echo "$ca" | base64 -d | $SUDO tee "$tls_dir/ca.crt" >/dev/null
   $SUDO chown -R "${run_user}:${run_user}" "$tls_dir"
   $SUDO chmod 600 "$tls_dir/tls.key"
