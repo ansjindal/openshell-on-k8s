@@ -30,24 +30,9 @@ curl -sS "$OPENSHELL_BASE_URL/models" -H "Authorization: Bearer $OPENSHELL_API_K
 
 ## 3. Apply it
 
-LiteLLM holds the key + model for the whole cluster, so the agents never do — everything funnels through one `litellm-secrets` Secret + the chart's `model_list`. You **don't** re-run the whole cluster setup for this.
-
-**Rotating just the key** (the model is already loaded in LiteLLM) — direct `kubectl`, no Ansible: preserve the existing `LITELLM_MASTER_KEY` (the gateway's own provider credential references it; regenerate it and inference silently breaks until the gateway is re-pointed), replace `UPSTREAM_API_KEY`, and restart:
+LiteLLM holds the key + model for the whole cluster, so the agents never do — everything funnels through one `litellm-secrets` Secret + the chart's `model_list`. You **don't** re-run the whole cluster setup for this — one Ansible tag re-renders just that Secret + the chart's `model_list` from `.env` (key rotation *and* model changes, in one path) and rolls the deployment, nothing else in the cluster:
 
 ```bash
-cd ~/openshell-on-k8s && set -a && . ./.env && set +a
-existing_master_key="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)"
-kubectl -n litellm create secret generic litellm-secrets \
-  --from-literal=LITELLM_MASTER_KEY="$existing_master_key" \
-  --from-literal=UPSTREAM_API_KEY="$OPENSHELL_API_KEY" \
-  --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n litellm rollout restart deploy/litellm
-kubectl -n litellm rollout status deploy/litellm --timeout=120s
-```
-
-**Adding a new model** (not just rotating the key) needs the chart's `model_list` re-rendered too — that's templated from `.env`/`litellm_models`, not something to hand-edit safely. For that, use the `litellm` Ansible tag (re-renders the same Secret + chart values from `.env` and rolls the deployment, nothing else in the cluster):
-
-```bash-ref
 ANSIBLE_TAGS=litellm ./scripts/setup.sh
 ```
 
