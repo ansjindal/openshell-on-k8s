@@ -276,6 +276,7 @@ configure_lab_cli() {
   if [[ "$(id -un)" == "$u" ]]; then run=(bash -lc); else run=(sudo -u "$u" -H bash -lc); fi
   "${run[@]}" '
     export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
     command -v openshell >/dev/null 2>&1 || exit 0
     command -v kubectl >/dev/null 2>&1 || exit 0
     mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"

@@ -20,6 +20,16 @@
       changed_when: false
       failed_when: false
 
+    # systemd's ExecStart needs an absolute path (no PATH lookup) — resolve
+    # wherever `openshell` actually landed (install.sh's ~/.local/bin symlinked
+    # to /usr/local/bin, an apt/deb package under /usr/bin, ...) rather than
+    # hardcoding one, since we've seen both locations across installs.
+    - name: Resolve the openshell CLI's absolute path
+      ansible.builtin.shell: command -v openshell
+      args: { executable: /bin/bash }
+      register: _openshell_bin
+      changed_when: false
+
     - name: Render the openclaw-forward systemd unit
       ansible.builtin.template:
         src: openclaw-forward.service.j2
