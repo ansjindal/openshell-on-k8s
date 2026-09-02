@@ -13,7 +13,7 @@ export default async function InferencePage() {
 
   let route: Any = null; let error: string | null = null;
   try {
-    route = await callInference("getClusterInference", { routeName: "" }, token);
+    route = await callInference("getInferenceRoute", { routeName: "" }, token);
   } catch (e) { error = String(e); }
 
   const provResp = await safe(callGateway<{ providers?: Array<{ metadata?: { name?: string }; type?: string }> }>("listProviders", {}, token));

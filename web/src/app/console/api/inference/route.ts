@@ -6,7 +6,7 @@ import { callInference } from "@/lib/grpc";
 export async function GET() {
   const { accessToken: token } = await consoleSession();
   try {
-    const resp = await callInference("getClusterInference", { routeName: "" }, token);
+    const resp = await callInference("getInferenceRoute", { routeName: "" }, token);
     return NextResponse.json(resp);
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 502 });
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "providerName and modelId are required" }, { status: 400 });
   }
   try {
-    const resp = await callInference("setClusterInference", {
+    const resp = await callInference("setInferenceRoute", {
       providerName: body.providerName,
       modelId: body.modelId,
       routeName: "",

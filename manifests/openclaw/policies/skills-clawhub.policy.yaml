@@ -18,9 +18,16 @@ network_policies:
     binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node } ]
   clawhub:
     name: clawhub
+    # Scoped package names (@org/name, e.g. @openclaw/duckduckgo-plugin) resolve
+    # through a URL-encoded path (/plugins/@openclaw%2Fduckduckgo-plugin) exactly
+    # like a scoped npm dependency — verified live that WITHOUT allow_encoded_slash
+    # here, resolving a scoped ClawHub package fails with an opaque
+    # "fetch failed | other side closed | UND_ERR_SOCKET" (not a clear
+    # policy_denied — misleading). Unscoped packages (no @org/) work fine either
+    # way, which is what made this easy to miss initially.
     endpoints:
-      - { host: clawhub.ai, port: 443, access: full }        # ClawHub registry
-      - { host: hub.openclaw.ai, port: 443, access: full }   # …its package CDN
+      - { host: clawhub.ai, port: 443, access: full, protocol: rest, allow_encoded_slash: true }        # ClawHub registry
+      - { host: hub.openclaw.ai, port: 443, access: full, protocol: rest, allow_encoded_slash: true }   # …its package CDN
     binaries: [ { path: /usr/bin/node }, { path: /usr/local/bin/node } ]
   npm-registry:
     name: npm-registry

@@ -16,11 +16,19 @@ service Inference {
   // Set cluster-level inference configuration.
   //
   // This controls how requests sent to `inference.local` are routed.
-  rpc SetClusterInference(SetClusterInferenceRequest)
+  //
+  // NOTE: the RPC name (not the request/response message shapes, which are
+  // otherwise unchanged) was corrected from the vendored SetClusterInference
+  // to match what this gateway build (0.0.116) actually serves on the wire —
+  // verified live with grpcurl against the real running gateway. The old
+  // name returned gRPC UNIMPLEMENTED (confirmed via the console's own
+  // "Gateway error: Error: 12 UNIMPLEMENTED" on the Inference page).
+  rpc SetInferenceRoute(SetClusterInferenceRequest)
       returns (SetClusterInferenceResponse);
 
-  // Get cluster-level inference configuration.
-  rpc GetClusterInference(GetClusterInferenceRequest)
+  // Get cluster-level inference configuration. See SetInferenceRoute's note
+  // on the RPC name above — same fix, same reasoning.
+  rpc GetInferenceRoute(GetClusterInferenceRequest)
       returns (GetClusterInferenceResponse);
 
 }
