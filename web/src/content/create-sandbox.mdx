@@ -4,17 +4,28 @@ Now create an agent. A sandbox is the unit of work here: one command, and the Op
 
 ## The easy way: the fleet helper
 
-`./scripts/fleet` wraps the common operations. To bring up one agent:
+`./scripts/fleet` is a thin wrapper this launchable ships (`scripts/fleet`) around the `openshell` CLI + `kubectl` — every lesson from here on reaches for it instead of hand-writing the raw commands underneath. Its full surface:
+
+```bash-ref
+fleet up [N]                    # create N sandboxes (agent-0, agent-1, …)
+fleet down                      # delete every fleet sandbox
+fleet status                    # openshell sandbox list + pod readiness
+fleet task "<prompt>" [agent-i|all]   # run a prompt across the fleet, in parallel
+fleet shell <agent-i>           # open an interactive shell inside one sandbox
+fleet logs <agent-i>            # tail one sandbox pod's logs
+```
+
+To bring up one agent:
 
 ```bash
 ./scripts/fleet up 1
 ```
 
-That asks the gateway to create a sandbox named `agent-0`. Watch it become Ready:
+That asks the gateway to create a sandbox named `agent-0` and prints its status once it's registered.
 
-```bash
-./scripts/fleet status
-```
+<Callout type="note" title="up already checks status">
+`fleet up` ends by running the same thing `fleet status` does, so you don't strictly need a separate step — but it's worth knowing `fleet status` on its own for whenever you want to re-check readiness later without creating anything.
+</Callout>
 
 When `agent-0` reads `Ready`, the agent is running in its own gVisor pod.
 
@@ -77,6 +88,6 @@ Need a fleet? Ask for more:
 
 You'll get `agent-0`, `agent-1`, `agent-2`, each its own sandbox.
 
-<Callout type="lab" title="Tear down when you're done">
-<code>./scripts/fleet down</code> deletes the sandboxes (and their pods). Because a sandbox <em>is</em> a CR, deleting the CR is all it takes — the controller cleans up the pod for you.
+<Callout type="note" title="Keep agent-0 around">
+The rest of this course — including [Next Steps](/learn/next-steps)'s traces, the console, and the whole [Part III capstone](/learn/what-youll-build) — assumes at least `agent-0` is still up. Don't run `./scripts/fleet down` yet; if you brought up extras just to see a fleet, `openshell sandbox delete agent-1 agent-2` scales back down without tearing everything out. `fleet down` (deletes every fleet sandbox — a CR delete is all it takes, the controller cleans up the pod) is there for when you're truly done with the whole launchable.
 </Callout>

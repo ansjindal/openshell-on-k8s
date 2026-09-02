@@ -56,8 +56,4 @@ With multiple agents on one prompt, `status` gives you the bird's-eye view while
 Each task ran inside a gVisor pod, reached the model without ever holding the key, and was bounded by the sandbox's policy. That's the entire point of the stack — useful, autonomous, and contained — demonstrated in one command.
 </Callout>
 
-When you're done, tear the fleet down:
-
-```bash
-./scripts/fleet down
-```
+Keep the fleet up — [OTLP Traces](/learn/traces) traces the task you just ran, and it's what the rest of the course (the console, [Part III](/learn/what-youll-build)) drives too. `./scripts/fleet down` is for when you're done with the whole launchable, not this lesson.

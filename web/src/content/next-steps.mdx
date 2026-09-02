@@ -1,5 +1,13 @@
 You've gone end to end: stood up the stack (or confirmed it), created sandboxes, exec'd into one, traced inference through `inference.local`, and run tasks across a fleet. Here's where to take it next.
 
+## Tear down, when you're actually done
+
+```bash
+./scripts/fleet down
+```
+
+Because a sandbox *is* a `Sandbox` CR, deleting it is all it takes — the controller cleans up the pod for you. This deletes every fleet sandbox, so only run it once you're done with the launchable, not mid-lesson (earlier lessons, the console, and the Part III capstone all assume the fleet is still up).
+
 ## Scale out to multiple nodes
 
 This guide runs on a single k3s node, but nothing in the design is single-node. The agent-sandbox controller and the OpenShell gateway schedule onto whatever cluster they're given. Join more nodes to k3s and your sandboxes spread across them — the gateway, the CRDs, and `inference.local` all work the same.

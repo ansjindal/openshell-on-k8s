@@ -38,10 +38,26 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 command -v openshell >/dev/null 2>&1 || die "openshell CLI not found — run ./scripts/setup.sh (the gateway/inference roles install it)."
 command -v kubectl   >/dev/null 2>&1 || die "kubectl not found — is k3s installed? (run ./scripts/setup.sh)"
 
-# Register the gateway via its pinned plaintext NodePort — reachable directly on
-# the node, so no kubectl port-forward background process is needed.
+# Register the gateway via its pinned NodePort — reachable directly on the
+# node, so no kubectl port-forward background process is needed. The gateway
+# always terminates mTLS now; ansible/roles/10-inference_routing and
+# scripts/setup.sh's configure_lab_cli already do this cert fetch + register
+# for root and the interactive lab user respectively — this is just a
+# fallback for a `fleet` invoked somewhere that hasn't run yet (a fresh SSH
+# session, a different user). `localhost`, not 127.0.0.1: the gateway's
+# default cert SANs cover the former, not the bare loopback IP.
 ensure_gateway() {
-  openshell gateway add "http://127.0.0.1:${GATEWAY_NODEPORT}" --local --name fleet >/dev/null 2>&1 || true
+  openshell --gateway fleet sandbox list >/dev/null 2>&1 && return 0
+  local mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"
+  mkdir -p "${mtls_dir}"
+  kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}' 2>/dev/null | base64 -d > "${mtls_dir}/tls.crt"
+  kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.tls\.key}' 2>/dev/null | base64 -d > "${mtls_dir}/tls.key"
+  local ca; ca="$(kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"
+  [ -n "${ca}" ] || ca="$(kubectl -n "${GATEWAY_NS}" get secret openshell-server-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"
+  echo "${ca}" | base64 -d > "${mtls_dir}/ca.crt"
+  chmod 600 "${mtls_dir}/tls.key"
+  openshell gateway remove fleet >/dev/null 2>&1 || true
+  openshell gateway add "https://localhost:${GATEWAY_NODEPORT}" --local --name fleet >/dev/null 2>&1 || true
 }
 
 cmd_up() {

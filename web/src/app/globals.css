@@ -36,6 +36,13 @@
 /* gb200-style soft green glow around the live lab terminal */
 .term-glow { box-shadow: 0 0 0 1px var(--color-line), 0 0 40px -12px rgba(118, 185, 0, 0.35); }
 
+/* @xterm/xterm's own base stylesheet hardcodes background-color: #000 on the
+   viewport element regardless of the `theme` passed to the Terminal
+   constructor — visible as a solid black frame around the (correctly
+   themed) rendered rows, especially in light mode. Let our own container's
+   background (--color-term-bg, already theme-aware) show through instead. */
+.xterm .xterm-viewport { background-color: transparent !important; }
+
 /* Light mode — toggled via document.documentElement.dataset.theme = "light" */
 :root[data-theme="light"] {
   --color-bg: #ffffff;
