@@ -54,6 +54,24 @@
       changed_when: false
       failed_when: false
 
+    # Requests arrive via the Brev edge's own reverse proxy (a separate Secure
+    # Link subdomain fronting the forwarded port), which adds X-Forwarded-For/
+    # -Proto headers OpenClaw doesn't trust by default — it refuses the request
+    # with "proxy_attribution_required" (verified live). The actual immediate
+    # peer as OpenClaw sees it is the openshell forward tunnel terminating
+    # inside the sandbox's own netns (loopback), not Brev's edge IP, so
+    # trusting loopback is enough — confirmed live with a spoofed
+    # X-Forwarded-For header completing a real WebSocket upgrade (HTTP 101).
+    - name: Trust the local forward tunnel's proxy headers
+      ansible.builtin.shell: |
+        set -e
+        payload='openclaw config set gateway.trustedProxies "[\"127.0.0.1\",\"::1\"]"'
+        b64="$(printf '%s' "$payload" | base64 | tr -d '\n')"
+        openshell --gateway fleet sandbox exec -n {{ openclaw_ui_agent }} -- sh -c "echo $b64 | base64 -d | sh"
+      args: { executable: /bin/bash }
+      changed_when: false
+      failed_when: false
+
     - name: Start (or restart) the in-sandbox OpenClaw Control UI gateway
       ansible.builtin.shell: |
         set -e
