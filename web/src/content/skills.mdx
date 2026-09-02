@@ -40,7 +40,12 @@ Now search and install — the hello-world skill and its deps resolve, and OpenC
 
 ```bash
 openshell sandbox exec -n agent-0 -- openclaw plugins search hello
-openshell sandbox exec -n agent-0 -- openclaw plugins install clawhub:openclaw-hello-world
+```
+
+Installing pulls the package, resolves deps over npm, and prints a ClawHub security-audit summary — verified live it can take close to a minute, past the in-page "Run" button's exec window, so use the shell for this one. `--accept-capabilities` is required by the current OpenClaw CLI (a newer guardrail than when this course shipped) — without it the install aborts with *"requires capability consent"*:
+
+```bash-interactive
+openshell sandbox exec -n agent-0 -- openclaw plugins install clawhub:openclaw-hello-world --accept-capabilities
 ```
 
 <Callout type="note" title="Why the npm endpoint needs allow_encoded_slash">
@@ -64,17 +69,17 @@ It's a **blocklist** — deny rules win over allow rules, so `badpkg` is refused
 Registry and egress control **where a skill can come from**. There's a separate gate for **whether an installed skill runs at all** — OpenClaw tracks each plugin's enabled state independently of whether it's on disk, so an installed-but-unwanted skill (or one you're mid-review on) stays inert:
 
 ```bash
-openshell sandbox exec -n agent-0 -- openclaw plugins disable openclaw-hello-world
+openshell sandbox exec -n agent-0 -- openclaw plugins disable hello-world
 ```
 <ExpectedOutput>
-{`Disabled plugin "openclaw-hello-world". Restart the gateway to apply.`}
+{`Disabled plugin "hello-world". Restart the gateway to apply.`}
 </ExpectedOutput>
 
 Confirm it, and flip it back on:
 
 ```bash
-openshell sandbox exec -n agent-0 -- openclaw config get plugins.entries.openclaw-hello-world.enabled
-openshell sandbox exec -n agent-0 -- openclaw plugins enable openclaw-hello-world
+openshell sandbox exec -n agent-0 -- openclaw config get plugins.entries.hello-world.enabled
+openshell sandbox exec -n agent-0 -- openclaw plugins enable hello-world
 ```
 
 <Callout type="note" title="Restart to apply">
