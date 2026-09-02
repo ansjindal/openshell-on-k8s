@@ -30,13 +30,32 @@
     # The gateway always terminates mTLS now (server.disableTls: false in
     # 09-openshell_gateway/files/values.yaml — unconditional; cert_manager_enabled
     # only chooses who ISSUES the certs, pkiInitJob or cert-manager, not whether
-    # TLS is on). `openshell gateway add --local https://...` looks for client
-    # cert material in its own config dir rather than taking cert/key flags — write
-    # it there from the openshell-client-tls Secret before adding the gateway.
+    # TLS is on). `openshell gateway add --local https://...` reads client cert
+    # material from its own config dir rather than taking cert/key flags — but
+    # per its own --help, `--local` means "a local mTLS gateway running in
+    # Docker", and it unconditionally (RE)PROVISIONS its own fixed dev-mode
+    # self-signed CA into gateways/<name>/mtls/ the moment it runs, clobbering
+    # anything already there (verified live: same fixed dev CA fingerprint every
+    # time, regardless of pre-existing files). So the real k3s-issued certs MUST
+    # be written AFTER `gateway add`, not before, or every call fails with
+    # "invalid peer certificate: UnknownIssuer".
+    - name: Register the gateway (before certs — see comment above)
+      ansible.builtin.shell: |
+        set -e
+        # Reach the gateway on its pinned NodePort (no port-forward). localhost
+        # is in the default cert SANs; a bare IP (127.0.0.1) is not.
+        # remove first: `gateway add` is a no-op (not an overwrite) against an
+        # existing name — a stale plaintext 'fleet' from before mTLS/a re-run
+        # with a different endpoint would otherwise stick around silently.
+        openshell gateway remove fleet 2>/dev/null || true
+        openshell gateway add https://localhost:{{ gateway_nodeport }} --local --name fleet 2>/dev/null || true
+      args: { executable: /bin/bash }
+      changed_when: false
+
     # That's a kubernetes.io/tls Secret (tls.crt/tls.key + a ca.crt field the
     # issuer stamps in); fall back to openshell-server-tls's ca.crt if the client
     # Secret doesn't carry one (both are signed by the same chart-managed CA).
-    - name: Fetch client mTLS material into the CLI's config dir
+    - name: Fetch client mTLS material into the CLI's config dir (after gateway add)
       ansible.builtin.shell: |
         set -e
         mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"
@@ -52,16 +71,9 @@
       args: { executable: /bin/bash }
       changed_when: false
 
-    - name: Register gateway, create provider, and wire inference.local to LiteLLM
+    - name: Create provider and wire inference.local to LiteLLM
       ansible.builtin.shell: |
         set -e
-        # Reach the gateway on its pinned NodePort (no port-forward). localhost
-        # is in the default cert SANs; a bare IP (127.0.0.1) is not.
-        # remove first: `gateway add` is a no-op (not an overwrite) against an
-        # existing name — a stale plaintext 'fleet' from before mTLS/a re-run
-        # with a different endpoint would otherwise stick around silently.
-        openshell gateway remove fleet 2>/dev/null || true
-        openshell gateway add https://localhost:{{ gateway_nodeport }} --local --name fleet 2>/dev/null || true
         openshell --gateway fleet provider create --name fleet --type openai \
           --config OPENAI_BASE_URL=http://litellm.{{ litellm_namespace }}.svc.cluster.local:4000/v1 \
           --credential OPENAI_API_KEY={{ ll_key.stdout }} 2>/dev/null || true

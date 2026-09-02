@@ -50,14 +50,21 @@ ensure_gateway() {
   openshell --gateway fleet sandbox list >/dev/null 2>&1 && return 0
   local mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"
   mkdir -p "${mtls_dir}"
+  # `--local` (per its own --help: a LOCAL mTLS gateway running in DOCKER)
+  # unconditionally (re)provisions its own fixed dev-mode self-signed CA into
+  # gateways/fleet/mtls/ the instant it runs, clobbering anything already
+  # there — verified live: same fixed dev-CA fingerprint every time,
+  # regardless of pre-existing files. So `add` must run BEFORE the real
+  # k3s-issued certs are written, not after, or every call fails with
+  # "invalid peer certificate: UnknownIssuer".
+  openshell gateway remove fleet >/dev/null 2>&1 || true
+  openshell gateway add "https://localhost:${GATEWAY_NODEPORT}" --local --name fleet >/dev/null 2>&1 || true
   kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}' 2>/dev/null | base64 -d > "${mtls_dir}/tls.crt"
   kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.tls\.key}' 2>/dev/null | base64 -d > "${mtls_dir}/tls.key"
   local ca; ca="$(kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"
   [ -n "${ca}" ] || ca="$(kubectl -n "${GATEWAY_NS}" get secret openshell-server-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"
   echo "${ca}" | base64 -d > "${mtls_dir}/ca.crt"
   chmod 600 "${mtls_dir}/tls.key"
-  openshell gateway remove fleet >/dev/null 2>&1 || true
-  openshell gateway add "https://localhost:${GATEWAY_NODEPORT}" --local --name fleet >/dev/null 2>&1 || true
 }
 
 cmd_up() {

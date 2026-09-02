@@ -281,10 +281,25 @@ configure_lab_cli() {
     command -v kubectl >/dev/null 2>&1 || exit 0
     mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"
     mkdir -p "$mtls_dir"
+    # remove first: `gateway add` is a no-op (not an overwrite) against an
+    # existing name — a stale plaintext "fleet" from before mTLS would
+    # otherwise stick around and every CLI call would fail with an opaque
+    # transport error against the now-mTLS-only gateway.
+    openshell gateway remove fleet >/dev/null 2>&1 || true
+    # `--local` (per its own --help: "Register a LOCAL mTLS gateway running in
+    # DOCKER on this machine") unconditionally (re)provisions its own fixed
+    # dev-mode self-signed CA into gateways/<name>/mtls/ the moment it runs —
+    # verified live: it overwrites ca.crt/tls.crt/tls.key with the exact same
+    # bundled dev cert every time, regardless of what is already on disk. So
+    # our real k3s-issued certs MUST be written AFTER `add`, not before, or
+    # `add` clobbers them and every call fails with "invalid peer certificate:
+    # UnknownIssuer" — the endpoint here is a k3s NodePort, not an actual
+    # local Docker gateway, so nothing about that dev CA is usable anyway.
+    openshell gateway add https://localhost:'"${GATEWAY_NODEPORT}"' --local --name fleet >/dev/null 2>&1 || true
+    openshell gateway remove openshell >/dev/null 2>&1 || true   # the auto-created mtls default (same dev CA)
     # The Secret object can exist before cert-manager finishes populating its
     # data (create-then-patch) — an empty tls.crt here silently becomes an
-    # empty file, and `gateway add --local` then generates its own throwaway
-    # dev CA instead of erroring. Retry until the data is actually there.
+    # empty file. Retry until the data is actually there.
     crt=""
     for _ in 1 2 3 4 5 6 7 8 9 10; do
       crt="$(kubectl -n openshell get secret openshell-client-tls -o jsonpath="{.data.tls\.crt}" 2>/dev/null)"
@@ -297,13 +312,6 @@ configure_lab_cli() {
     [ -n "$ca" ] || ca="$(kubectl -n openshell get secret openshell-server-tls -o jsonpath="{.data.ca\.crt}" 2>/dev/null)"
     echo "$ca" | base64 -d > "$mtls_dir/ca.crt"
     chmod 600 "$mtls_dir/tls.key"
-    # remove first: `gateway add` is a no-op (not an overwrite) against an
-    # existing name — a stale plaintext "fleet" from before mTLS would
-    # otherwise stick around and every CLI call would fail with an opaque
-    # transport error against the now-mTLS-only gateway.
-    openshell gateway remove fleet >/dev/null 2>&1 || true
-    openshell gateway add https://localhost:'"${GATEWAY_NODEPORT}"' --local --name fleet >/dev/null 2>&1 || true
-    openshell gateway remove openshell >/dev/null 2>&1 || true   # the auto-created mtls default (wrong CA)
     openshell gateway select fleet >/dev/null 2>&1 || true
   ' || true
 }
