@@ -1,0 +1,81 @@
+---
+# OpenShell Console (github.com/ai-openshell/console, chart openshell-dashboard),
+# on its own public host (console_url) through the Envoy ingress.
+# Needs: Keycloak (client openshell-dashboard), Envoy Gateway, the gateway with OIDC.
+- name: OpenShell Console
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Require the console's public URL and client secret
+      ansible.builtin.assert:
+        that:
+          - console_url | length > 0
+          - (console_client_secret | default('') | length) > 0
+          - (console_cookie_secret | default('') | length) > 0
+        fail_msg: "Set console_url, console_client_secret and console_cookie_secret (scripts/setup.sh does)."
+
+    - name: Console host name
+      ansible.builtin.set_fact:
+        console_host: "{{ console_url | regex_replace('^https?://', '') | regex_replace('[:/].*$', '') }}"
+
+    # The chart is not published to a public registry yet, so install it from
+    # the console repository at the release tag (the image is public).
+    - name: Fetch the console chart ({{ console_version }})
+      ansible.builtin.git:
+        repo: "{{ console_repo }}"
+        version: "v{{ console_version }}"
+        dest: /opt/openshell-console
+        depth: 1
+        force: true
+
+    - name: Create the console's OIDC Secret
+      ansible.builtin.shell: |
+        kubectl -n {{ openshell_namespace }} create secret generic openshell-dashboard-oidc \
+          --from-literal=client-secret='{{ console_client_secret }}' \
+          --from-literal=cookie-secret='{{ console_cookie_secret }}' \
+          --dry-run=client -o yaml | kubectl apply -f -
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: false
+
+    - name: Render console values
+      ansible.builtin.template:
+        src: values.yaml.j2
+        dest: /tmp/console-values.yaml
+        mode: "0644"
+
+    - name: Install the console (release openshell-dashboard)
+      ansible.builtin.shell: |
+        helm upgrade --install openshell-dashboard /opt/openshell-console/deploy/helm/openshell-dashboard \
+          --namespace {{ openshell_namespace }} \
+          -f /tmp/console-values.yaml --wait --timeout 6m
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    # Envoy's default route timeout (15 s) would cut the console's log streams
+    # and terminal sessions.
+    - name: No request timeout on the console route
+      ansible.builtin.shell: |
+        cat <<YAML | kubectl apply -f -
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: BackendTrafficPolicy
+        metadata:
+          name: openshell-dashboard
+          namespace: {{ openshell_namespace }}
+        spec:
+          targetRefs:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              name: openshell-dashboard
+          timeout:
+            http:
+              requestTimeout: 0s
+        YAML
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Console summary
+      ansible.builtin.debug:
+        msg:
+          - "Console: {{ console_url }}  (sign in with Keycloak; realm {{ keycloak_realm }})"
+          - "Brev/launchpad: a Secure Link named after '{{ console_host.split('-')[0] }}' on host port {{ console_host_port }}."

@@ -1,0 +1,49 @@
+An autonomous agent is, by design, an untrusted process you've given a shell and a network. The point of this stack is to make that *safe*, not with one big wall but with layers, so that defeating any single one doesn't get an attacker much.
+
+<Figure src="/diagrams/sandbox-anatomy.svg" alt="Security layers of a sandbox: workload pod with Landlock, seccomp and a sandbox user; a supervisor pod that owns the network; Kubernetes NetworkPolicy, resource admission and Kyverno around them." caption="The layers around one agent" />
+
+## 1 · The workload pod: what the agent process can touch
+
+The agent runs as the unprivileged user `sandbox`. The sandbox runtime applies the policy's static parts before the agent starts:
+
+- **Landlock** (a Linux security module) limits the filesystem: here `/usr`, `/lib`, `/etc` are read-only, `/sandbox` and `/tmp` are writable, everything else is invisible. OpenShell 0.1 requires Landlock ABI v3, so the node needs Linux 6.2 or newer.
+- **seccomp** filters dangerous system calls, and the process cannot regain root.
+- These are **static**: fixed when the sandbox is created.
+
+## 2 · The supervisor pod: what the agent can reach
+
+The workload pod has no network of its own. A Kubernetes **NetworkPolicy** lets it talk only to its supervisor, and the supervisor decides everything else:
+
+- **Deny by default.** Nothing leaves unless a `network_policies` entry allows it.
+- **L4**: which host and port, from which binary (`curl` may reach GitHub, `python3` may not).
+- **L7**: for `protocol: rest`, which HTTP method and path, even inside TLS. `GET /repos/**` allowed, `DELETE` refused with `403 policy_denied`.
+- **Live**: network rules are **dynamic**; a new revision loads into a running sandbox without a restart.
+
+## 3 · Credentials: the agent never holds the key
+
+A **provider** stores a credential in the gateway. A sandbox with the provider attached sees only a placeholder, such as `LITELLM_API_KEY=openshell:resolve:env:…`. The supervisor swaps in the real value on requests that match the provider's endpoint and rules, and nowhere else.
+
+<Figure src="/diagrams/credential-flow.svg" alt="The agent sends a request with a placeholder; the supervisor checks the policy, injects the real key and forwards to LiteLLM; a request to an endpoint the profile does not allow is refused with 403 and logged." caption="The key the agent never sees" />
+
+A fully compromised agent (prompt-injected, hijacked) cannot exfiltrate the key, because it never had it, and cannot even *use* it outside the allowed calls.
+
+## 4 · The control plane: who may change any of this
+
+The gateway accepts no anonymous calls. People sign in with **Keycloak** and act within their role and their workspaces; the lab's CLI uses an `OU=operator` client certificate; supervisors use tokens scoped to their own sandbox. **cert-manager** issues and rotates the gateway's TLS certificates.
+
+## 5 · Kubernetes guardrails
+
+- **Resource admission**: a sandbox may use a cluster resource (a RuntimeClass, a PriorityClass, a volume) only if the operator labelled it `openshell.ai/sandbox-attachable=true`.
+- **Kyverno** rejects any sandbox pod that asks for the host's network, PID or IPC namespace.
+
+## 6 · The audit trail
+
+Every decision the supervisor and the gateway make, allowed or denied, is an **OCSF** event: in `openshell logs`, in the supervisor's pod log and in Loki. You'll query it in [The Audit Trail](/learn/audit).
+
+The interactive view below breaks a sandbox policy into its sections, what each controls, and where it's enforced:
+
+<PolicyExplorer />
+
+<Callout type="warn" title="Defense in depth, not a silver bullet">
+No single layer is the answer. Landlock and seccomp bound the process, the supervisor bounds the network, providers bound the secrets, identities bound the control plane, and the audit trail tells you what happened. Together they make a compromised agent a contained problem instead of a cluster-wide one.
+</Callout>

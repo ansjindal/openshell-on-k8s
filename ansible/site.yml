@@ -3,16 +3,15 @@
 #   ansible-playbook site.yml -e upstream_api_key=nvapi-xxxx
 # Tags let you run a single component, e.g.:  --tags monitoring
 #
-# Role folders are numbered in creation order (01-gvisor … 16-sandboxes).
-# Order: host prep (gVisor FIRST, then mesh) -> k3s server -> k3s agents ->
+# Role folders are numbered in creation order (02-mesh … 18-openclaw-forward).
+# Order: host prep (mesh) -> k3s server -> k3s agents ->
 # cluster components (on the server) -> sandbox fleet.
 
-- name: Host prep — gVisor (first) then mesh
+- name: Host prep — mesh networking
   hosts: k3s_cluster
   become: true
   roles:
-    - { role: "01-gvisor", tags: [gvisor, hostprep] }   # runsc + containerd drop-in, BEFORE k3s
-    - { role: "02-mesh",   tags: [mesh, hostprep] }      # conditional: only if mesh_iface present
+    - { role: "02-mesh", tags: [mesh, hostprep] }      # conditional: only if mesh_iface present
 
 - name: k3s control-plane
   hosts: server
@@ -43,17 +42,17 @@
 #   ansible-playbook site.yml --tags litellm -e upstream_api_key=...
 #   ansible-playbook site.yml --tags gateway
 #   ansible-playbook site.yml --tags monitoring
-# (helm + the gVisor RuntimeClass are ensured by the prep play below, which
+# (helm is ensured by the prep play below, which
 #  runs for whichever component tags you select.)
 # ---------------------------------------------------------------------------
 
-- name: Control-plane prerequisites (helm + gVisor RuntimeClass)
+- name: Control-plane prerequisites (API ready + helm)
   hosts: server
   become: true
   tasks:
-    # The 03-k3s `restart k3s` handler (containerd gVisor drop-in / config change) fires at the
+    # The 03-k3s `restart k3s` handler (config change) fires at the
     # end of the k3s play and bounces the API server. The "node Ready" wait happened BEFORE that
-    # restart, so without re-waiting here the next kubectl (the gVisor RuntimeClass apply) can hit
+    # restart, so without re-waiting here the next kubectl can hit
     # the API mid-restart and fail with: dial tcp 127.0.0.1:6443: connect: connection refused.
     # Poll the real readiness endpoint until it answers — condition-based, not a fixed sleep.
     - name: Wait for the k3s API server to be ready (it may have just restarted)
@@ -64,20 +63,22 @@
       delay: 5
       until: _k3s_readyz.rc == 0
       tags: [always]
-    - name: Ensure helm is installed
+    # Pinned release tarball, verified against its published sha256.
+    - name: Ensure helm {{ helm_version }} is installed
       ansible.builtin.shell: |
-        set -e
-        command -v helm >/dev/null 2>&1 || \
-          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        set -euo pipefail
+        if command -v helm >/dev/null 2>&1 && helm version --template '{{ '{{' }}.Version{{ '}}' }}' | grep -qx '{{ helm_version }}'; then exit 0; fi
+        tmp="$(mktemp -d)"; cd "$tmp"
+        f="helm-{{ helm_version }}-linux-amd64.tar.gz"
+        curl -fsSL --retry 3 -o "$f" "https://get.helm.sh/$f"
+        curl -fsSL --retry 3 -o "$f.sha256sum" "https://get.helm.sh/$f.sha256sum"
+        sha256sum -c "$f.sha256sum"
+        tar -xzf "$f" linux-amd64/helm
+        install -m 0755 linux-amd64/helm /usr/local/bin/helm
+        rm -rf "$tmp"
       args: { executable: /bin/bash }
       changed_when: false
-      tags: [litellm, postgres, gateway, kyverno, monitoring, cert-manager]
-    - name: Apply the gVisor RuntimeClass (API is up now)
-      ansible.builtin.import_role:
-        name: "01-gvisor"
-        tasks_from: runtimeclass
-      when: gvisor_enabled | bool
-      tags: [gvisor, gateway]
+      tags: [litellm, postgres, gateway, kyverno, monitoring, cert-manager, keycloak, envoy, console, headlamp]
 
 - name: Component — agent-sandbox controller
   hosts: server
@@ -98,6 +99,13 @@
   roles:
     - { role: "06-postgres", when: gateway_db_backend | default('sqlite') == 'postgres' }
 
+- name: Component — cert-manager (gateway mTLS, operator cert, lab CA)
+  hosts: server
+  become: true
+  tags: [cert-manager, gateway, keycloak]
+  roles:
+    - { role: "08b-cert_manager", when: cert_manager_enabled | bool }
+
 - name: Component — Keycloak (OIDC identity provider, optional)
   hosts: server
   become: true
@@ -112,24 +120,17 @@
   roles:
     - { role: "08-apiserver_oidc", when: apiserver_oidc_enabled | bool }
 
-- name: Component — cert-manager (issues the gateway's mTLS material, optional)
-  hosts: server
-  become: true
-  tags: [cert-manager, gateway]
-  roles:
-    - { role: "08b-cert_manager", when: cert_manager_enabled | bool }
-
 - name: Component — OpenShell gateway
   hosts: server
   become: true
   tags: [gateway]
   roles: ["09-openshell_gateway"]
 
-- name: Component — inference routing (inference.local → LiteLLM)
+- name: Component — openshell CLI + litellm provider (model access per sandbox)
   hosts: server
   become: true
-  tags: [inference]
-  roles: ["10-inference_routing"]
+  tags: [inference, cli, providers]
+  roles: ["10-cli_providers"]
 
 - name: Component — Kyverno guardrails
   hosts: server
@@ -159,13 +160,13 @@
   roles:
     - { role: "14-envoy_gateway", when: envoy_gateway_enabled | bool }
 
-# Runs last among components: the console's HTTPRoute attaches to the fleet-gw Gateway.
-- name: Component — OpenShell Console (web UI, optional)
+# The console's HTTPRoute attaches to the fleet-gw Gateway (Envoy, above).
+- name: Component — OpenShell Console (ai-openshell/console, optional)
   hosts: server
   become: true
   tags: [console, ui]
   roles:
-    - { role: "15-openshell_ui", when: openshell_ui_enabled | bool }
+    - { role: "15-console", when: console_enabled | bool }
 
 # Private skill registry (Verdaccio) — the governed source agents install skills from.
 - name: Component — Skill registry (Verdaccio, optional)

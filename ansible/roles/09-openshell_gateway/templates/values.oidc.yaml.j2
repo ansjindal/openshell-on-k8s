@@ -1,11 +1,22 @@
-# OIDC overlay — applied after values.yaml when auth_mode == oidc. Switches the
-# gateway from dev-unauthenticated to validating Bearer tokens from Keycloak.
+# OIDC overlay, applied when auth_mode == oidc (Keycloak enabled). The gateway
+# validates Bearer tokens from the Keycloak realm; roles come from
+# realm_access.roles.
+#
+# The issuer is the PUBLIC URL (it is what the browser signs in at and what
+# Keycloak writes into `iss`). Inside the cluster CoreDNS rewrites that host to
+# Keycloak's own HTTPS port (role 07-keycloak), so the gateway never goes out
+# through the public edge. Its certificate comes from the lab CA, which is in
+# the ConfigMap below (public roots + lab CA: the chart points SSL_CERT_FILE at
+# it, so it must hold the public roots too).
 server:
-  auth:
-    allowUnauthenticatedUsers: false
   oidc:
+    caConfigMapName: {{ lab_ca_bundle_configmap }}
+
+gatewayConfig:
+  openshell.gateway.oidc:
     issuer: "{{ keycloak_issuer_url }}"
     audience: "{{ keycloak_client_id }}"
-    rolesClaim: "realm_access.roles"
-    adminRole: "{{ keycloak_admin_role }}"
-    userRole: "{{ keycloak_user_role }}"
+    roles_claim: realm_access.roles
+    admin_role: "{{ keycloak_admin_role }}"
+    user_role: "{{ keycloak_user_role }}"
+    jwks_ttl_secs: 3600

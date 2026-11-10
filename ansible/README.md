@@ -7,12 +7,13 @@
 One playbook brings up the whole stack across your nodes, in order:
 
 ```
-host prep:  01-gvisor (FIRST) → 02-mesh (conditional)
+host prep:  02-mesh (conditional)
 control:    03-k3s server → 03-k3s agents
-cluster:    gVisor RuntimeClass → 04-agent_sandbox → 05-litellm → 06-postgres*
+cluster:    04-agent_sandbox → 05-litellm → 06-postgres* → 08b-cert_manager
             → 07-keycloak* → 08-apiserver_oidc* → 09-openshell_gateway
-            → 10-inference_routing → 11-kyverno* → 12-monitoring*
-            → 13-headlamp* → 14-envoy_gateway* → 15-openshell_ui* → 16-sandboxes*
+            → 10-cli_providers → 11-kyverno* → 12-monitoring*
+            → 13-headlamp* → 14-envoy_gateway* → 15-console* → 17-skill-registry*
+            → 16-sandboxes* → 18-openclaw-forward*
             (* optional / toggled)
 ```
 
@@ -32,7 +33,7 @@ cp inventory/group_vars/secrets.example.yml inventory/group_vars/secrets.yml   #
 ```
 
 - `inventory/hosts.ini` — `[server]` (control-plane) + `[agents]` (workers).
-- `inventory/group_vars/all.yml` — public defaults: mesh iface, gVisor toggle, charts,
+- `inventory/group_vars/all.yml` — public defaults: mesh iface, chart and image versions,
   the **multi-model** `litellm_models` list, component toggles.
 - `inventory/group_vars/secrets.yml` — `upstream_api_key` and any environment-specific
   overrides (private `upstream_base_url`, custom `litellm_models`). Never committed.
@@ -47,7 +48,7 @@ ansible-playbook site.yml -e @inventory/group_vars/secrets.yml
 Run a single layer with tags:
 
 ```bash
-ansible-playbook site.yml --tags hostprep        # gvisor + mesh only
+ansible-playbook site.yml --tags hostprep        # mesh only
 ansible-playbook site.yml --tags k3s
 ansible-playbook site.yml --tags gateway
 ansible-playbook site.yml --tags monitoring -e upstream_api_key=...
@@ -57,22 +58,24 @@ ansible-playbook site.yml --tags monitoring -e upstream_api_key=...
 
 | Role | Does | Where |
 |---|---|---|
-| `01-gvisor` | runsc + containerd drop-in (first); RuntimeClass post-k3s | all nodes |
 | `02-mesh` | detect mesh IP, MSS clamp — **no-op if no mesh iface** | all nodes |
 | `03-k3s` | server install / agent join, mesh-pinned | server + agents |
 | `04-agent_sandbox` | upstream controller + CRDs | server |
-| `05-litellm` | secret + official Helm chart (multi-model) | server |
-| `06-postgres` | PostgreSQL (Bitnami) + DB secret — when `gateway_db_backend=postgres` | server |
-| `07-keycloak` | OIDC identity provider (optional) | server |
+| `05-litellm` | secret + official Helm chart (multi-model, `default` alias) | server |
+| `06-postgres` | PostgreSQL + DB secret — when `gateway_db_backend=postgres` | server |
+| `08b-cert_manager` | cert-manager, the lab CA (ClusterIssuer `lab-ca`) and its trust bundle | server |
+| `07-keycloak` | Keycloak (realm `openshell`, users `demo` / `learner`), HTTPS on the public host name in-cluster (CoreDNS rewrite) | server |
 | `08-apiserver_oidc` | kube-apiserver OIDC + RBAC (optional) | server |
-| `09-openshell_gateway` | OpenShell gateway Helm chart (+gVisor / OIDC / Postgres overlays) | server |
-| `10-inference_routing` | create `fleet` provider + point inference.local → LiteLLM (CLI) | server |
-| `11-kyverno` | guardrails (+require-gvisor) | server |
-| `12-monitoring` | kube-prometheus-stack + Loki + Alloy + dashboards | server |
+| `09-openshell_gateway` | OpenShell gateway Helm chart (OIDC / OTLP / Postgres overlays), NodePort, operator certificate | server |
+| `10-cli_providers` | pinned `openshell` CLI (checksum-verified), the `litellm` provider profile + provider | server |
+| `11-kyverno` | guardrails on sandbox pods | server |
+| `12-monitoring` | kube-prometheus-stack + Loki + Alloy + Tempo + dashboards | server |
 | `13-headlamp` | Kubernetes dashboard, OIDC SSO (optional) | server |
-| `14-envoy_gateway` | single-host path-routed ingress (optional) | server |
-| `15-openshell_ui` | OpenShell Console web UI (optional) | server |
+| `14-envoy_gateway` | Gateway API ingress, host- and path-routed (optional) | server |
+| `15-console` | OpenShell Console ([ai-openshell/console](https://github.com/ai-openshell/console)), Keycloak sign-in (optional) | server |
+| `17-skill-registry` | Verdaccio, the in-cluster skill registry | server |
 | `16-sandboxes` | create the initial sandbox fleet via the CLI — when `sandboxes_enabled` | server |
+| `18-openclaw-forward` | OpenClaw Control UI of agent-0 on a host port (optional) | server |
 
 After it completes, drive the fleet with [`../scripts/fleet`](../scripts/fleet) (run it on the
 server node, where kubectl + the openshell CLI are configured).

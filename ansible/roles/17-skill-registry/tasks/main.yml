@@ -2,7 +2,7 @@
 # Deploy a private npm registry (Verdaccio) in-cluster as the agents' single, governed
 # skill source, and provision the publish user. Reachable at
 # registry.{{ skill_registry_namespace }}.svc.cluster.local:4873. Agents install scoped
-# skills from it (@workshop/*); see web/src/content/skills.mdx for the per-agent policy
+# skills from it (@workshop/*); see training/src/content/skills.mdx for the per-agent policy
 # (the registry endpoint needs protocol: rest + allow_encoded_slash for scoped names).
 - name: Skill registry — Verdaccio (PVC + ConfigMap + Deployment + Service)
   when: skill_registry_enabled | bool

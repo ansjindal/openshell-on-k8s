@@ -1,6 +1,7 @@
 ---
-# Install the OpenShell gateway (official Helm chart). Adds the gVisor overlay
-# (sandbox pods on RuntimeClass gvisor) when gvisor_enabled.
+# Install the OpenShell gateway (official Helm chart, 0.1.x) and give the VM's
+# operator tooling (CLI, scripts, teaching site) an OU=operator client
+# certificate.
 - name: OpenShell gateway
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
@@ -20,7 +21,8 @@
         mode: "0644"
       loop:
         - values.yaml
-        - values.gvisor.yaml
+        - values.mtls.yaml
+        - values.otlp.yaml
 
     - name: Render OIDC overlay (when auth_mode == oidc)
       ansible.builtin.template:
@@ -35,20 +37,6 @@
         dest: /tmp/openshell-values.postgres.yaml
         mode: "0644"
       when: gateway_db_backend | default('sqlite') == 'postgres'
-
-    - name: Copy mTLS overlay (when cert_manager_enabled)
-      ansible.builtin.copy:
-        src: values.mtls.yaml
-        dest: /tmp/openshell-values.mtls.yaml
-        mode: "0644"
-      when: cert_manager_enabled | bool
-
-    - name: Copy OTLP overlay (when openshell_otlp_enabled)
-      ansible.builtin.copy:
-        src: values.otlp.yaml
-        dest: /tmp/openshell-values.otlp.yaml
-        mode: "0644"
-      when: openshell_otlp_enabled | bool
 
     # Switching backends flips the workload kind (StatefulSet <-> Deployment).
     # Helm won't change an existing object's kind in place, so drop the stale
@@ -66,13 +54,14 @@
           --version {{ openshell_chart_version }} \
           --namespace {{ openshell_namespace }} \
           --set server.sandboxNamespace={{ k3s_sandbox_namespace }} \
+          --set sandbox.image.repository={{ sandbox_image_repository }} \
+          --set-string sandbox.image.tag={{ sandbox_image_tag }} \
           -f /tmp/openshell-values.yaml \
-          {{ '-f /tmp/openshell-values.gvisor.yaml' if (gvisor_enabled | bool) else '' }} \
-          {{ '-f /tmp/openshell-values.oidc.yaml' if (auth_mode == 'oidc') else '' }} \
-          {{ '-f /tmp/openshell-values.postgres.yaml' if (gateway_db_backend | default('sqlite') == 'postgres') else '' }} \
           {{ '-f /tmp/openshell-values.mtls.yaml' if (cert_manager_enabled | bool) else '' }} \
           {{ '-f /tmp/openshell-values.otlp.yaml' if (openshell_otlp_enabled | bool) else '' }} \
-          --wait --timeout 8m
+          {{ '-f /tmp/openshell-values.oidc.yaml' if (auth_mode == 'oidc') else '' }} \
+          {{ '-f /tmp/openshell-values.postgres.yaml' if (gateway_db_backend | default('sqlite') == 'postgres') else '' }} \
+          --wait --timeout 10m
       args: { executable: /bin/bash }
       changed_when: true
 
@@ -82,56 +71,90 @@
         rollout status {{ 'deployment' if (gateway_db_backend | default('sqlite') == 'postgres') else 'statefulset' }}/openshell
         --timeout=300s
       changed_when: false
-      failed_when: false
 
-    # Sandbox pods mount openshell-client-tls to auth back to the gateway over
-    # mTLS, but they land in k3s_sandbox_namespace — a namespace SEPARATE from
-    # the gateway's release namespace by design (isolation). Secrets don't cross
-    # namespaces, and cert-manager only creates this one where the chart is
-    # installed, so replicate it — otherwise every sandbox pod sits in
-    # Init:0/2 forever on "secret openshell-client-tls not found".
-    # The Secret object can exist before cert-manager finishes populating its
-    # data (create-then-patch) — checking only `get secret -o name` (existence)
-    # let earlier runs race ahead with an EMPTY tls.crt, which downstream (role
-    # 10, scripts/setup.sh) silently decoded into an empty file; `openshell
-    # gateway add --local` then found no valid cert material and fell back to
-    # self-generating its own throwaway dev CA instead of erroring — the CLI
-    # accepted it as "TLS certificates present" and every subsequent RPC failed
-    # with an opaque "invalid peer certificate: UnknownIssuer". Wait for actual
-    # non-empty cert data instead of just the object.
-    - name: Wait for the client mTLS secret to be populated
-      # ansible.builtin.command shlex-splits its args, which silently eats the
-      # backslash in `tls\.crt` (no escaping needed/possible there) — kubectl
-      # then reads jsonpath={.data.tls.crt} (a nested, nonexistent path) and
-      # returns rc=0 with empty stdout instead of erroring, so this looked like
-      # a slow-secret race rather than the arg-parsing bug it actually is. Use
-      # ansible.builtin.shell (a real shell, single-quoted) like the task below.
+    # The chart's Service is ClusterIP; publish the gRPC port on a fixed
+    # NodePort so the CLI on the VM reaches https://localhost:<gateway_nodeport>
+    # (localhost is in the server certificate's SANs; 127.0.0.1 is too).
+    - name: Publish the gateway on NodePort {{ gateway_nodeport }}
       ansible.builtin.shell: |
-        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}'
-      register: _client_tls_secret
-      changed_when: false
-      retries: 15
-      delay: 4
-      until: _client_tls_secret.rc == 0 and (_client_tls_secret.stdout | length) > 0
-
-    - name: Copy the client mTLS secret into the sandbox namespace
-      ansible.builtin.shell: |
-        set -e
-        tls_crt="$(kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}')"
-        tls_key="$(kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.tls\.key}')"
-        ca_crt="$(kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}')"
         cat <<EOF | kubectl apply -f -
         apiVersion: v1
-        kind: Secret
-        type: kubernetes.io/tls
+        kind: Service
         metadata:
-          name: openshell-client-tls
-          namespace: {{ k3s_sandbox_namespace }}
-        data:
-          tls.crt: $tls_crt
-          tls.key: $tls_key
-          ca.crt: $ca_crt
+          name: openshell-nodeport
+          namespace: {{ openshell_namespace }}
+        spec:
+          type: NodePort
+          selector:
+            app.kubernetes.io/name: openshell
+            app.kubernetes.io/instance: openshell
+          ports:
+            - name: grpc
+              port: 8080
+              targetPort: 8080
+              nodePort: {{ gateway_nodeport }}
         EOF
       args: { executable: /bin/bash }
+      changed_when: false
+
+    # Supervisor pods mount openshell-client-tls (the chart CA, to verify the
+    # gateway) but run in the sandbox namespace; Secrets don't cross namespaces
+    # and the chart creates this one only in its release namespace. Without the
+    # copy every supervisor pod stays in ContainerCreating.
+    - name: Wait for the client TLS secret
+      ansible.builtin.shell: |
+        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}'
+      register: _client_tls
+      changed_when: false
+      retries: 30
+      delay: 4
+      until: _client_tls.rc == 0 and (_client_tls.stdout | length) > 0
       when: k3s_sandbox_namespace != openshell_namespace
-      changed_when: true
+
+    - name: Copy the client TLS secret into the sandbox namespace
+      ansible.builtin.shell: |
+        set -euo pipefail
+        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o json \
+          | python3 -c 'import sys,json; s=json.load(sys.stdin); print(json.dumps({"apiVersion":"v1","kind":"Secret","type":s["type"],"metadata":{"name":"openshell-client-tls","namespace":"{{ k3s_sandbox_namespace }}","labels":{"app.kubernetes.io/managed-by":"openshell-lab"}},"data":s["data"]}))' \
+          | kubectl apply -f -
+      args: { executable: /bin/bash }
+      changed_when: false
+      when: k3s_sandbox_namespace != openshell_namespace
+
+    # OU=operator => platform admin across all workspaces (mtls_auth.operator_enabled
+    # in values.yaml). Issued by the chart's own CA, so the gateway trusts it.
+    # Only the VM's root/lab user ever gets this key.
+    - name: Issue the operator client certificate (OU=operator)
+      ansible.builtin.shell: |
+        cat <<EOF | kubectl apply -f -
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: openshell-operator
+          namespace: {{ openshell_namespace }}
+        spec:
+          secretName: openshell-operator-tls
+          commonName: lab-operator
+          subject:
+            organizationalUnits: [operator]
+          duration: 2160h
+          renewBefore: 360h
+          privateKey: {algorithm: ECDSA, size: 256}
+          usages: [client auth, digital signature, key encipherment]
+          issuerRef:
+            name: openshell-ca-issuer
+            kind: Issuer
+        EOF
+      args: { executable: /bin/bash }
+      changed_when: false
+      when: cert_manager_enabled | bool
+
+    - name: Wait for the operator certificate
+      ansible.builtin.shell: |
+        kubectl -n {{ openshell_namespace }} get secret openshell-operator-tls -o jsonpath='{.data.tls\.crt}'
+      register: _operator_tls
+      changed_when: false
+      retries: 30
+      delay: 4
+      until: _operator_tls.rc == 0 and (_operator_tls.stdout | length) > 0
+      when: cert_manager_enabled | bool

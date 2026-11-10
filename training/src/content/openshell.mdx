@@ -1,0 +1,40 @@
+**OpenShell** is what makes "run an autonomous agent *safely*" practical. In one line: **to be useful, agents need access; to be safe, they need zero trust**, and OpenShell is the runtime that gives you both. It is a gateway plus guardrails, built on the open-source `agent-sandbox` Kubernetes primitive.
+
+<Figure src="/diagrams/sandbox-anatomy.svg" alt="A sandbox is a workload pod (agent as user sandbox, Landlock, seccomp, no direct network) and a supervisor pod (network policy, credential injection, OCSF audit); destinations are allowed or denied by policy." caption="What a sandbox is" />
+
+## The pieces
+
+- **Gateway**: the control plane, a gRPC API (`openshell` CLI, the console, the SDKs). It stores sandboxes, policies with their revision history, provider profiles and provider credentials, and checks every call against the caller's identity and role.
+- **Compute driver**: the part of the gateway that speaks Kubernetes. It writes `agents.x-k8s.io` `Sandbox` resources and creates the supervisor pods, so OpenShell doesn't reinvent scheduling.
+- **Supervisor**: one per sandbox, in its own pod. It is the sandbox's only way out: it resolves DNS, evaluates every connection and request against the policy, injects provider credentials, relays `exec` and SSH, and writes an **OCSF** audit event for each decision.
+- **Sandbox runtime**: inside the workload pod. It starts the agent as an unprivileged `sandbox` user under **Landlock** (filesystem) and **seccomp**, and hands all network traffic to the supervisor.
+
+## The objects you work with
+
+| Object | What it is | CLI |
+|---|---|---|
+| Sandbox | One isolated agent environment (two pods) | `openshell sandbox create / list / exec / delete` |
+| Policy | Filesystem, process and network rules; versioned, network rules live-updatable | `openshell policy get / update / set / list` |
+| Provider profile | A *kind* of credential: which env vars, which endpoints, which L7 rules | `openshell profile import / describe / export` |
+| Provider | A credential instance of a profile, stored by the gateway | `openshell provider create / update / list` |
+| Workspace | A tenant: its own sandboxes, providers and members | `openshell workspace create / member add`, `--workspace` on any command, the console |
+
+## Who may call the gateway
+
+Every call carries an identity:
+
+- **People** sign in with **Keycloak** (OIDC). Their token's realm roles decide what they can do: `openshell-admin` is a platform admin, `openshell-user` works inside the workspaces they belong to.
+- **The lab operator** (this VM's CLI and scripts) presents a client certificate with `OU=operator`, issued by cert-manager. It is a platform admin across all workspaces.
+- **Supervisors** authenticate with tokens the gateway mints for their sandbox only.
+
+## Why a control plane at all?
+
+You *could* hand-write `Sandbox` resources with `kubectl`. The gateway exists so every sandbox gets a policy, a supervisor, credentials as placeholders, an identity and an audit trail, without you wiring those up each time:
+
+```bash-ref
+openshell sandbox list
+```
+
+<Callout type="tip" title="Two front doors, one cluster">
+Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; the sandboxes it creates live in <code>openshell-sandboxes</code>. You can always drop to <code>kubectl -n openshell-sandboxes get sandboxes,pods</code> to see what the gateway did.
+</Callout>

@@ -1,6 +1,6 @@
 ---
-# Kyverno + sandbox guardrails. require-gvisor is applied only when gvisor_enabled
-# (otherwise it would reject every sandbox pod).
+# Kyverno + sandbox guardrails: a second, Kubernetes-level check on the pods the
+# OpenShell gateway creates (defence in depth on top of OpenShell's own policy).
 - name: Kyverno
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
@@ -26,15 +26,8 @@
         mode: "0644"
       loop:
         - sandbox-guardrails.yaml
-        - require-gvisor.yaml
 
     - name: Apply base guardrails
       ansible.builtin.command: kubectl apply -f /tmp/kyverno-sandbox-guardrails.yaml
       register: kg
       changed_when: "'created' in kg.stdout or 'configured' in kg.stdout"
-
-    - name: Apply require-gvisor rule (gVisor enabled)
-      ansible.builtin.command: kubectl apply -f /tmp/kyverno-require-gvisor.yaml
-      when: gvisor_enabled | bool
-      register: kgg
-      changed_when: "'created' in kgg.stdout or 'configured' in kgg.stdout"

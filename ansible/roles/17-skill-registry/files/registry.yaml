@@ -5,7 +5,7 @@
 # the sandbox egress policy (policies/openclaw-sandbox.yaml) allows ONLY this Service, and
 # Verdaccio uplinks npmjs + caches transitive deps, so the agent never reaches the public
 # internet directly. Skills enter here two ways — authored in-sandbox and `npm publish`ed,
-# or vetted-and-mirrored from ClawHub by a curator (see web/src/content/skills.mdx).
+# or vetted-and-mirrored from ClawHub by a curator (see training/src/content/skills.mdx).
 #
 # Reachable in-cluster at: registry.openshell.svc.cluster.local:4873
 # The sandbox maps the @workshop scope (and its default registry) here via /sandbox/.npmrc,

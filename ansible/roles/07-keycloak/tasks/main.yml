@@ -45,6 +45,35 @@
       ansible.builtin.set_fact:
         realm_checksum: "{{ lookup('ansible.builtin.template', 'realm.json.j2') | hash('sha1') }}"
 
+    - name: Public host name (for the in-cluster HTTPS certificate + CoreDNS rewrite)
+      ansible.builtin.set_fact:
+        keycloak_public_host: "{{ keycloak_base_url | regex_replace('^https?://', '') | regex_replace('[:/].*$', '') }}"
+      when: keycloak_base_url | length > 0
+
+    - name: Issue Keycloak's in-cluster certificate for {{ keycloak_public_host | default('-') }} (lab CA)
+      ansible.builtin.shell: |
+        cat <<YAML | kubectl apply -f -
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: keycloak-public-tls
+          namespace: {{ keycloak_namespace }}
+        spec:
+          secretName: keycloak-public-tls
+          dnsNames: ["{{ keycloak_public_host }}"]
+          duration: 8760h
+          privateKey: {algorithm: ECDSA, size: 256}
+          issuerRef: {name: {{ lab_ca_issuer }}, kind: ClusterIssuer}
+        YAML
+        for i in $(seq 1 30); do
+          kubectl -n {{ keycloak_namespace }} get secret keycloak-public-tls >/dev/null 2>&1 && exit 0
+          sleep 3
+        done
+        echo "certificate keycloak-public-tls was not issued" >&2; exit 1
+      args: { executable: /bin/bash }
+      changed_when: false
+      when: keycloak_base_url | length > 0
+
     - name: Render + apply Keycloak Deployment/Service
       ansible.builtin.template:
         src: deployment.yaml.j2
@@ -58,6 +87,46 @@
     - name: Wait for Keycloak to be ready
       ansible.builtin.command: kubectl -n {{ keycloak_namespace }} rollout status deploy/keycloak --timeout=300s
       changed_when: false
+
+    # Inside the cluster the public host resolves to Keycloak's Service (port 443
+    # = Keycloak's HTTPS listener with the lab-CA certificate). k3s's CoreDNS
+    # imports *.override files from ConfigMap kube-system/coredns-custom.
+    - name: Resolve {{ keycloak_public_host | default('-') }} to Keycloak inside the cluster (CoreDNS rewrite)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        cat <<YAML | kubectl apply -f -
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: coredns-custom
+          namespace: kube-system
+        data:
+          keycloak.override: |
+            rewrite name exact {{ keycloak_public_host }} keycloak.{{ keycloak_namespace }}.svc.cluster.local
+        YAML
+        kubectl -n kube-system rollout restart deploy/coredns
+        kubectl -n kube-system rollout status deploy/coredns --timeout=120s
+      args: { executable: /bin/bash }
+      changed_when: false
+      when: keycloak_base_url | length > 0
+
+    - name: Check the issuer over in-cluster HTTPS (lab CA)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        ca="$(mktemp)"
+        kubectl -n {{ cert_manager_namespace }} get secret lab-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > "$ca"
+        ip="$(kubectl -n {{ keycloak_namespace }} get svc keycloak -o jsonpath='{.spec.clusterIP}')"
+        curl -fsS --cacert "$ca" --resolve "{{ keycloak_public_host }}:443:${ip}" \
+          "https://{{ keycloak_public_host }}{{ keycloak_relative_path }}/realms/{{ keycloak_realm }}/.well-known/openid-configuration" \
+          | python3 -c 'import sys,json; print(json.load(sys.stdin)["issuer"])'
+        rm -f "$ca"
+      args: { executable: /bin/bash }
+      register: _issuer_check
+      retries: 20
+      delay: 6
+      until: _issuer_check.rc == 0
+      changed_when: false
+      when: keycloak_base_url | length > 0
 
     # The realm is imported only ONCE — Keycloak does not overwrite an existing realm on
     # re-import — so a regenerated keycloak_demo_password would never reach Keycloak and the

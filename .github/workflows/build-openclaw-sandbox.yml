@@ -6,7 +6,7 @@ name: build-openclaw-sandbox
 #
 # After the first run, make the resulting package PUBLIC (GitHub -> your profile ->
 # Packages -> openclaw-sandbox -> Package settings -> Change visibility -> Public) so
-# the k3s node can pull it without a pull secret. Then pin sandboxImage
+# the k3s node can pull it without a pull secret. Then pin the image
 # (ansible/roles/09-openshell_gateway/files/values.yaml) to:
 #   ghcr.io/<owner>/openclaw-sandbox:<version>
 
@@ -15,10 +15,10 @@ on:
     inputs:
       openclaw_version:
         description: OpenClaw npm version to bake in
-        default: "2026.8.2"
+        default: "2026.11.1"
   push:
     paths:
-      - images/openclaw-sandbox/Dockerfile
+      - images/openclaw-sandbox/**
       - .github/workflows/build-openclaw-sandbox.yml
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.event.inputs.openclaw_version || '2026.8.2' }}
+      VERSION: ${{ github.event.inputs.openclaw_version || '2026.11.1' }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3

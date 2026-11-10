@@ -1,0 +1,42 @@
+You've gone end to end: confirmed the stack, created and sealed sandboxes, given agents models and credentials they never hold, read the audit trail, signed in as different users, and pointed a fleet at an incident. Here's where to take it next.
+
+## Tear down, when you're actually done
+
+```bash-ref
+./scripts/fleet down
+```
+
+Deleting a sandbox removes its workload pod, its supervisor pod and its policy. This deletes every fleet sandbox, so run it only when you're done with the launchable.
+
+## Make the gateway highly available
+
+This lab runs one gateway replica on SQLite. For HA, run the gateway as a Deployment with two or more replicas on PostgreSQL: set `gateway_db_backend: postgres` (role `06-postgres`) and the chart switches to `workload.kind: deployment`. With more than one node, add pod anti-affinity and a PodDisruptionBudget.
+
+## Scale out to multiple nodes
+
+Nothing in the design is single-node. Join more nodes to k3s (the same Ansible drives them, see `ansible/README.md`) and sandboxes spread across them. Remember the CNI must **enforce** NetworkPolicy for both ingress and egress in the sandbox namespace: it's what keeps each workload pod talking only to its supervisor.
+
+## One namespace per team
+
+The lab puts every workspace's sandboxes in one namespace (`workspaceMode: shared`). For real tenants, switch the driver to `managed` (the gateway creates a namespace per workspace) or `operator` (you pre-create labelled namespaces, for example from git), and give each its own ResourceQuota and LimitRange.
+
+## Keep provider credentials outside the gateway's database
+
+By default the gateway encrypts provider credentials in its database. In production, use a **credential driver**: Kubernetes Secrets in a dedicated namespace, or **Vault** (`server.credentialDrivers.vault`), so every read of a credential is in your secret store's own audit log.
+
+## Run a different agent
+
+OpenClaw is the default, but a sandbox runs any image. Build on the OpenShell community base images (they include the runtime the supervisor needs), ship a policy that's valid for 0.1 at `/etc/openshell/policy.yaml`, attach the `litellm` provider, and point the agent at `http://litellm.litellm.svc.cluster.local:4000/v1` with `$LITELLM_API_KEY`. Set `AGENT_CMD` so `./scripts/fleet task` runs it.
+
+## Resources
+
+- **OpenShell**: [docs.nvidia.com/openshell](https://docs.nvidia.com/openshell/) · [github.com/NVIDIA/OpenShell](https://github.com/NVIDIA/OpenShell)
+- **OpenShell Console**: [github.com/ai-openshell/console](https://github.com/ai-openshell/console)
+- **agent-sandbox**: [github.com/kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox)
+- **LiteLLM**: [docs.litellm.ai](https://docs.litellm.ai)
+- **OCSF** (the audit event schema): [schema.ocsf.io](https://schema.ocsf.io)
+- **Kyverno**: [kyverno.io](https://kyverno.io) · **k3s**: [k3s.io](https://k3s.io)
+
+<Callout type="tip" title="The takeaway">
+Sandboxed agents on Kubernetes come down to a few ideas: a sandbox is a pair of pods, the supervisor owns the agent's network, credentials are placeholders until a policy says otherwise, and every decision is written down. Once that clicks, the rest is ordinary Kubernetes.
+</Callout>

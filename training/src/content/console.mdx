@@ -1,0 +1,56 @@
+You've driven the gateway from the CLI. The same gateway has a web UI: the **OpenShell Console** ([ai-openshell/console](https://github.com/ai-openshell/console)), deployed on its own host. It isn't a separate system: it forwards your Keycloak token to the same gateway, so it sees and does exactly what *you* may see and do.
+
+## Open it
+
+Use the **OpenShell Console ↗** link in the site header, or open `https://console-<brevid>.<domain>`. You're sent to Keycloak; sign in as **`demo`**. The passwords are generated per box:
+
+```bash
+grep -E 'KC_(DEMO|LEARNER)_PASSWORD' .sso-secrets.env
+```
+
+The top bar shows **Gateway status: Healthy** and **Role: Platform admin**: the gateway read `openshell-admin` from your token.
+
+<Figure src="/diagrams/architecture.svg" alt="The console: browser to Envoy to oauth2-proxy and the console backend, which calls the OpenShell gateway with the user's token." caption="The console is oauth2-proxy + a small backend, calling the same gateway as your CLI" />
+
+## Around the console
+
+- **Workspaces**: tenants, their members, sandboxes, providers and templates ([next lesson](/learn/access-control)).
+- **Sandboxes**: every sandbox you may see, across workspaces, with status and image.
+- **Proposals**: the inbox of policy changes waiting for review (below).
+- **Provider profiles** and **Global policy**: platform-wide settings, admins only.
+
+## One sandbox, every angle
+
+Open **Sandboxes → agent-0**. The tabs map one-to-one to what you did in the shell:
+
+| Tab | What it shows | The CLI equivalent |
+|---|---|---|
+| Details | id, image, command, limits, attached providers, active policy version | `openshell sandbox get agent-0` |
+| Logs | gateway + sandbox logs with the OCSF decisions, filterable by level and source | `openshell logs agent-0` |
+| Terminal | a shell inside the workload pod, in your browser | `openshell sandbox connect agent-0` |
+| Providers | attach and detach providers | `openshell sandbox provider attach/detach` |
+| Policy | static part (filesystem, Landlock, process) and the editable network rules, with revisions | `openshell policy get / update / list` |
+| Proposals | rules suggested from denied traffic | (below) |
+| Services | HTTP services exposed from the sandbox | `openshell service expose` |
+| Settings | per-sandbox settings, policy source and hash | `openshell settings get agent-0` |
+| Files | upload and download | `openshell sandbox upload / download` |
+
+Open **Policy**: you'll see the endpoints you added in [The Seal](/learn/policy) (`allow_api_github_com_443`, …) and `_provider_litellm`. Add or remove an endpoint here and run `openshell policy list agent-0` in the lab shell: a new revision, the same one.
+
+## Proposals: denied traffic becomes a reviewable rule
+
+When an agent keeps hitting a denied destination, the gateway analyses the denials and drafts a rule. Open **Proposals** for `agent-0`: OpenClaw itself tried to reach `telemetry.openclaw.ai:443` and ClawHub, was denied, and each became a **pending** proposal with the binary, a confidence score and how often it was denied.
+
+Nothing changes until a person decides. **Approve** turns a proposal into a new policy revision; **Reject** records why. Here the right call is *reject*: the agent has no business sending telemetry from a sealed lab. That's the workflow for growing a policy from real behaviour without ever loosening it silently.
+
+## OpenClaw's own UI
+
+Separately from the console, **OpenClaw** has its own web Control UI (chat, device pairing) inside `agent-0`. Its port lives in the sandbox, so the lab forwards it out with `openshell forward` to host port `30789` (a systemd unit, `openclaw-forward`). Use the **OpenClaw UI ↗** header link (it needs its own Brev Secure Link named `openclaw`). Its password is separate from Keycloak:
+
+```bash
+grep OPENCLAW_GATEWAY_PASSWORD .sso-secrets.env
+```
+
+<Callout type="note" title="CLI and console are one control plane">
+Create a sandbox in the console, then run <code>openshell sandbox list</code> here: it's there. The console has no privileges of its own; sign in as <code>learner</code> and it shows only what <code>learner</code> may see.
+</Callout>

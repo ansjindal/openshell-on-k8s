@@ -4,8 +4,9 @@
 #
 #   openshell policy set agent-0 --policy manifests/openclaw/policies/skills-locked.policy.yaml --wait
 #
-# A bare `openshell sandbox create` gives an agent the gateway's generic DEFAULT policy (which
-# has no registry rule at all) — so skill installs/publishes are denied until you apply this.
+# The lab baseline policy (manifests/policies/baseline.yaml) has no registry rule at all,
+# so skill installs/publishes are denied until you apply this. OpenClaw runs on its own
+# Node 24 (/usr/local/lib/openclaw/node/bin/node), so that binary is listed too.
 version: 1
 filesystem_policy:
   include_workdir: true
@@ -23,5 +24,5 @@ network_policies:
     # Verdaccio uplinks npmjs server-side and caches transitive deps, so @workshop installs
     # never need the agent to reach public npm directly.
     endpoints:
-      - { host: registry.openshell.svc.cluster.local, port: 4873, access: full, protocol: rest, allow_encoded_slash: true }
-    binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node } ]
+      - { host: registry.openshell.svc.cluster.local, port: 4873, access: full, protocol: rest, enforcement: enforce, allow_encoded_slash: true }
+    binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node }, { path: /usr/local/lib/openclaw/node/bin/node } ]

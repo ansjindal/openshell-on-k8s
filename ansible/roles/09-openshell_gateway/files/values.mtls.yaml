@@ -6,7 +6,7 @@
 # default serverDnsNames (openshell, openshell.openshell.svc[.cluster.local],
 # localhost, openshell.localhost, *.openshell.localhost, host.docker.internal)
 # already cover this launchable's namespace (openshell) and how role
-# 10-inference_routing reaches the gateway (https://localhost:<nodeport>), so
+# the CLI (roles/10-cli_providers) reaches the gateway (https://localhost:<nodeport>), so
 # nothing else needs overriding.
 certManager:
   enabled: true

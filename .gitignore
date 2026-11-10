@@ -7,10 +7,11 @@ ansible/inventory/group_vars/secrets.yml
 .sso-secrets.env
 
 # teaching site build artifacts
-web/node_modules
-web/.next
+training/node_modules
+training/.next
 
 # logs / scratch
 *.log
 *.retry
-web/tsconfig.tsbuildinfo
+training/tsconfig.tsbuildinfo
+training/public/diagrams/

@@ -1,50 +1,47 @@
 ---
-# Create fleet_size sandboxes via the openshell CLI, each attached to
-# sandbox_provider. Idempotent + best-effort (a name that already exists is
-# left as-is). Runs only when sandboxes_enabled. Must run AFTER the gateway
-# (09) and inference routing / provider (10).
+# Create fleet_size sandboxes (agent-0..N-1) through the openshell CLI. Each one
+# starts from the lab baseline policy (deny all network), gets the `litellm`
+# provider attached (model access + a placeholder key) and keeps running
+# `sleep infinity` so lessons and scripts can exec into it. Idempotent: an
+# existing name is left as it is. Runs after the gateway (09) and the provider (10).
 - name: Create the sandbox fleet
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    NO_COLOR: "1"
   block:
-    - name: Install the openshell CLI (if missing)
-      ansible.builtin.shell: |
-        set -e
-        command -v openshell >/dev/null 2>&1 && exit 0
-        curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
-        ln -sf "$HOME/.local/bin/openshell" /usr/local/bin/openshell 2>/dev/null || true
-      args: { executable: /bin/bash }
-      changed_when: false
-      failed_when: false
-
     - name: Create sandboxes through the gateway
       ansible.builtin.shell: |
-        set -e
-        # 10-inference_routing (runs before this role) already registered 'fleet'
-        # with its mTLS client cert — re-adding it here with a bare http:// URL
-        # would overwrite that working registration with a broken plaintext one.
-        existing="$(openshell --gateway fleet sandbox list 2>/dev/null | awk 'NR>1{print $1}')"
+        set -euo pipefail
+        existing="$(openshell sandbox list 2>/dev/null | awk 'NR>1{print $1}')"
         for i in $(seq 0 {{ (fleet_size | int) - 1 }}); do
           name="{{ sandbox_name_prefix }}-${i}"
           if echo "$existing" | grep -qx "$name"; then echo "$name (already exists)"; continue; fi
-          # `sandbox create` attaches an interactive shell by default; run
-          # non-interactively (--no-tty) so it creates + detaches instead of
-          # blocking. The initial command must actually keep running: newer
-          # supervisors (0.0.111+, "canonical main process for sandboxes") end
-          # the pod's main container as soon as its command exits — `-- true`
-          # used to leave the pod persisting anyway, it no longer does, so the
-          # fleet's own `task`/`shell` exec has nothing to attach to afterward.
-          # `sleep infinity` keeps the pod (and container) alive to exec into.
-          timeout 90 openshell --gateway fleet sandbox create --name "$name" --provider "{{ sandbox_provider }}" --no-tty -- sleep infinity >/dev/null 2>&1 \
-            && echo "created $name" || echo "created $name (attach skipped)"
+          # --detach: create and return; the main process keeps the sandbox alive.
+          timeout 300 openshell sandbox create --name "$name" \
+            --provider {{ sandbox_provider }} \
+            --policy {{ playbook_dir }}/../manifests/policies/baseline.yaml \
+            --memory {{ sandbox_memory }} \
+            --env LITELLM_MODEL=default \
+            --no-tty --detach -- sleep infinity </dev/null >/dev/null
+          echo "created $name"
         done
       args: { executable: /bin/bash }
       register: sb_create
       changed_when: "'created' in sb_create.stdout"
 
+    - name: Wait for the fleet to be Ready
+      ansible.builtin.shell: |
+        openshell sandbox list 2>/dev/null | awk 'NR>1 && $1 ~ /^{{ sandbox_name_prefix }}-/ && $NF != "Ready" {print $1}'
+      args: { executable: /bin/bash }
+      register: _not_ready
+      retries: 36
+      delay: 5
+      until: _not_ready.rc == 0 and (_not_ready.stdout | length) == 0
+      changed_when: false
+
     - name: Sandbox fleet summary
       ansible.builtin.debug:
         msg:
-          - "Requested {{ fleet_size }} sandbox(es) named {{ sandbox_name_prefix }}-0..{{ (fleet_size | int) - 1 }} (provider: {{ sandbox_provider }})."
+          - "{{ fleet_size }} sandbox(es) {{ sandbox_name_prefix }}-0..{{ (fleet_size | int) - 1 }}, provider {{ sandbox_provider }}, policy manifests/policies/baseline.yaml."
           - "{{ sb_create.stdout_lines | default([]) }}"
-          - "Runtime ops (status / task / scale / logs): scripts/fleet, or the console."
+          - "Runtime ops: ./scripts/fleet status | task | shell | logs"

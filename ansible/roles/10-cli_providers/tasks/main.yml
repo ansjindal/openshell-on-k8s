@@ -1,0 +1,100 @@
+---
+# The openshell CLI on the VM (as the lab operator) and the model provider.
+#
+# OpenShell 0.1.x has no managed inference route: a sandbox reaches a model
+# only through a provider attached to it. Here we import the `litellm` provider
+# profile (endpoint + L7 rules + credential contract) and create the `litellm`
+# provider holding LiteLLM's key. Sandboxes attach it (`--provider litellm`),
+# see a placeholder in $LITELLM_API_KEY, and the supervisor swaps in the real
+# key only on requests the profile allows.
+- name: OpenShell CLI and providers
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    NO_COLOR: "1"
+  block:
+    - name: Check the installed openshell CLI version
+      ansible.builtin.shell: openshell --version 2>/dev/null | awk '{print $2}'
+      register: _cli_version
+      changed_when: false
+      failed_when: false
+
+    # Release tarball + its published sha256, pinned to the gateway's version.
+    - name: Install the openshell CLI {{ openshell_cli_version }}
+      ansible.builtin.shell: |
+        set -euo pipefail
+        tmp="$(mktemp -d)"; cd "$tmp"
+        base="https://github.com/NVIDIA/OpenShell/releases/download/{{ openshell_cli_version }}"
+        asset="openshell-x86_64-unknown-linux-musl.tar.gz"
+        curl -fsSL --retry 3 -o "$asset" "$base/$asset"
+        curl -fsSL --retry 3 -o sums.txt "$base/openshell-checksums-sha256.txt"
+        grep " ${asset}\$" sums.txt | sha256sum -c -
+        tar -xzf "$asset" openshell
+        install -m 0755 openshell /usr/local/bin/openshell
+        rm -rf "$tmp"
+      args: { executable: /bin/bash }
+      when: _cli_version.stdout != (openshell_cli_version | regex_replace('^v', ''))
+      changed_when: true
+
+    - name: Register the gateway for root (mTLS operator)
+      ansible.builtin.command: "{{ playbook_dir }}/../scripts/lab-cli-setup.sh fleet {{ gateway_nodeport }}"
+      register: _cli_setup
+      retries: 5
+      delay: 10
+      until: _cli_setup.rc == 0
+      changed_when: false
+
+    - name: Read the LiteLLM master key
+      ansible.builtin.shell: |
+        kubectl -n {{ litellm_namespace }} get secret litellm-secrets \
+          -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d
+      args: { executable: /bin/bash }
+      register: ll_key
+      no_log: true
+      changed_when: false
+
+    - name: Copy the litellm provider profile
+      ansible.builtin.copy:
+        src: litellm-profile.yaml
+        dest: /tmp/openshell-litellm-profile.yaml
+        mode: "0644"
+
+    # Platform-scoped (--global) so every workspace can create a provider of it.
+    # An update must carry the stored profile's resource_version (optimistic
+    # concurrency), so read it from `profile export` and add it to the file.
+    - name: Import (or update) the litellm provider profile
+      ansible.builtin.shell: |
+        set -euo pipefail
+        f=/tmp/openshell-litellm-profile.yaml
+        openshell profile lint -f "$f"
+        if rv="$(openshell profile export litellm --global -o yaml 2>/dev/null | awk '/^resource_version:/{print $2; exit}')" && [ -n "$rv" ]; then
+          # The CLI picks the parser from the extension: keep it .yaml.
+          { echo "resource_version: $rv"; grep -v '^resource_version:' "$f"; } > /tmp/openshell-litellm-profile.update.yaml
+          openshell profile update litellm -f /tmp/openshell-litellm-profile.update.yaml --global
+          echo "updated (was resource_version $rv)"
+        else
+          openshell profile import -f "$f" --global
+          echo "imported"
+        fi
+      args: { executable: /bin/bash }
+      register: _profile
+      changed_when: true
+
+    - name: Create (or update) the litellm provider
+      ansible.builtin.shell: |
+        set -euo pipefail
+        export LITELLM_API_KEY='{{ ll_key.stdout }}'
+        if openshell provider get litellm >/dev/null 2>&1; then
+          openshell provider update litellm --credential LITELLM_API_KEY
+        else
+          openshell provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY
+        fi
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: true
+
+    - name: Provider summary
+      ansible.builtin.debug:
+        msg:
+          - "Provider 'litellm' (profile litellm): sandboxes that attach it reach"
+          - "http://litellm.litellm.svc.cluster.local:4000/v1 with $LITELLM_API_KEY (a placeholder)."
+          - "Check: openshell provider list ; openshell profile describe litellm"

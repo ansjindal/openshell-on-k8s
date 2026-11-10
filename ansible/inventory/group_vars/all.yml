@@ -15,27 +15,15 @@
 # to it and installs an MSS clamp. If the iface is absent, the role no-ops.
 mesh_iface: ""
 
-# ---- gVisor (REQUIRED) -----------------------------------------------------
-# runsc is installed on every node and sandboxes are forced onto RuntimeClass
-# gvisor (gateway gVisor overlay + Kyverno require-gvisor rule).
-gvisor_enabled: true
-
 # ---- k3s -------------------------------------------------------------------
 # Pin the k3s/Kubernetes MINOR via a release channel (installs the latest patch of that
-# minor). Bleeding-edge minors break this stack at BOTH ends:
-#   - k8s 1.36 reproducibly fails the OpenShell supervisor's IssueSandboxToken bootstrap.
-#   - k8s 1.35.x crash-loops the control plane on fresh VMs: the cloud-controller-manager
-#     can't read the extension-apiserver-authentication configmap during RBAC bootstrap
-#     ("forbidden"), exits, and takes k3s down with it — systemd restarts it in a loop, the
-#     API only serves intermittently, and the playbook fails at whatever kubectl step the
-#     timing lands on (gVisor apply / node-Ready wait) with "connection refused".
-# v1.34 is the latest mature minor that avoids BOTH. Set k3s_version for an exact pin
-# (takes precedence over the channel); leave it empty to track the channel.
-# follow-up: re-validate 1.35/1.36 against a current OpenShell gateway before bumping —
-# both bugs above were observed against older k3s/gateway builds and may be fixed, but
-# that hasn't been re-tested here. Not attempted in the 2026-09 chart/agent-sandbox bump.
-k3s_channel: "v1.34"
+# minor). v1.37 is verified with OpenShell 0.1.7 (gateway, supervisor bootstrap,
+# image-volume supervisor sideload). Set k3s_version for an exact pin (takes
+# precedence over the channel); leave it empty to track the channel.
+k3s_channel: "v1.37"
 k3s_version: ""
+# helm used by every role (pinned release tarball, checksum-verified)
+helm_version: "v3.22.1"
 # Namespace where agent sandbox pods land — kept SEPARATE from the gateway's
 # namespace for isolation. The chart creates the sandbox ServiceAccount, Role,
 # RoleBinding and NetworkPolicy in this namespace (verified via `helm template`);
@@ -44,15 +32,10 @@ k3s_version: ""
 k3s_sandbox_namespace: openshell-sandboxes
 
 # ---- agent-sandbox controller ----------------------------------------------
-# PIN the version — do NOT track "latest". The CRD's storage version + API
-# (v1alpha1 vs v1beta1) must match what the OpenShell gateway speaks, or the
-# gateway rejects every supervisor bootstrap and sandboxes never reach Ready.
-# v1.0.0 is verified working with openshell_chart_version 0.0.116 below (CRD
-# still serves v1beta1/storage=true, unchanged since v0.5.0 through 1.0.0; both
-# bumped together 2026-09 — re-validate CRD compatibility again before the next
-# bump of either). NOTE: the release asset was renamed from manifest.yaml to
-# sandbox.yaml starting v0.5.1 (manifest.yaml 404s on newer releases).
-agent_sandbox_version: "v1.0.0"
+# PIN the version; do NOT track "latest". The OpenShell chart runs a preflight
+# that fails the install when no supported Sandbox API is served. v1.0.10 is
+# verified with openshell_chart_version 0.1.7. The release asset is sandbox.yaml.
+agent_sandbox_version: "v1.0.10"
 agent_sandbox_manifest_url: "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/{{ agent_sandbox_version }}/sandbox.yaml"
 
 # ---- cert-manager (issues the gateway's mTLS material) ---------------------
@@ -65,12 +48,13 @@ agent_sandbox_manifest_url: "https://github.com/kubernetes-sigs/agent-sandbox/re
 # being showcased here.
 cert_manager_enabled: true
 cert_manager_chart: "oci://quay.io/jetstack/charts/cert-manager"
-cert_manager_chart_version: "1.21.1"
+cert_manager_chart_version: "v1.21.3"
 cert_manager_namespace: cert-manager
 
 # ---- LiteLLM (inference backend) -------------------------------------------
 litellm_chart: "oci://ghcr.io/berriai/litellm-helm"
-litellm_chart_version: ""        # "" = chart default
+litellm_chart_version: "1.108.4"
+litellm_image_tag: "v1.108.4"     # ghcr.io/berriai/litellm, same release as the chart
 litellm_namespace: litellm
 
 # Shared default endpoint each model entry falls back to. Point this at any
@@ -101,12 +85,10 @@ litellm_extra_credentials: {}     # e.g. { OPENAI_KEY: "sk-..." }
 
 # ---- OpenShell gateway -----------------------------------------------------
 openshell_chart: "oci://ghcr.io/nvidia/openshell/helm-chart"
-# Chart version. The chart tracks the same version as the OpenShell CLI/binary
-# (not an independent semver line) — pin a real tagged release rather than the
-# floating "0.0.0-dev" build. 0.0.116 pulls matched gateway+supervisor images and
-# terminates mTLS by default (see cert-manager section above + the gateway
-# role's values.yaml for how the client side is wired).
-openshell_chart_version: "0.0.116"
+# Chart version == gateway, supervisor and sandbox-runtime image tag. The 0.1.x
+# line replaced the managed inference route (inference.local) with provider
+# profiles attached per sandbox; see roles/10-cli_providers.
+openshell_chart_version: "0.1.7"
 openshell_namespace: openshell
 # Enable OpenTelemetry trace export from the gateway/supervisor over OTLP/gRPC.
 # Only useful when monitoring_enabled (Tempo is the OTLP receiver); the gateway
@@ -116,8 +98,20 @@ openshell_otlp_enabled: "{{ monitoring_enabled }}"
 # values.yaml). The CLI/roles reach the gateway directly at 127.0.0.1:<this>,
 # so no kubectl port-forward is needed.
 gateway_nodeport: 30808
-# Model the gateway forces for inference.local (must be a litellm_models name).
+# Model agents use by default (must be a litellm_models name). Agents call
+# LiteLLM's own OpenAI-compatible API; access comes from the `litellm` provider.
 inference_model: "{{ litellm_models[0].name }}"
+# openshell CLI on the VM; keep it on the gateway's release line.
+openshell_cli_version: "v{{ openshell_chart_version }}"
+# Default workload image for `openshell sandbox create` (no --from): OpenClaw on
+# the OpenShell community base image, built from images/openclaw-sandbox.
+sandbox_image_repository: ghcr.io/ansjindal/openclaw-sandbox
+sandbox_image_tag: "2026.11.1"
+# Lab CA: cert-manager ClusterIssuer that signs in-cluster HTTPS for the public
+# host (Keycloak). The bundle ConfigMap (public roots + lab CA) is what the
+# gateway and the console trust for the OIDC issuer.
+lab_ca_issuer: lab-ca
+lab_ca_bundle_configmap: lab-ca-bundle
 
 # ---- Gateway database backend ----------------------------------------------
 # sqlite (default): bundled per-pod SQLite -> single-replica StatefulSet.
@@ -134,7 +128,7 @@ auth_mode: "{{ 'oidc' if keycloak_enabled | bool else 'unauthenticated' }}"
 # ---- Keycloak (OIDC identity provider, optional) ---------------------------
 keycloak_enabled: false
 keycloak_namespace: keycloak
-keycloak_image: "quay.io/keycloak/keycloak:26.1"
+keycloak_image: "quay.io/keycloak/keycloak:26.8.2"
 keycloak_realm: openshell
 keycloak_client_id: openshell-cli
 keycloak_admin_role: openshell-admin
@@ -158,16 +152,16 @@ keycloak_internal_issuer_url: "http://keycloak.{{ keycloak_namespace }}.svc.clus
 # ---- Optional components (chart versions current as of 2026-06) ------------
 kyverno_enabled: true
 kyverno_chart: "kyverno/kyverno"
-kyverno_chart_version: "3.8.1"
+kyverno_chart_version: "3.9.2"
 # Default OFF for a lean, fast, reliable single-VM first boot. The full stack
 # (Prometheus + Grafana + Loki + Alloy) adds real load and pulls several images.
 # Flip to true (ENABLE_MONITORING=true in .env) once the core stack is up.
 monitoring_enabled: false
-kps_chart_version: "86.2.3"
+kps_chart_version: "92.21.1"
 # Loki OSS Helm chart (single-binary). The OSS chart moved to grafana-community
 # around 6.55; grafana/loki >= 7.x is Grafana Enterprise Logs — keep 6.x for OSS.
-loki_chart_version: "6.55.0"
-alloy_chart_version: "1.10.0"
+loki_chart_version: "7.5.0"
+alloy_chart_version: "1.15.0"
 # Grafana Tempo (monolithic) — distributed tracing backend (OTLP in, Grafana datasource out).
 tempo_chart_version: "1.24.4"
 
@@ -177,7 +171,7 @@ tempo_chart_version: "1.24.4"
 # so it keeps its own GRPCRoute on a separate listener. ONLY auth-gated services
 # are exposed on the public host; Prometheus/Alertmanager/LiteLLM stay ClusterIP.
 envoy_gateway_enabled: false
-envoy_gateway_version: "1.4.6"
+envoy_gateway_version: "1.10.0"
 envoy_gateway_ns: fleet-gateway          # holds the Gateway + EnvoyProxy CRs
 envoy_web_nodeport: 30080                # HTTP path-routing listener (the public host points here)
 envoy_grpc_nodeport: 30081               # OpenShell gateway (gRPC) via Envoy
@@ -205,16 +199,22 @@ grafana_path: "/grafana"        # path under the single public host (Envoy route
 grafana_url: "{{ (keycloak_base_url ~ grafana_path) if (keycloak_base_url | length) > 0 else '' }}"
 # grafana_client_secret: set in secrets.yml
 
-# ---- OpenShell Console (web UI, optional) ----------------------------------
-# Minimal web console (github.com/ansjindal/openshell-ui): OIDC login, then
-# admin/user views of the fleet over the gateway's gRPC API via a Next.js BFF.
-# Exposed at openshell_ui_path on the single public host (Envoy route). Needs
-# keycloak_enabled + envoy_gateway_enabled.
-openshell_ui_enabled: false
-openshell_ui_path: "/console"   # path under the single public host (Envoy route + BASE_PATH)
-console_url: "{{ (keycloak_base_url ~ openshell_ui_path) if (keycloak_base_url | length) > 0 else '' }}"
-# openshell_ui_client_secret (= the openshell-ui realm client secret) and
-# openshell_ui_auth_secret (openssl rand -base64 32): set in secrets.yml
+# ---- OpenShell Console (optional) -----------------------------------------
+# The upstream admin UI, github.com/ai-openshell/console (chart
+# openshell-dashboard): workspaces, sandboxes, logs, terminal, policies and
+# providers. Users sign in with Keycloak; the gateway authorizes every call.
+# A console release supports one gateway release line: 0.1.x for gateway 0.1.x.
+# Served on its own public host (console_url) through the Envoy ingress; needs
+# keycloak_enabled + envoy_gateway_enabled. scripts/setup.sh turns it on with SSO.
+console_enabled: false
+console_version: "0.1.3"
+console_repo: "https://github.com/ai-openshell/console.git"
+# Releases up to 0.1.3 are published at quay.io/gkrumbach07/openshell-dashboard.
+console_image_registry: quay.io
+console_image_repository: gkrumbach07/openshell-dashboard
+console_url: ""                 # e.g. https://console-<brevid>.<domain>
+console_host_port: 3002         # low host port forwarded to Envoy (like envoy host port 3001)
+# console_client_secret / console_cookie_secret: set in secrets.yml (setup.sh generates them)
 
 # ---- Sandbox fleet ---------------------------------------------------------
 # fleet_size sandboxes named agent-0..N. Used by scripts/fleet (runtime ops) and
@@ -230,7 +230,5 @@ sandboxes_enabled: false       # set true (or --tags sandboxes) to create the fl
 openclaw_ui_enabled: true
 openclaw_ui_port: 30789
 openclaw_ui_agent: "agent-0"   # matches sandbox_name_prefix-0's default in 16-sandboxes
-# Password for the in-sandbox `openclaw gateway run --auth password` process (the
-# CONTROL UI's own login, unrelated to Keycloak/the console). Override via .env's
-# OPENCLAW_GATEWAY_PASSWORD for anything beyond a local demo box.
-openclaw_gateway_password: "openshell-wad26"
+# openclaw_gateway_password: the Control UI's own login (not Keycloak); set in
+# secrets.yml (scripts/setup.sh generates it).

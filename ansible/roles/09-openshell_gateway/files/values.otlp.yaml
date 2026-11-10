@@ -1,11 +1,21 @@
-# Overlay applied when openshell_otlp_enabled (monitoring_enabled) — exports
-# gateway + sandbox-supervisor traces over OTLP/gRPC straight to Tempo's
-# in-cluster Service (ansible/roles/12-monitoring installs Tempo with its OTLP
-# receiver on 4317 enabled by chart default; already wired into Grafana via
-# the tempo datasource in that role). No collector hop needed.
+# Overlay applied when openshell_otlp_enabled (monitoring_enabled).
+#   - Gateway traces over OTLP/gRPC to Tempo.
+#   - OCSF audit events (every allow/deny the sandbox supervisors decide) as
+#     OTLP log records into Loki; attributes include openshell.sandbox.id.
+#   - Agent trace relay: every sandbox process gets
+#     OTEL_EXPORTER_OTLP_ENDPOINT=http://192.0.0.8:4318 and the supervisor
+#     forwards those spans (tagged openshell.sandbox.id) to Tempo. The relay
+#     accepts application/x-protobuf only (JSON gets 415).
 server:
   otlp:
-    # Needs an explicit scheme — the gateway's tonic/OTLP gRPC exporter rejects
-    # a bare host:port with "transport error: invalid URI".
+    # Needs a scheme: a bare host:port fails with "invalid URI".
     endpoint: "http://tempo.monitoring.svc.cluster.local:4317"
     serviceName: "openshell-gateway"
+
+gatewayConfig:
+  openshell.gateway.otlp.ocsf:
+    enabled: true
+    endpoint: http://loki.monitoring.svc.cluster.local:3100/otlp
+    protocol: http/protobuf
+  openshell.gateway.otlp.agent:
+    enabled: true

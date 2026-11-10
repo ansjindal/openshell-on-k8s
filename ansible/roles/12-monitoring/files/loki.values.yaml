@@ -1,8 +1,11 @@
-# Values for the Loki Helm chart (grafana/loki), single-binary mode.
-# One StatefulSet, filesystem backend — plenty for a demo. Adapted from the
-# sibling repo (no openclaw.io/role nodeSelector). Grafana auto-discovers Loki
-# as a datasource via the kube-prometheus-stack sidecar is NOT automatic — add
-# the Loki datasource in Grafana, or it's wired by the install script.
+# Loki (grafana/loki chart 7.x, Loki 3.x), single-binary mode on the local
+# filesystem: one StatefulSet, plenty for a lab.
+#
+# Two streams land here:
+#   - every pod's logs, shipped by Alloy (labels namespace/pod/container/app);
+#     sandbox supervisors print one "OCSF ..." line per allow/deny decision;
+#   - OpenShell's OCSF audit events over OTLP (/otlp), with their attributes
+#     (openshell.sandbox.id, ocsf.class_uid, ...) kept as structured metadata.
 deploymentMode: SingleBinary
 
 loki:
@@ -13,49 +16,44 @@ loki:
     type: filesystem
   schemaConfig:
     configs:
-      - from: "2024-01-01"
+      - from: "2026-01-01"
         store: tsdb
         object_store: filesystem
         schema: v13
         index:
-          prefix: loki_index_
+          prefix: index_
           period: 24h
-  rulerConfig:
-    wal:
-      dir: /var/loki/ruler-wal
+  limits_config:
+    allow_structured_metadata: true   # OTLP attributes (sandbox id, OCSF class, ...)
+    volume_enabled: true
+    retention_period: 168h
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
+  pattern_ingester:
+    enabled: true
 
 singleBinary:
   replicas: 1
   persistence:
     enabled: true
     storageClass: local-path
-    accessModes: ["ReadWriteOnce"]
     size: 10Gi
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 1536Mi}
 
-# Disable microservices-mode components.
-chunksCache:
-  enabled: false
-resultsCache:
-  enabled: false
-backend:
-  replicas: 0
-read:
-  replicas: 0
-write:
-  replicas: 0
-gateway:
-  enabled: false
+# Single-binary only: no microservices components, caches, gateway or canary.
+read: {replicas: 0}
+write: {replicas: 0}
+backend: {replicas: 0}
+gateway: {enabled: false}
+chunksCache: {enabled: false}
+resultsCache: {enabled: false}
+lokiCanary: {enabled: false}
+test: {enabled: false}
+minio: {enabled: false}
 
-# kube-prometheus-stack already provides kube-state-metrics; just expose a
-# ServiceMonitor for Loki itself so Prometheus scrapes it.
 monitoring:
-  dashboards:
-    enabled: false
-  rules:
-    enabled: false
   serviceMonitor:
     enabled: true
-  selfMonitoring:
-    enabled: false
-    grafanaAgent:
-      installOperator: false

@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
 # fleet — scale and drive a fleet of OpenShell sandboxes via the openshell CLI.
-# The gateway turns each request into an agents.x-k8s.io Sandbox CR; inference
-# flows through the gateway's inference.local -> LiteLLM -> external API.
+# Each sandbox starts from the lab baseline policy (deny all network) with the
+# `litellm` provider attached: the agent calls LiteLLM's own API with a
+# placeholder key that the supervisor swaps for the real one.
 #
-#   fleet up [N]            create N long-lived sandboxes (default FLEET_SIZE, or 1)
+#   fleet up [N]            create N long-lived sandboxes agent-0..N-1 (default FLEET_SIZE, or 1)
 #   fleet down              delete all fleet sandboxes
-#   fleet status            openshell sandbox list + kubectl pod readiness
+#   fleet status            openshell sandbox list + the pods behind them
 #   fleet task "<prompt>" [agent-i|all]   run the agent on a prompt across the fleet (parallel)
-#   fleet logs <agent-i>    tail one sandbox pod's logs
+#   fleet logs <agent-i>    OpenShell logs for one sandbox (gateway + supervisor)
 #   fleet shell <agent-i>   open an interactive shell inside one sandbox
 #
 # Env (from .env or shell):
 #   FLEET_SIZE   default count for `up`
-#   AGENT_CMD    agent binary run inside the sandbox for tasks (default: openclaw).
-#                Must match the inference backend format — use codex/opencode for
-#                an OpenAI/LiteLLM backend, claude for an Anthropic-format backend.
-#   PROVIDER     gateway provider to attach (default: fleet)
-#   SANDBOX_NS   sandbox namespace (default: openshell; matches gateway values)
-#   KUBECONFIG   defaults to the k3s path written by this launchable.
+#   AGENT_CMD    agent binary run inside the sandbox for tasks (default: openclaw)
+#   PROVIDER     provider to attach (default: litellm)
+#   SANDBOX_NS   sandbox namespace (default: openshell-sandboxes)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -25,55 +23,24 @@ ENV_FILE="${ENV_FILE:-${HERE}/.env}"
 [ -f "${ENV_FILE}" ] && { set -a; source "${ENV_FILE}"; set +a; }
 
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+export NO_COLOR=1
 FLEET_SIZE="${FLEET_SIZE:-1}"
 AGENT_CMD="${AGENT_CMD:-openclaw}"
-PROVIDER="${PROVIDER:-fleet}"
+PROVIDER="${PROVIDER:-litellm}"
 SANDBOX_NS="${SANDBOX_NS:-openshell-sandboxes}"
-GATEWAY_NS="${GATEWAY_NS:-openshell}"
 GATEWAY_NODEPORT="${GATEWAY_NODEPORT:-30808}"
-# All CLI calls target the registered 'fleet' gateway explicitly.
+POLICY="${HERE}/manifests/policies/baseline.yaml"
 OSH=(openshell --gateway fleet)
 
 die() { echo "ERROR: $*" >&2; exit 1; }
-command -v openshell >/dev/null 2>&1 || die "openshell CLI not found — run ./scripts/setup.sh (the gateway/inference roles install it)."
+command -v openshell >/dev/null 2>&1 || die "openshell CLI not found — run ./scripts/setup.sh"
 command -v kubectl   >/dev/null 2>&1 || die "kubectl not found — is k3s installed? (run ./scripts/setup.sh)"
 
-# Register the gateway via its pinned NodePort — reachable directly on the
-# node, so no kubectl port-forward background process is needed. The gateway
-# always terminates mTLS now; ansible/roles/10-inference_routing and
-# scripts/setup.sh's configure_lab_cli already do this cert fetch + register
-# for root and the interactive lab user respectively — this is just a
-# fallback for a `fleet` invoked somewhere that hasn't run yet (a fresh SSH
-# session, a different user). `localhost`, not 127.0.0.1: the gateway's
-# default cert SANs cover the former, not the bare loopback IP.
+# The CLI talks to the gateway as the lab operator (mTLS, OU=operator). Set it
+# up for this user if that hasn't happened yet (fresh SSH session, other user).
 ensure_gateway() {
-  openshell --gateway fleet sandbox list >/dev/null 2>&1 && return 0
-  local mtls_dir="$HOME/.config/openshell/gateways/fleet/mtls"
-  mkdir -p "${mtls_dir}"
-  # `--local` (per its own --help: a LOCAL mTLS gateway running in DOCKER)
-  # unconditionally (re)provisions its own fixed dev-mode self-signed CA into
-  # gateways/fleet/mtls/ the instant it runs, clobbering anything already
-  # there — verified live: same fixed dev-CA fingerprint every time,
-  # regardless of pre-existing files. So `add` must run BEFORE the real
-  # k3s-issued certs are written, not after, or every call fails with
-  # "invalid peer certificate: UnknownIssuer". It ALSO requires the cert
-  # files to already exist as a precondition (content doesn't matter —
-  # verified live empty files satisfy it) or it errors outright with "mTLS
-  # certificates ... were not found"; touch placeholders first. Retry +
-  # verify since a from-scratch $HOME can transiently fail this a few times.
-  touch "${mtls_dir}/tls.crt" "${mtls_dir}/tls.key" "${mtls_dir}/ca.crt"
-  openshell gateway remove fleet >/dev/null 2>&1 || true
-  for _ in 1 2 3 4 5; do
-    openshell gateway add "https://localhost:${GATEWAY_NODEPORT}" --local --name fleet >/dev/null 2>&1
-    openshell gateway list 2>/dev/null | grep -q fleet && break
-    sleep 3
-  done
-  kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.tls\.crt}' 2>/dev/null | base64 -d > "${mtls_dir}/tls.crt"
-  kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.tls\.key}' 2>/dev/null | base64 -d > "${mtls_dir}/tls.key"
-  local ca; ca="$(kubectl -n "${GATEWAY_NS}" get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"
-  [ -n "${ca}" ] || ca="$(kubectl -n "${GATEWAY_NS}" get secret openshell-server-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null)"
-  echo "${ca}" | base64 -d > "${mtls_dir}/ca.crt"
-  chmod 600 "${mtls_dir}/tls.key"
+  "${OSH[@]}" status >/dev/null 2>&1 && "${OSH[@]}" sandbox list >/dev/null 2>&1 && return 0
+  "${HERE}/scripts/lab-cli-setup.sh" fleet "${GATEWAY_NODEPORT}" >/dev/null
 }
 
 cmd_up() {
@@ -84,19 +51,13 @@ cmd_up() {
   local existing; existing="$("${OSH[@]}" sandbox list 2>/dev/null | awk 'NR>1{print $1}')"
   for i in $(seq 0 $((n - 1))); do
     if echo "${existing}" | grep -qx "agent-${i}"; then echo "  agent-${i} (already exists)"; continue; fi
-    # --no-tty: create + detach instead of attaching an interactive shell
-    # (default). The initial command must actually keep running: newer
-    # supervisors (0.0.111+, "canonical main process for sandboxes") end the
-    # pod's main container as soon as its command exits — `true` used to
-    # leave the pod persisting anyway, it no longer does (this exact class of
-    # bug was already fixed in ansible/roles/16-sandboxes, which creates the
-    # *initial* fleet at provisioning time — this is the separate runtime
-    # `fleet up` path, missed until caught live: agent-1/agent-2 created via
-    # `fleet up 3` sat in phase Error, pod status Completed).
-    # `sleep infinity` keeps the pod alive to exec/attach into afterward.
-    timeout 90 "${OSH[@]}" sandbox create --name "agent-${i}" --provider "${PROVIDER}" --no-tty -- sleep infinity >/dev/null 2>&1 \
+    # --detach: create and return. `sleep infinity` is the sandbox's main
+    # process; when it exits the sandbox ends, so it must keep running.
+    timeout 300 "${OSH[@]}" sandbox create --name "agent-${i}" --provider "${PROVIDER}" \
+        --policy "${POLICY}" --memory 3Gi --env LITELLM_MODEL=default \
+        --no-tty --detach -- sleep infinity </dev/null >/dev/null 2>&1 \
       && echo "  created agent-${i}" \
-      || echo "  created agent-${i} (attach skipped — check 'fleet status')"
+      || echo "  agent-${i}: create failed — check 'openshell logs agent-${i}'"
   done
   echo ""
   cmd_status
@@ -115,15 +76,12 @@ cmd_status() {
   echo "== openshell sandboxes =="
   "${OSH[@]}" sandbox list 2>/dev/null || echo "(CLI unavailable)"
   echo ""
-  echo "== Sandbox CRs + pods (${SANDBOX_NS}) =="
-  kubectl -n "${SANDBOX_NS}" get sandboxes 2>/dev/null || echo "(none)"
-  kubectl -n "${SANDBOX_NS}" get pods \
-    -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[0].ready,PHASE:.status.phase,NODE:.spec.nodeName' \
-    2>/dev/null || true
+  echo "== Kubernetes (${SANDBOX_NS}): one workload pod + one supervisor pod per sandbox =="
+  kubectl -n "${SANDBOX_NS}" get sandboxes.agents.x-k8s.io 2>/dev/null || echo "(none)"
+  kubectl -n "${SANDBOX_NS}" get pods -o wide 2>/dev/null || true
   local total ready
-  total="$(kubectl -n "${SANDBOX_NS}" get pods --no-headers 2>/dev/null | wc -l | tr -d ' ')"
-  ready="$(kubectl -n "${SANDBOX_NS}" get pods \
-    -o jsonpath='{range .items[*]}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null | grep -c true || true)"
+  total="$("${OSH[@]}" sandbox list 2>/dev/null | awk 'NR>1' | wc -l | tr -d ' ')"
+  ready="$("${OSH[@]}" sandbox list 2>/dev/null | awk 'NR>1 && $NF=="Ready"' | wc -l | tr -d ' ')"
   echo ""
   echo "Fleet ready: ${ready:-0}/${total:-0}"
 }
@@ -141,15 +99,12 @@ cmd_task() {
   fi
   [ "${#agents[@]}" -gt 0 ] || die "no agents — run 'fleet up' first"
 
-  # openclaw's one-shot invocation is `agent --agent main --message <text>`
-  # (it routes through openclaw's own Gateway for inference by default — no
-  # --local, no API keys needed in the sandbox shell; `main` is the default
-  # agent id every openclaw workspace ships with — confirm with
-  # `sandbox exec -- openclaw agents list`). claude/codex/opencode all use the
-  # more common `-p "<prompt>"` print-mode convention instead.
+  # OpenClaw one-shot: `agent --local --agent main --message <text>` runs the
+  # embedded agent in this process (no OpenClaw Gateway) against LiteLLM.
+  # Other agents use the common `-p "<prompt>"` print mode.
   local -a agent_argv
   if [ "${AGENT_CMD}" = "openclaw" ]; then
-    agent_argv=("${AGENT_CMD}" agent --agent main --message "${prompt}")
+    agent_argv=("${AGENT_CMD}" agent --local --agent main --message "${prompt}")
   else
     agent_argv=("${AGENT_CMD}" -p "${prompt}")
   fi
@@ -177,10 +132,10 @@ cmd_shell() {
 
 cmd_logs() {
   local a="${1:-}"; [ -n "${a}" ] || die "usage: fleet logs <agent-i>"
-  local pod
-  pod="$(kubectl -n "${SANDBOX_NS}" get pods -o name 2>/dev/null | grep "${a}" | head -1)"
-  [ -n "${pod}" ] || die "no pod matching ${a} in ${SANDBOX_NS}"
-  kubectl -n "${SANDBOX_NS}" logs "${pod}" --tail=200 -f
+  ensure_gateway
+  # Gateway + supervisor logs for the sandbox, including the OCSF lines for
+  # every network decision the supervisor made.
+  "${OSH[@]}" logs "${a}" -n 200 --tail
 }
 
 case "${1:-}" in

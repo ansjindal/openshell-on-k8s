@@ -13,6 +13,15 @@ spec:
     - name: http
       port: 8080
       targetPort: 8080
+{% if keycloak_base_url | length > 0 %}
+    # In-cluster HTTPS for the PUBLIC host name: CoreDNS rewrites that host to
+    # this Service, so the gateway and the console's auth proxy reach the
+    # issuer (https://<public host>/auth/realms/...) without leaving the cluster.
+    # Certificate keycloak-public-tls comes from the lab CA.
+    - name: https
+      port: 443
+      targetPort: 8443
+{% endif %}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -53,20 +62,33 @@ spec:
             - name: KC_HTTP_RELATIVE_PATH
               value: "{{ keycloak_relative_path }}"
 {% endif %}
+{% if keycloak_base_url | length > 0 %}
+            - name: KC_HTTPS_CERTIFICATE_FILE
+              value: /etc/keycloak-tls/tls.crt
+            - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+              value: /etc/keycloak-tls/tls.key
+{% endif %}
             - name: KC_PROXY_HEADERS
               value: "xforwarded"
             - name: KC_HEALTH_ENABLED
               value: "true"
           ports:
             - { name: http, containerPort: 8080 }
+            - { name: https, containerPort: 8443 }
             - { name: mgmt, containerPort: 9000 }
           volumeMounts:
             - name: realm-import
               mountPath: /opt/keycloak/data/import
               readOnly: true
+{% if keycloak_base_url | length > 0 %}
+            - name: tls
+              mountPath: /etc/keycloak-tls
+              readOnly: true
+{% endif %}
           readinessProbe:
             # KC_HTTP_RELATIVE_PATH also shifts the management health endpoint.
-            httpGet: { path: "{{ (keycloak_relative_path ~ '/health/ready') if (keycloak_base_url | length > 0) else '/health/ready' }}", port: 9000 }
+            # With HTTPS configured, Keycloak serves the management port over HTTPS too.
+            httpGet: { path: "{{ (keycloak_relative_path ~ '/health/ready') if (keycloak_base_url | length > 0) else '/health/ready' }}", port: 9000, scheme: {{ 'HTTPS' if (keycloak_base_url | length > 0) else 'HTTP' }} }
             initialDelaySeconds: 20
             periodSeconds: 10
             failureThreshold: 30
@@ -77,3 +99,8 @@ spec:
         - name: realm-import
           configMap:
             name: keycloak-realm
+{% if keycloak_base_url | length > 0 %}
+        - name: tls
+          secret:
+            secretName: keycloak-public-tls
+{% endif %}

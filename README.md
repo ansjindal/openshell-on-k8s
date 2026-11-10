@@ -1,132 +1,136 @@
 # OpenShell on Kubernetes — a Brev Launchable
 
-Stand up **[NVIDIA OpenShell](https://docs.nvidia.com/openshell/)** on a real Kubernetes
-cluster and run an **agent** (OpenClaw by default) inside an isolated, policy-controlled
-sandbox — on a **single VM**, with **one command**.
+Stand up **[NVIDIA OpenShell](https://docs.nvidia.com/openshell/) 0.1** on a real Kubernetes
+cluster and run **agents** (OpenClaw by default) inside isolated, policy-controlled sandboxes —
+on a **single VM**, with **one command**.
 
-It's a teaching launchable: learn, hands-on, what it takes to run agents on Kubernetes the
-OpenShell way — a control-plane gateway, sandboxes as native pods, **gVisor** kernel
-isolation, and an inference path where **the agent never holds the API key**. It ships a
-**teaching website** (lessons + a live in-browser terminal + an embedded **OpenShell
-Console**), optional **single sign-on** (Keycloak) and **observability** (Prometheus +
-Grafana + Loki + Alloy + Tempo), all reachable through **one public URL**.
+It's a teaching launchable. You get the platform (k3s, the OpenShell gateway, Keycloak sign-in,
+the [OpenShell Console](https://github.com/ai-openshell/console), LiteLLM, Prometheus, Grafana,
+Loki and Tempo) and, separately, a **training site** with lessons and a live in-browser terminal
+that walks you through it: sandboxes, deny-by-default network policy, credentials the agent never
+sees, the audit trail, users and workspaces, and a multi-agent SRE capstone.
 
-> Plain upstream Kubernetes (**k3s**) — no nesting, no MicroShift, no `oc`. The repeatable
-> infra is Ansible, on a single node.
+![One VM: Envoy routes the training site, Keycloak, Grafana and the OpenShell Console; the OpenShell gateway creates a workload pod and a supervisor pod per sandbox; agents reach LiteLLM through their supervisor, which injects the key; OCSF audit events go to Loki and agent traces to Tempo.](docs/architecture.svg)
 
-## Architecture
+**A sandbox is two pods.** The workload pod runs the agent as an unprivileged user under
+Landlock and seccomp and has no network of its own. The supervisor pod owns its network:
+deny by default, allow per host, port and binary, and per HTTP method and path. It injects
+provider credentials on allowed requests only and writes an OCSF audit event for every decision.
 
-![OpenShell-on-Kubernetes architecture: a browser reaches one public host (Envoy ingress :3001) fronting the teaching site/console, Grafana, and Keycloak SSO; the gateway in the openshell namespace writes a Sandbox CR that the agent-sandbox controller reconciles into a gVisor-isolated OpenClaw agent pod in openshell-sandboxes (Kyverno enforces gVisor); the agent calls https://inference.local, and the in-pod supervisor proxy injects the key and forwards to LiteLLM then the upstream model API.](docs/architecture.png)
+![What a sandbox is: the workload pod and the supervisor pod, the policy layers, and what is allowed or denied.](docs/sandbox-anatomy.svg)
 
-<!-- Source for the diagram above: docs/architecture.mmd (Mermaid). Re-render with:
-     npx -y @mermaid-js/mermaid-cli -i docs/architecture.mmd -o docs/architecture.png -t neutral -b white --scale 3
-     Committed as a PNG because the Brev Launchable README viewer does not render Mermaid. -->
-**Architecture** — one public host (Envoy ingress on `:3001`) fronts the site/console, Grafana, and Keycloak; the gateway writes a Sandbox CR, the controller reconciles a gVisor-isolated agent pod, and the agent's `https://inference.local` is proxied (key injected) to LiteLLM → your model API.
+**The agent never holds the key.** Models come from the `litellm` **provider**: the sandbox sees
+`LITELLM_API_KEY=openshell:resolve:env:…`, and the supervisor swaps in the real key only on the
+calls the provider's profile allows (`POST /v1/chat/completions`, …). LiteLLM's admin API is
+refused with `403 policy_denied`.
 
-**Credential isolation:** agent code calls `https://inference.local`; the in-pod supervisor
-proxy holds the gateway-provided key and forwards to LiteLLM → your model API. A compromised
-agent never sees `OPENSHELL_API_KEY`. **Namespace isolation:** the gateway runs in `openshell`,
-agent pods in `openshell-sandboxes`. **Kernel isolation:** every sandbox pod runs under the
-`gvisor` RuntimeClass, enforced at admission by Kyverno.
+![The key the agent never sees: placeholder in the sandbox, policy check and key injection in the supervisor, LiteLLM and the model upstream; a denied admin call is logged.](docs/credential-flow.svg)
 
 ## Quick start (on the VM)
 
 ```bash
 cp .env.example .env
-$EDITOR .env            # set OPENSHELL_API_KEY (build.nvidia.com, OpenAI, vLLM/NIM…)
-./scripts/setup.sh      # installs Ansible, brings up the whole stack (~10-20 min first boot)
+$EDITOR .env            # OPENSHELL_API_KEY (+ OPENSHELL_BASE_URL / OPENSHELL_MODEL if not build.nvidia.com)
+./scripts/setup.sh      # installs Ansible and brings up everything (~20-25 min on first boot)
 ```
 
-`setup.sh` installs Ansible, writes a localhost inventory + a secrets file from `.env`, runs
-the playbook, builds & serves the teaching site, and — when SSO is on — publishes everything
-through Envoy on a single port. It's **idempotent**: re-run after editing `.env`, or target one
-layer with `ANSIBLE_TAGS=gateway ./scripts/setup.sh`.
+`setup.sh` installs Ansible, writes a localhost inventory and a secrets file from `.env`, runs
+the playbook, then builds and serves the training site. It is **idempotent**: re-run it after
+editing `.env`, or run one layer with `ANSIBLE_TAGS=gateway ./scripts/setup.sh`.
 
 ### Reach it
 
-When SSO is enabled (default), **expose only port `3001`** on your platform and everything
-lives under one host (auto-derived on Brev/launchpad as `https://<prefix>-<brevid>.<domain>`).
-`3001` is a **low host port** the launchpad edge will forward — a socat forwarder bridges it to
-the in-cluster Envoy ingress (pointing a public URL straight at the high NodePort `30080`
-returns an edge 503, since launchpad only forwards low ports):
+With sign-in on (`ENABLE_SSO=true`, the default) create two Brev **Secure Links**, named so the
+URLs match what `setup.sh` derives (`https://<name>-<brevid>.<BREV_URL_DOMAIN>`):
 
-| Path | What | Auth |
-|------|------|------|
-| `/` | Teaching site — lessons + live terminal | launchpad/public |
-| `/console` | **OpenShell Console** — fleet & sandbox management | open (set `ENABLE_CONSOLE_SSO=true` for Keycloak) |
-| `/grafana` | Dashboards & metrics | Keycloak |
-| `/auth` | Keycloak (realm `openshell`) | — |
+| Link name | Host port | What |
+|---|---|---|
+| `openshell` | `3001` | training site `/` · Keycloak `/auth` · Grafana `/grafana` |
+| `console` | `3002` | the OpenShell Console |
+| `openclaw` | `30789` | optional: OpenClaw's own Control UI (agent-0) |
 
-Optionally, expose one more port to reach **OpenClaw's own web UI** (chat, device pairing) — it
-runs inside the sandbox's sealed network namespace so it can't be path-routed through Envoy like
-the rest; set `ENABLE_OPENCLAW_UI=true` and expose `OPENCLAW_UI_PORT` (default `30789`).
+Sign in as **`demo`** (platform admin) or **`learner`** (user); the passwords are generated into
+`.sso-secrets.env` on the VM (`grep KC_ .sso-secrets.env`). Details: [brev/launchable.md](brev/launchable.md).
 
-Or drive it straight from the VM:
+Or drive it from the VM; the `openshell` CLI is already set up as the lab operator:
 
 ```bash
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-kubectl -n openshell get pods            # gateway, LiteLLM
-kubectl -n openshell-sandboxes get pods  # agent sandboxes
-
-./scripts/fleet status                                       # sandboxes + readiness
+openshell status
+openshell sandbox list
 ./scripts/fleet task "Write a haiku about Kubernetes pods" all
-./scripts/fleet shell agent-0
 ```
 
 ## What it deploys
 
-| Component | Namespace | Notes |
-|---|---|---|
-| **k3s** | — | single-node Kubernetes, tracks `v1.34` (the latest mature minor at time of writing) |
-| **gVisor** (`runsc`) | — | RuntimeClass every sandbox pod runs under |
-| **agent-sandbox controller** | `agent-sandbox-system` | pinned `v1.0.0`; reconciles `Sandbox` CRs → pods |
-| **LiteLLM** | `litellm` | one OpenAI-compatible endpoint in front of the model |
-| **OpenShell gateway** | `openshell` | control plane: creates sandboxes, routes `inference.local` |
-| **OpenClaw sandboxes** | `openshell-sandboxes` | the agents, as native gVisor pods |
-| **Kyverno** | `kyverno` | guardrails — `require-gvisor` + sandbox policies |
-| **Monitoring** | `monitoring` | Prometheus + Grafana + Loki + Alloy + Tempo *(toggle)* |
-| **Keycloak + Envoy** | `keycloak` / `envoy-gateway-system` | SSO + single-host path-routed ingress *(toggle)* |
-| **Teaching site + Console** | host (systemd) | Next.js: lessons, live terminal, `/console` |
+| Component | Namespace | Version | Notes |
+|---|---|---|---|
+| **k3s** | — | v1.37 channel | single-node Kubernetes |
+| **agent-sandbox controller** | `agent-sandbox-system` | v1.0.10 | reconciles `Sandbox` CRs into workload pods |
+| **OpenShell gateway** | `openshell` | 0.1.7 | StatefulSet + SQLite; OIDC (Keycloak) for people, mTLS `OU=operator` for the VM's CLI; NodePort 30808 |
+| **Sandboxes** | `openshell-sandboxes` | 0.1.7 | workload pod + supervisor pod each; default image `ghcr.io/ansjindal/openclaw-sandbox` (OpenClaw 2026.11.1) |
+| **OpenShell Console** | `openshell` | 0.1.3 | [ai-openshell/console](https://github.com/ai-openshell/console) behind oauth2-proxy |
+| **LiteLLM** | `litellm` | 1.108.4 | OpenAI-compatible endpoint in front of your model; alias `default` |
+| **Keycloak** | `keycloak` | 26.8.2 | realm `openshell`; users `demo` (admin) and `learner` (user) |
+| **cert-manager** | `cert-manager` | v1.21.3 | gateway TLS, the operator certificate, the lab CA |
+| **Envoy Gateway** | `envoy-gateway-system` | v1.10.0 | Gateway API ingress for the public hosts |
+| **Monitoring** | `monitoring` | kps 92.21.1 · Loki 7.5.0 · Tempo 1.24.4 · Alloy 1.15.0 | metrics, logs, OCSF audit events, agent traces *(toggle)* |
+| **Kyverno** | `kyverno` | 3.9.2 | guardrails on sandbox pods *(toggle)* |
+| **Skill registry** | `openshell` | Verdaccio | the governed source of agent skills |
+| **Training site** | host (systemd) | — | `training/`: Next.js lessons + live terminal *(toggle)* |
+
+## What changed in OpenShell 0.1 (and in this lab)
+
+- **No managed inference route.** `inference.local` and `openshell inference` are gone. Models are
+  a provider attached to each sandbox (`--provider litellm`); see the *Models Through a Provider*
+  and *Your Own Provider* lessons.
+- **No gVisor.** The 0.1 sandbox runtime requires Landlock ABI v3 and seccomp notifications in
+  the workload, which gVisor does not implement. Isolation now comes from the two-pod design,
+  Landlock, seccomp and the supervisor's network policy.
+- **Sign-in everywhere.** The gateway accepts no anonymous calls; the console and Grafana use
+  Keycloak, the lab CLI an operator certificate.
+- **Resource admission.** Cluster resources a sandbox wants to use (RuntimeClass, volumes) need the
+  operator label `openshell.ai/sandbox-attachable=true`.
+- **Audit and traces built in.** Supervisors log an OCSF event per decision (shipped to Loki) and
+  relay agent spans to Tempo.
 
 ## Configuration
 
 Everything is driven by `.env` (see [.env.example](.env.example)):
 
-- `OPENSHELL_API_KEY` / `OPENSHELL_BASE_URL` / `OPENSHELL_MODEL` — the inference backend.
-- `ENABLE_GVISOR`, `ENABLE_KYVERNO`, `ENABLE_MONITORING` — stack toggles.
-- `ENABLE_SSO` — Keycloak + apiserver-OIDC + Envoy ingress + Grafana SSO under one host. The console itself stays open (no login) unless `ENABLE_CONSOLE_SSO=true`.
-- `PUBLIC_BASE_URL` / `BREV_URL_PREFIX` / `BREV_URL_DOMAIN` — the public host (auto-derived per instance when empty).
-- `CREATE_FLEET`, `FLEET_SIZE`, `AGENT_CMD` — the initial agent fleet.
-- `ENABLE_OPENCLAW_UI`, `OPENCLAW_UI_PORT` — forward OpenClaw's own web UI to a host port (optional).
-
-Running **other agents** instead of OpenClaw: the gateway's `sandboxImage` and the `AGENT_CMD`
-your tasks invoke are both configurable. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- `OPENSHELL_API_KEY` / `OPENSHELL_BASE_URL` / `OPENSHELL_MODEL`: the upstream model.
+- `ENABLE_SSO`: Keycloak, Envoy ingress, Grafana SSO and the console. `ENABLE_MONITORING`, `ENABLE_KYVERNO`: toggles.
+- `BREV_URL_DOMAIN` (or `PUBLIC_BASE_URL` + `CONSOLE_URL`): the public hosts.
+- `CREATE_FLEET`, `FLEET_SIZE`, `AGENT_CMD`: the initial agent fleet.
+- `ENABLE_TRAINING`: the training site (set `false` for the platform only).
+- `ENABLE_OPENCLAW_UI`: OpenClaw's Control UI on a host port.
 
 ## Layout
 
 ```
-scripts/setup.sh         # entrypoint — single-VM bring-up (+ Envoy real-socket forwarder)
-scripts/fleet            # runtime ops: up / down / status / task / shell / logs
-.env.example             # config (model, key, toggles) — copy to .env
-brev/launchable.md       # Brev wizard field-by-field mapping
-ansible/                 # the repeatable infra (16 roles; single-node by default)
-  site.yml               #   ordered plays
-  inventory/group_vars/all.yml   # public defaults (charts, versions, toggles)
-  roles/                 #   01-gvisor … 16-sandboxes
-web/                     # teaching website (Next.js + xterm.js + embedded console)
-docs/ARCHITECTURE.md     # the flow, the security model, the teaching points
+scripts/setup.sh          # entrypoint: single-VM bring-up
+scripts/fleet             # runtime ops: up / down / status / task / shell / logs
+scripts/fleet.sh          # Part III capstone: the SRE copilot fleet from a spec (fleet.txt)
+scripts/lab-cli-setup.sh  # point a user's openshell CLI at the gateway as the lab operator
+ansible/                  # the platform (roles 02-18; single node by default)
+manifests/                # policies, the demo apps, the echo API, OpenClaw roles and skills
+images/openclaw-sandbox/  # the default sandbox image (OpenClaw on the OpenShell community base)
+training/                 # the training site: lessons (src/content/*.mdx) + live terminal
+docs/                     # architecture, diagrams (SVG)
+brev/                     # Brev Launchable wizard mapping + setup wrapper
 ```
 
 ## Multi-node
 
-The same Ansible drives a real multi-node cluster from a workstation over SSH — fill in
+The same Ansible drives a multi-node cluster from a workstation over SSH: fill in
 `ansible/inventory/hosts.ini`, set `mesh_iface` if your nodes use a mesh NIC, and run the
 playbook directly. See [ansible/README.md](ansible/README.md).
 
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE). Built on
-[NVIDIA OpenShell](https://docs.nvidia.com/openshell/),
+[NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell),
+[OpenShell Console](https://github.com/ai-openshell/console),
 [kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox),
-[LiteLLM](https://github.com/BerriAI/litellm), [k3s](https://k3s.io), gVisor, Kyverno,
-Keycloak, and Envoy Gateway.
+[LiteLLM](https://github.com/BerriAI/litellm), [k3s](https://k3s.io), Keycloak, Envoy Gateway,
+cert-manager, Kyverno and the Grafana stack.

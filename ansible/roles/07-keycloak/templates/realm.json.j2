@@ -64,19 +64,22 @@
       ]
     },
     {
-      "clientId": "openshell-ui",
+      "clientId": "openshell-dashboard",
       "name": "OpenShell Console",
       "enabled": true,
       "publicClient": false,
-      "secret": "{{ openshell_ui_client_secret | default('openshell-ui-secret-changeme') }}",
+      "secret": "{{ console_client_secret | default('console-secret-changeme') }}",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": [{{ ('"' ~ console_url ~ '/*"') if (console_url | default('') | length) > 0 else '"*"' }}],
+      "redirectUris": [{{ ('"' ~ console_url ~ '/oauth2/callback"') if (console_url | default('') | length) > 0 else '"*"' }}],
       "webOrigins": ["+"],
-      "attributes": { "pkce.code.challenge.method": "S256" },
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "{{ (console_url ~ '/*') if (console_url | default('') | length) > 0 else '+' }}"
+      },
       "protocolMappers": [
         {
-          "name": "openshell-cli-audience",
+          "name": "gateway-audience",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
@@ -84,20 +87,6 @@
             "included.client.audience": "{{ keycloak_client_id }}",
             "id.token.claim": "false",
             "access.token.claim": "true"
-          }
-        },
-        {
-          "name": "realm-roles-to-groups",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-realm-role-mapper",
-          "consentRequired": false,
-          "config": {
-            "claim.name": "groups",
-            "jsonType.label": "String",
-            "multivalued": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "userinfo.token.claim": "true"
           }
         }
       ]
@@ -142,6 +131,19 @@
         { "type": "password", "value": "{{ keycloak_demo_password | default('changeme') }}", "temporary": false }
       ],
       "realmRoles": ["{{ keycloak_admin_role }}"]
+    },
+    {
+      "username": "{{ keycloak_learner_user | default('learner') }}",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "{{ keycloak_learner_user | default('learner') }}@example.com",
+      "firstName": "Lab",
+      "lastName": "Learner",
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "{{ keycloak_learner_password | default(keycloak_demo_password) | default('changeme') }}", "temporary": false }
+      ],
+      "realmRoles": ["{{ keycloak_user_role }}"]
     }
   ]
 }

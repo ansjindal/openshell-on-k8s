@@ -1,26 +1,57 @@
-# Custom OpenClaw sandbox image = the community sandbox image + a newer OpenClaw.
+# OpenClaw sandbox image for OpenShell 0.1.x: the OpenShell community base image
+# plus a pinned OpenClaw, wired to the lab's LiteLLM model gateway.
 #
-# Why: the community base image ships whatever OpenClaw was current when it was built,
-# which can lag the npm release — pinning our own tag lets us track a specific, tested
-# OpenClaw version independent of the base image's release cadence. Verified live
-# (2026-09): the community :latest base was still on OpenClaw 2026.3.11 / Node 22.22.1.
+#   - Base: openshell-community/sandboxes/base, pinned by digest (runs as `sandbox`).
+#   - OpenClaw needs Node >= 24.16; the base ships Node 22, so a checksum-verified
+#     Node 24 goes under /usr/local/lib/openclaw and only OpenClaw uses it.
+#   - /etc/openshell/policy.yaml: the base image's copy is not valid for 0.1.x,
+#     so it is replaced with the lab baseline (deny all network; model access
+#     comes from the `litellm` provider attached to the sandbox).
 #
-# OpenClaw >=2026.8.x requires Node >=22.22.3 — newer than the base image's Node, so this
-# also bumps Node itself (via `n`) before installing OpenClaw.
-#
-# Build + publish via .github/workflows/build-openclaw-sandbox.yml (pushes to
-# ghcr.io/<owner>/openclaw-sandbox:<version>), then pin openshell_sandbox_image /
-# ansible/roles/09-openshell_gateway/files/values.yaml's sandboxImage to it.
-ARG BASE=ghcr.io/nvidia/openshell-community/sandboxes/openclaw:latest
-FROM ${BASE}
+# Built and published by .github/workflows/build-openclaw-sandbox.yml as
+# ghcr.io/<owner>/openclaw-sandbox:<OPENCLAW_VERSION>; the gateway's default
+# sandbox image (sandbox_image_tag in ansible/inventory/group_vars/all.yml) pins it.
+FROM ghcr.io/nvidia/openshell-community/sandboxes/base:fffb6b2@sha256:aeef1c63f00e2913ea002ccb3aaf925f338b5c5d70e63576f0d95c16a138044e
 
-ARG OPENCLAW_VERSION=2026.8.2
-ARG NODE_VERSION=22.22.3
+ARG OPENCLAW_VERSION=2026.11.1
+ARG NODE_VERSION=24.22.2
+ARG NODE_SHA256=48cc0e21e048790e54c0cf5749c2725005313d652651c40b7a21feb9697aaf75
 
 USER root
-RUN npm install -g n \
- && n "${NODE_VERSION}" \
- && hash -r \
- && npm install -g "openclaw@${OPENCLAW_VERSION}" \
- && node --version \
- && openclaw --version
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Everything under /usr/local (readable under the baseline Landlock policy).
+RUN set -eux; \
+    curl -fsSL --retry 3 -o /tmp/node.tar.xz \
+      "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"; \
+    echo "${NODE_SHA256}  /tmp/node.tar.xz" | sha256sum -c -; \
+    mkdir -p /usr/local/lib/openclaw/node; \
+    tar -xJf /tmp/node.tar.xz -C /usr/local/lib/openclaw/node --strip-components=1 \
+      --exclude='*/include' --exclude='*/share' --exclude='*/lib/node_modules/corepack'; \
+    rm /tmp/node.tar.xz; \
+    PATH=/usr/local/lib/openclaw/node/bin:$PATH \
+      npm install --global --prefix /usr/local/lib/openclaw \
+        --cache /tmp/npm-cache --no-audit --no-fund --omit=dev \
+        "openclaw@${OPENCLAW_VERSION}"; \
+    rm -rf /tmp/npm-cache /root/.npm; \
+    test "$(/usr/local/lib/openclaw/node/bin/node -p "require('/usr/local/lib/openclaw/lib/node_modules/openclaw/package.json').version")" = "${OPENCLAW_VERSION}"
+
+RUN install -d -m 0755 /etc/openclaw
+COPY --chmod=0755 openclaw /usr/local/bin/openclaw
+COPY --chmod=0644 openclaw.json /etc/openclaw/openclaw.json
+COPY --chmod=0644 policy.yaml /etc/openshell/policy.yaml
+
+# /var/tmp is not writable under the baseline Landlock policy (only /sandbox, /tmp).
+ENV TMPDIR=/tmp \
+    SQLITE_TMPDIR=/tmp \
+    LITELLM_BASE_URL=http://litellm.litellm.svc.cluster.local:4000/v1 \
+    OPENCLAW_STATE_DIR=/sandbox/.openclaw \
+    OPENCLAW_CONFIG_PATH=/sandbox/.openclaw/openclaw.json
+
+LABEL org.opencontainers.image.title="openclaw-sandbox" \
+      org.opencontainers.image.description="OpenClaw ${OPENCLAW_VERSION} for OpenShell 0.1.x sandboxes, models via LiteLLM" \
+      org.opencontainers.image.version="${OPENCLAW_VERSION}" \
+      org.opencontainers.image.source="https://github.com/ansjindal/openshell-on-k8s"
+
+USER sandbox
+WORKDIR /sandbox

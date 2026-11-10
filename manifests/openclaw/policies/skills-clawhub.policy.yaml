@@ -14,8 +14,8 @@ network_policies:
   in-cluster-registry:
     name: in-cluster-registry
     endpoints:
-      - { host: registry.openshell.svc.cluster.local, port: 4873, access: full, protocol: rest, allow_encoded_slash: true }
-    binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node } ]
+      - { host: registry.openshell.svc.cluster.local, port: 4873, access: full, protocol: rest, enforcement: enforce, allow_encoded_slash: true }
+    binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node }, { path: /usr/local/lib/openclaw/node/bin/node } ]
   clawhub:
     name: clawhub
     # Scoped package names (@org/name, e.g. @openclaw/duckduckgo-plugin) resolve
@@ -26,9 +26,9 @@ network_policies:
     # policy_denied — misleading). Unscoped packages (no @org/) work fine either
     # way, which is what made this easy to miss initially.
     endpoints:
-      - { host: clawhub.ai, port: 443, access: full, protocol: rest, allow_encoded_slash: true }        # ClawHub registry
-      - { host: hub.openclaw.ai, port: 443, access: full, protocol: rest, allow_encoded_slash: true }   # …its package CDN
-    binaries: [ { path: /usr/bin/node }, { path: /usr/local/bin/node } ]
+      - { host: clawhub.ai, port: 443, access: full, protocol: rest, enforcement: enforce, allow_encoded_slash: true }        # ClawHub registry
+      - { host: hub.openclaw.ai, port: 443, access: full, protocol: rest, enforcement: enforce, allow_encoded_slash: true }   # …its package CDN
+    binaries: [ { path: /usr/bin/node }, { path: /usr/local/bin/node }, { path: /usr/local/lib/openclaw/node/bin/node } ]
   npm-registry:
     name: npm-registry
     # A ClawHub plugin's own deps install DIRECTLY from public npm (not via Verdaccio), and a
@@ -36,5 +36,5 @@ network_policies:
     # exactly like the in-cluster one, needs protocol: rest + allow_encoded_slash: true (which
     # is why it's in the policy YAML and not an `--add-endpoint`).
     endpoints:
-      - { host: registry.npmjs.org, port: 443, access: full, protocol: rest, allow_encoded_slash: true }
-    binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node } ]
+      - { host: registry.npmjs.org, port: 443, access: full, protocol: rest, enforcement: enforce, allow_encoded_slash: true }
+    binaries: [ { path: /usr/bin/npm }, { path: /usr/local/bin/npm }, { path: /usr/bin/node }, { path: /usr/local/bin/node }, { path: /usr/local/lib/openclaw/node/bin/node } ]

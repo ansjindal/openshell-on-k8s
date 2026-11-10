@@ -1,0 +1,92 @@
+So far you've been the **operator**: this shell's client certificate makes you a platform admin. Real people sign in with **Keycloak**, and what they can do comes from two things: their **role** in the token, and the **workspaces** they're members of.
+
+## Two people, two roles
+
+The realm `openshell` has two users. Their passwords were generated at provisioning:
+
+```bash
+grep -E 'KC_(DEMO|LEARNER)_PASSWORD' .sso-secrets.env
+```
+
+| User | Keycloak realm role | In OpenShell |
+|---|---|---|
+| `demo` | `openshell-admin` | **Platform admin**: every workspace, gateway settings, the global policy |
+| `learner` | `openshell-user` | **Standard user**: only the workspaces they're a member of |
+
+The gateway reads the roles from the token's `realm_access.roles` claim.
+
+## 1 · Sign in as `learner`
+
+Open the **OpenShell Console** (header link, or `https://console-<brevid>.<domain>`) in a private window and sign in as `learner`. You'll see:
+
+```bash-ref
+Role: Standard user
+Workspaces: No workspaces. Ask a platform admin to add you to a workspace.
+```
+
+`learner` can sign in but sees nothing: there is no workspace they belong to. Try opening `…/workspaces/default` directly; the gateway refuses with *not a member of workspace 'default'*. The console only displays what the gateway allows.
+
+## 2 · Create a workspace and add `learner`
+
+A **workspace** is a tenant: its own sandboxes, providers and members. Create one:
+
+```bash
+openshell workspace create --name team-a
+```
+<ExpectedOutput>
+{`✓ Created workspace team-a`}
+</ExpectedOutput>
+
+Members are identified by their OIDC **subject** (the token's `sub`, Keycloak's user id), not their name. Look it up and add `learner` as a user:
+
+```bash
+SUB=$(./scripts/keycloak-user-id.sh learner) && openshell workspace member add --workspace team-a --subject "$SUB" --role user && openshell workspace member list --workspace team-a
+```
+<ExpectedOutput>
+{`✓ Added fadec839-948e-4ab0-913c-0c64ca8f3f12 to workspace team-a as user
+SUBJECT                               ROLE
+fadec839-948e-4ab0-913c-0c64ca8f3f12  user`}
+</ExpectedOutput>
+
+(In the console, `demo` can do the same: **Workspaces → Create workspace**, then **Members → Add member**. A signed-in user finds their own subject under **Copy my subject ID** in the user menu.)
+
+## 3 · Give the workspace model access
+
+Providers belong to a workspace. `team-a` needs its own `litellm` provider (the profile is platform-wide, so it can be reused):
+
+```bash
+LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)" openshell --workspace team-a provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY
+```
+<ExpectedOutput>
+{`✓ Created provider litellm`}
+</ExpectedOutput>
+
+## 4 · `learner` works in `team-a`
+
+Refresh the console as `learner`: **team-a** is there. Create a sandbox in it from the console (**Create sandbox**, attach provider `litellm`), or from here on their behalf:
+
+```bash
+openshell --workspace team-a sandbox create --name lab-a --provider litellm --policy manifests/policies/baseline.yaml --no-tty --detach -- sleep infinity && openshell --workspace team-a sandbox list
+```
+<ExpectedOutput>
+{`NAME   CREATED              PHASE
+lab-a  2026-11-10 16:00:18  Ready`}
+</ExpectedOutput>
+
+`learner` sees `lab-a`, its policy revision and its providers, and can open its logs and terminal. They still can't see `agent-0`: it's in `default`.
+
+```bash
+openshell sandbox list && kubectl -n openshell-sandboxes get pods | grep -- '--'
+```
+
+The workspace is part of every pod name (`default--agent-0`, `team-a--lab-a`): the lab runs all workspaces in one namespace (`workspaceMode: shared`). For hard tenant separation the gateway can give each workspace its own namespace; see [Next Steps](/learn/next-steps).
+
+## 5 · Clean up
+
+```bash
+openshell --workspace team-a sandbox delete lab-a && openshell --workspace team-a provider delete litellm && openshell workspace delete team-a
+```
+
+<Callout type="nv" title="Same rules for every door">
+The CLI, the console and the SDKs all call the same gateway, and the gateway checks every call against the caller's identity, role and workspace membership. The console holds no privileges of its own: it forwards the signed-in user's token.
+</Callout>

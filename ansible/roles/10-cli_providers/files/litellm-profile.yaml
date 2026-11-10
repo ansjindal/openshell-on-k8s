@@ -1,0 +1,39 @@
+# OpenShell provider profile: the lab's LiteLLM model gateway.
+#
+# A profile is the access contract for one kind of provider:
+#   - credentials: what the sandbox gets (LITELLM_API_KEY, as a placeholder) and
+#     how the supervisor sends the real value (Authorization: Bearer ...)
+#   - endpoints:   the only host:port the credential may go to, with L7 rules
+#     (method + path). Anything else is denied, even with the key attached.
+#
+# The gateway merges these endpoints into the policy of every sandbox the
+# `litellm` provider is attached to, as `_provider_litellm`.
+id: litellm
+display_name: LiteLLM (lab model gateway)
+description: OpenAI-compatible model API in front of the upstream model; model calls only
+category: inference
+inference_capable: true
+credentials:
+  - name: api_key
+    description: LiteLLM key; agents only ever see a placeholder
+    env_vars: [LITELLM_API_KEY]
+    required: true
+    auth_style: bearer
+    header_name: authorization
+discovery:
+  credentials: [api_key]
+endpoints:
+  # FQDN: sandbox policy DNS has no search domains.
+  - host: litellm.litellm.svc.cluster.local
+    port: 4000
+    protocol: rest
+    enforcement: enforce
+    rules:
+      - allow: {method: GET, path: "/v1/models"}
+      - allow: {method: POST, path: "/v1/chat/completions"}
+      - allow: {method: POST, path: "/v1/completions"}
+      - allow: {method: POST, path: "/v1/responses"}
+      - allow: {method: POST, path: "/v1/embeddings"}
+      - allow: {method: POST, path: "/v1/messages"}
+binaries:
+  - "/**"

@@ -3,7 +3,7 @@
 # pulled from an env var (injected from the litellm-secrets Secret).
 image:
   repository: ghcr.io/berriai/litellm
-  tag: main-stable
+  tag: "{{ litellm_image_tag }}"
 
 environmentSecrets:
   - litellm-secrets
@@ -19,6 +19,12 @@ proxy_config:
         stream_options:
           include_usage: true
 {% endfor %}
+
+  # "default" points at the lab's model (inference_model), so agents and the
+  # OpenClaw image can say model "default" and the model stays a lab setting.
+  router_settings:
+    model_group_alias:
+      default: "{{ inference_model }}"
 
   general_settings:
     master_key: os.environ/LITELLM_MASTER_KEY

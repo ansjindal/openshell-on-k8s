@@ -1,0 +1,63 @@
+# OpenShell Console: the upstream admin UI (github.com/ai-openshell/console),
+# chart openshell-dashboard. A Go BFF behind oauth2-proxy: users sign in with
+# Keycloak, the BFF forwards each user's access token to the gateway, and the
+# gateway decides what they may see and do.
+dashboard:
+  image:
+    registry: {{ console_image_registry }}
+    repository: {{ console_image_repository }}
+    tag: "{{ console_version }}"
+
+authProxy:
+  image:
+    registry: quay.io
+    repository: oauth2-proxy/oauth2-proxy
+  # The Brev / launchpad edge terminates TLS; oauth2-proxy sees plain HTTP from
+  # Envoy, but the browser is on https, so cookies must still be Secure.
+  extraArgs:
+    - --cookie-secure=true
+
+gateway:
+  # The gateway's in-cluster Service (release `openshell`) over TLS; the BFF
+  # trusts the chart CA from openshell-client-tls and authenticates every call
+  # with the user's bearer token.
+  serviceName: openshell
+  tls:
+    enabled: true
+  caSecretName: openshell-client-tls
+  caKey: ca.crt
+
+oidc:
+  provider: keycloak-oidc
+  issuer: "{{ keycloak_issuer_url }}"
+  audience: "{{ keycloak_client_id }}"
+  rolesClaim: realm_access.roles
+  adminRole: "{{ keycloak_admin_role }}"
+  userRole: "{{ keycloak_user_role }}"
+  # oauth2-proxy reaches the issuer inside the cluster (CoreDNS rewrite to
+  # Keycloak's HTTPS port, certificate from the lab CA).
+  caConfigMapName: {{ lab_ca_bundle_configmap }}
+  clientId: openshell-dashboard
+  existingSecret: openshell-dashboard-oidc
+  redirectURL: "{{ console_url }}/oauth2/callback"
+  codeChallengeMethod: S256
+  allowedRoles:
+    - "{{ keycloak_admin_role }}"
+    - "{{ keycloak_user_role }}"
+
+httpRoute:
+  enabled: true
+  hostnames: ["{{ console_host }}"]
+  gateway:
+    name: fleet-gw
+    namespace: {{ envoy_gateway_ns }}
+    sectionName: web
+
+networkPolicy:
+  enabled: true
+  # Envoy Gateway runs its data-plane pods in the controller's namespace.
+  ingressNamespace: envoy-gateway-system
+
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {memory: 256Mi}

@@ -1,81 +1,69 @@
-# Values for the official OpenShell gateway Helm chart.
-#   chart: oci://ghcr.io/nvidia/openshell/helm-chart   (see ansible/README.md)
+# Values for the official OpenShell gateway Helm chart (0.1.x line).
+#   chart: oci://ghcr.io/nvidia/openshell/helm-chart   (version: openshell_chart_version)
 #
-# The gateway is the control plane: its Kubernetes compute driver turns sandbox
-# requests into agents.x-k8s.io Sandbox CRs, and its inference router serves
-# https://inference.local to every sandbox.
+# The gateway is the control plane. Its Kubernetes compute driver turns each
+# sandbox request into an agents.x-k8s.io Sandbox (the workload pod) plus a
+# supervisor pod that enforces the sandbox policy. Model access is a provider
+# attached to the sandbox (roles/10-cli_providers), not a gateway route.
 #
-# mTLS is ON (chart default since 0.0.71+): the gateway always terminates mTLS
-# and requires a client certificate. Cert issuance is handed to cert-manager
-# (see values.mtls.yaml + ansible/roles/08b-cert_manager) rather than the
-# chart's built-in pkiInitJob — both work, cert-manager is used here since it's
-# one of the OpenShell capabilities this launchable showcases. The CLI side
-# (role 10-inference_routing) fetches the resulting client cert out of the
-# openshell-client-tls Secret into the CLI's mTLS cert directory before it
-# calls `openshell gateway add`.
+# Before bumping the chart, diff the values:
+#   helm show values oci://ghcr.io/nvidia/openshell/helm-chart --version <new>
+# Overlays applied on top (see tasks/main.yml): values.mtls.yaml,
+# values.otlp.yaml, values.oidc.yaml.j2, values.postgres.yaml.j2.
 #
-# NOTE: key names follow the documented chart values; verify against
-#   helm show values oci://ghcr.io/nvidia/openshell/helm-chart --version {{ openshell_chart_version }}
-# before bumping the chart version further — they've shifted before.
+# Isolation: each sandbox is two pods. The workload pod runs the agent under
+# Landlock (ABI v3+), seccomp and a sandbox user, and a NetworkPolicy lets it
+# talk only to its supervisor pod; the supervisor pod enforces the network
+# policy (L4/L7), injects credentials and writes the OCSF audit trail.
+# gVisor cannot host the workload: it implements neither Landlock nor the
+# seccomp notifications the 0.1.x sandbox runtime requires.
 
-image:
-  repository: ghcr.io/nvidia/openshell/gateway
-  # Empty = use the chart's appVersion tag. Do NOT pin to "latest": that pulls a
-  # floating gateway build that can skew against the chart's supervisor image and
-  # break the sandbox bootstrap handshake (IssueSandboxToken). Pin the CHART
-  # version (openshell_chart_version) instead and let gateway + supervisor track
-  # it together.
-  tag: ""
-
-# StatefulSet + bundled SQLite (no external Postgres needed for the demo).
+# StatefulSet + bundled SQLite: one replica, no database to run.
 workload:
   kind: statefulset
 
-# Expose the gateway gRPC/HTTP port outside the cluster so the openshell CLI can
-# reach it at <node-ip>:<nodeport> without a port-forward. (Dev convenience; for
-# production front it with an ingress / Gateway API + TLS instead.)
+# The NodePort (gateway_nodeport, 30808) is a separate Service created by the
+# role; the chart's own Service stays ClusterIP.
 service:
-  type: NodePort
+  type: ClusterIP
   port: 8080
-  # Pin the NodePort so the launchable can expose ONE predictable port on Brev
-  # (and the openshell CLI can reach the gateway at <node-ip>:30808). Without a
-  # fixed value k3s assigns a random port in 30000-32767 each install.
-  nodePort: 30808
 
 server:
-  # The image each sandbox pod runs (the OpenShell sandbox runtime). Built from
-  # images/openclaw-sandbox/Dockerfile (community base + a pinned OpenClaw npm version),
-  # published via .github/workflows/build-openclaw-sandbox.yml. Pinned (not :latest) so the
-  # skills chapter — author, build, publish to the in-cluster registry, install — stays on a
-  # tested OpenClaw version instead of drifting with the community base image's own tag.
-  sandboxImage: ghcr.io/ansjindal/openclaw-sandbox:2026.8.2
-  sandboxImagePullPolicy: IfNotPresent
-  # Namespace for sandbox pods. Empty = the Helm release namespace (openshell) —
-  # the chart only creates sandbox RBAC inside it; it does NOT create a separate
-  # namespace. Leave empty to follow the official default (sandboxes in openshell).
-  sandboxNamespace: ""
-  # Gateway callback endpoint sandboxes dial. Leave EMPTY so the chart derives it
-  # from the release namespace + service + disableTls (yields
-  # https://openshell.openshell.svc.cluster.local:8080). Hardcoding without a
-  # scheme breaks the sandbox supervisor connection.
-  grpcEndpoint: ""
-  # mTLS stays on (chart default) — see the file header. allowUnauthenticatedUsers
-  # only controls whether an OIDC bearer token is ALSO required on top of the
-  # client certificate; when SSO is off (auth_mode != oidc) leave it true so the
-  # CLI/console work with just the mTLS cert. values.oidc.yaml.j2 flips this to
-  # false when Keycloak is enabled.
+  logLevel: info
+  # Anonymous usage telemetry to NVIDIA; turn off if your policy requires it.
+  telemetryEnabled: true
+  # TLS on the gateway API (chart default).
   disableTls: false
   auth:
-    allowUnauthenticatedUsers: true
+    # Never accept anonymous callers. Browser users (the console) sign in with
+    # Keycloak; the lab's CLI uses an mTLS operator certificate (see below).
+    allowUnauthenticatedUsers: false
+  # A policy that fails validation deactivates the previous one.
+  policyValidationFailureMode: fail_closed
+  drivers:
+    kubernetes:
+      # Every workspace shares one sandbox namespace (the role sets
+      # server.sandboxNamespace to k3s_sandbox_namespace), separate from the
+      # gateway's own namespace.
+      workspaceMode: shared
+      # Resource admission: a sandbox may use a cluster resource (RuntimeClass,
+      # PriorityClass, volumes) only when it carries the operator's approval
+      # labels: openshell.ai/sandbox-attachable=true and
+      # openshell.ai/sandbox-attachable-workspace=<workspace>.
+      resourceAdmission:
+        enabled: true
 
-# How the openshell-sandbox supervisor binary is delivered into each pod.
-#   image-volume  -> Kubernetes 1.33+
-#   init-container -> older clusters (broadest compatibility)
-supervisor:
-  sideloadMethod: init-container
+gatewayConfig:
+  # The lab's CLI, scripts and teaching site run on the VM as a trusted
+  # operator: a client certificate with OU=operator (Certificate
+  # openshell-operator, issued by the chart's CA) is a platform admin across
+  # all workspaces. Nobody else gets a certificate; people sign in with Keycloak.
+  openshell.gateway.mtls_auth:
+    operator_enabled: true
 
-# The chart creates the gateway + sandbox ServiceAccounts and their RBAC.
 serviceAccount:
   create: true
 sandboxServiceAccount:
   create: true
+networkPolicy:
+  enabled: true

@@ -1,0 +1,15 @@
+# Lab baseline sandbox policy (OpenShell 0.1.x): deny all network; model access
+# comes from the `litellm` provider. images/openclaw-sandbox/policy.yaml is a copy.
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /proc, /dev/urandom, /app, /etc, /var/log]
+  read_write: [/sandbox, /tmp, /dev/null]
+landlock:
+  compatibility: best_effort
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+# No direct network access. Model access is added by the `litellm` provider
+# profile when the provider is attached (as _provider_litellm).
+network_policies: {}
