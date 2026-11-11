@@ -89,9 +89,9 @@
 <text x="112" y="460.15" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">console-&lt;id&gt;:   Console</text>
 </g>
 <path d="M380 286 V370" fill="none" stroke="#3d4652" stroke-width="1.6" marker-end="url(#a3d4652)" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="472" y="372" width="318" height="110" rx="8" fill="#f6f7f9" stroke="#c3c9d1" stroke-width="1.2"/>
-<text x="484" y="392" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="557.45" y="392" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#57606a" text-anchor="start" xml:space="preserve">keycloak</text>
+<rect x="472" y="372" width="318" height="110" rx="8" fill="#f6f2ff" stroke="#8b5cf6" stroke-width="1.4"/>
+<text x="484" y="392" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#6d28d9" text-anchor="start" xml:space="preserve">namespace </text>
+<text x="557.45" y="392" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#6d28d9" text-anchor="start" xml:space="preserve">keycloak</text>
 <g class="dg-node" data-node="Keycloak">
 <rect x="486" y="400" width="290" height="72" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-people" xlink:href="#i-people" x="496" y="407.25" width="22" height="22" color="#3d4652"/>
@@ -99,9 +99,9 @@
 <text x="526" y="440.65" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">realm openshell</text>
 <text x="526" y="458.65" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">users: demo (admin), learner</text>
 </g>
-<rect x="810" y="372" width="730" height="110" rx="8" fill="#f6f7f9" stroke="#c3c9d1" stroke-width="1.2"/>
-<text x="822" y="392" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="895.45" y="392" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#57606a" text-anchor="start" xml:space="preserve">monitoring</text>
+<rect x="810" y="372" width="730" height="110" rx="8" fill="#fff8eb" stroke="#f59e0b" stroke-width="1.4"/>
+<text x="822" y="392" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#b45309" text-anchor="start" xml:space="preserve">namespace </text>
+<text x="895.45" y="392" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#b45309" text-anchor="start" xml:space="preserve">monitoring</text>
 <g class="dg-node" data-node="Tempo">
 <rect x="826" y="400" width="140" height="70" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-trace" xlink:href="#i-trace" x="836" y="415.25" width="22" height="22" color="#3d4652"/>
@@ -250,9 +250,9 @@
 <path d="M1060 596 V472" fill="none" stroke="#8a94a3" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a8a94a3)" stroke-linejoin="round" stroke-linecap="round"/>
 <rect x="1062" y="486.95" width="87.3" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="1066" y="500" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#8a94a3" text-anchor="start" xml:space="preserve">OCSF audit</text>
-<rect x="1190" y="510" width="350" height="320" rx="8" fill="#f6f7f9" stroke="#c3c9d1" stroke-width="1.2"/>
-<text x="1202" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="1275.45" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#57606a" text-anchor="start" xml:space="preserve">litellm</text>
+<rect x="1190" y="510" width="350" height="320" rx="8" fill="#eff5ff" stroke="#3b82f6" stroke-width="1.4"/>
+<text x="1202" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#1d4ed8" text-anchor="start" xml:space="preserve">namespace </text>
+<text x="1275.45" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#1d4ed8" text-anchor="start" xml:space="preserve">litellm</text>
 <g class="dg-node" data-node="LiteLLM">
 <rect x="1210" y="640" width="310" height="96" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-chip" xlink:href="#i-chip" x="1220" y="658.25" width="22" height="22" color="#3d4652"/>
@@ -265,9 +265,9 @@
 <text x="1156" y="668" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">LLM calls</text>
 <rect x="1104.42" y="680.95" width="103.16" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="1156" y="694" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">key injected</text>
-<rect x="72" y="860" width="348" height="104" rx="8" fill="#f6f7f9" stroke="#c3c9d1" stroke-width="1.2"/>
-<text x="84" y="880" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="157.45" y="880" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#57606a" text-anchor="start" xml:space="preserve">cert-manager</text>
+<rect x="72" y="860" width="348" height="104" rx="8" fill="#edfcf9" stroke="#14b8a6" stroke-width="1.4"/>
+<text x="84" y="880" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#0f766e" text-anchor="start" xml:space="preserve">namespace </text>
+<text x="157.45" y="880" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#0f766e" text-anchor="start" xml:space="preserve">cert-manager</text>
 <g class="dg-node" data-node="cert-manager">
 <rect x="88" y="890" width="316" height="60" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-cert" xlink:href="#i-cert" x="98" y="899.75" width="22" height="22" color="#3d4652"/>
@@ -277,9 +277,9 @@
 <path d="M360 888 V802" fill="none" stroke="#8a94a3" stroke-width="1.6" stroke-dasharray="3 3" marker-end="url(#a8a94a3)" stroke-linejoin="round" stroke-linecap="round"/>
 <rect x="252.84" y="835.95" width="103.16" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="352" y="849" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#8a94a3" text-anchor="end" xml:space="preserve">issues certs</text>
-<rect x="472" y="860" width="318" height="104" rx="8" fill="#f6f7f9" stroke="#c3c9d1" stroke-width="1.2"/>
-<text x="484" y="880" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="557.45" y="880" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#57606a" text-anchor="start" xml:space="preserve">agent-sandbox-system</text>
+<rect x="472" y="860" width="318" height="104" rx="8" fill="#ecfdff" stroke="#06b6d4" stroke-width="1.4"/>
+<text x="484" y="880" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#0e7490" text-anchor="start" xml:space="preserve">namespace </text>
+<text x="557.45" y="880" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#0e7490" text-anchor="start" xml:space="preserve">agent-sandbox-system</text>
 <g class="dg-node" data-node="agent-sandbox controller">
 <rect x="486" y="890" width="290" height="60" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-gear" xlink:href="#i-gear" x="496" y="899.75" width="22" height="22" color="#3d4652"/>
@@ -289,12 +289,12 @@
 <path d="M404 790 H440 V920 H484" fill="none" stroke="#4a7a00" stroke-width="1.6" marker-end="url(#a4a7a00)" stroke-linejoin="round" stroke-linecap="round"/>
 <rect x="396.35" y="835.95" width="87.3" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="440" y="849" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">Sandbox CR</text>
-<path d="M630 888 V832" fill="none" stroke="#3d4652" stroke-width="1.6" marker-end="url(#a3d4652)" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="514.91" y="835.95" width="111.09" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
-<text x="622" y="849" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#3d4652" text-anchor="end" xml:space="preserve">workload pods</text>
-<rect x="810" y="860" width="322" height="104" rx="8" fill="#f6f7f9" stroke="#c3c9d1" stroke-width="1.2"/>
-<text x="822" y="880" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="895.45" y="880" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#57606a" text-anchor="start" xml:space="preserve">kyverno</text>
+<path d="M752 888 V832" fill="none" stroke="#3d4652" stroke-width="1.6" marker-end="url(#a3d4652)" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="636.91" y="835.95" width="111.09" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
+<text x="744" y="849" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#3d4652" text-anchor="end" xml:space="preserve">workload pods</text>
+<rect x="810" y="860" width="322" height="104" rx="8" fill="#fdf2f8" stroke="#ec4899" stroke-width="1.4"/>
+<text x="822" y="880" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#be185d" text-anchor="start" xml:space="preserve">namespace </text>
+<text x="895.45" y="880" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#be185d" text-anchor="start" xml:space="preserve">kyverno</text>
 <g class="dg-node" data-node="Kyverno">
 <rect x="826" y="890" width="290" height="60" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-shield" xlink:href="#i-shield" x="836" y="899.75" width="22" height="22" color="#3d4652"/>
@@ -323,4 +323,19 @@
 <text x="734" y="1028" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">HTTP routing</text>
 <path d="M844 1024 H884" fill="none" stroke="#8a94a3" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a8a94a3)" stroke-linejoin="round" stroke-linecap="round"/>
 <text x="894" y="1028" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">telemetry</text>
+<text x="24" y="1068" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="bold" fill="#57606a" text-anchor="start" xml:space="preserve">namespaces:</text>
+<rect x="124" y="1055" width="22" height="16" rx="4" fill="#f3f9e8" stroke="#b7dc7a" stroke-width="1.4"/>
+<text x="154" y="1068" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">OpenShell (control plane, workspaces)</text>
+<rect x="420.53" y="1055" width="22" height="16" rx="4" fill="#f6f2ff" stroke="#8b5cf6" stroke-width="1.4"/>
+<text x="450.53" y="1068" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">keycloak</text>
+<rect x="527.65" y="1055" width="22" height="16" rx="4" fill="#fff8eb" stroke="#f59e0b" stroke-width="1.4"/>
+<text x="557.65" y="1068" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">monitoring</text>
+<rect x="649.98" y="1055" width="22" height="16" rx="4" fill="#eff5ff" stroke="#3b82f6" stroke-width="1.4"/>
+<text x="679.98" y="1068" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">litellm</text>
+<rect x="744.23" y="1055" width="22" height="16" rx="4" fill="#edfcf9" stroke="#14b8a6" stroke-width="1.4"/>
+<text x="774.23" y="1068" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">cert-manager</text>
+<rect x="887.36" y="1055" width="22" height="16" rx="4" fill="#ecfdff" stroke="#06b6d4" stroke-width="1.4"/>
+<text x="917.36" y="1068" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">agent-sandbox</text>
+<rect x="1034" y="1055" width="22" height="16" rx="4" fill="#fdf2f8" stroke="#ec4899" stroke-width="1.4"/>
+<text x="1064" y="1068" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">kyverno</text>
 </svg>

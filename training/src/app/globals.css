@@ -47,6 +47,12 @@
   --dg-grey: #8f9c84; --dg-box: #1b220f; --dg-area: #11160d; --dg-vm: #0d110b; --dg-ns: #151b10;
   --dg-green-d: #92e600; --dg-green-t: rgba(118, 185, 0, 0.07); --dg-green-l: #3f5f12;
   --dg-red: #f06262; --dg-red-t: rgba(229, 72, 77, 0.12); --dg-on: #0b0f05;
+  --dg-ns-kc-t: rgba(139, 92, 246, 0.10); --dg-ns-kc-l: #c4b5fd;
+  --dg-ns-mon-t: rgba(245, 158, 11, 0.09); --dg-ns-mon-l: #fcd34d;
+  --dg-ns-ll-t: rgba(59, 130, 246, 0.10); --dg-ns-ll-l: #93c5fd;
+  --dg-ns-cm-t: rgba(20, 184, 166, 0.09); --dg-ns-cm-l: #5eead4;
+  --dg-ns-asb-t: rgba(6, 182, 212, 0.09); --dg-ns-asb-l: #67e8f9;
+  --dg-ns-kyv-t: rgba(236, 72, 153, 0.09); --dg-ns-kyv-l: #f9a8d4;
 
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -85,6 +91,9 @@
   --dg-grey: #3d4652; --dg-box: #ffffff; --dg-area: #ffffff; --dg-vm: #f4f5f7; --dg-ns: #f6f7f9;
   --dg-green-d: #4a7a00; --dg-green-t: #f3f9e8; --dg-green-l: #b7dc7a;
   --dg-red: #d62d2d; --dg-red-t: #fdf0f0; --dg-on: #ffffff;
+  --dg-ns-kc-t: #f6f2ff; --dg-ns-kc-l: #6d28d9; --dg-ns-mon-t: #fff8eb; --dg-ns-mon-l: #b45309;
+  --dg-ns-ll-t: #eff5ff; --dg-ns-ll-l: #1d4ed8; --dg-ns-cm-t: #edfcf9; --dg-ns-cm-l: #0f766e;
+  --dg-ns-asb-t: #ecfdff; --dg-ns-asb-l: #0e7490; --dg-ns-kyv-t: #fdf2f8; --dg-ns-kyv-l: #be185d;
   --color-info: #2f6fd0;
   --color-run-bg: #f7f8fb;
   --color-run-line: #d6dbe3;

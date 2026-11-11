@@ -39,10 +39,10 @@ S.box(72, 372, 348, 110, "Envoy Gateway", ["Gateway API · Gateway fleet-gw",
       ("openshell-<id>: /  /auth  /grafana", "m"), ("console-<id>:   Console", "m")], icon="i-route")
 S.arrow("M380 286 V370")  # socat -> envoy
 
-S.ns(472, 372, 318, 110, "keycloak")
+S.ns(472, 372, 318, 110, "keycloak", color="keycloak")
 S.box(486, 400, 290, 72, "Keycloak", ["realm openshell", "users: demo (admin), learner"], icon="i-people", gap=18)
 
-S.ns(810, 372, 730, 110, "monitoring")
+S.ns(810, 372, 730, 110, "monitoring", color="monitoring")
 mon = [(826, 140, "Tempo", "traces", "i-trace"), (978, 120, "Loki", "logs", "i-doc"),
        (1110, 130, "Grafana", "dashboards", "i-chart"), (1252, 140, "Prometheus", "metrics", "i-gauge"),
        (1404, 122, "Alloy", "collector", "i-sync")]
@@ -135,26 +135,26 @@ S.label(938, 500, "agent traces", MID, anchor="end", size=12.5)
 S.arrow("M1060 596 V472", MID, dash="6 4")
 S.label(1066, 500, "OCSF audit", MID, anchor="start", size=12.5)
 
-S.ns(1190, 510, 350, 320, "litellm")
+S.ns(1190, 510, 350, 320, "litellm", color="litellm")
 S.box(1210, 640, 310, 96, "LiteLLM", ["OpenAI-compatible API", ("litellm.litellm.svc:4000", "m")], icon="i-chip")
 S.arrow("M1104 676 H1208", GREEN_D)
 S.label(1156, 668, "LLM calls", GREEN_D, size=12.5)
 S.label(1156, 694, "key injected", GREEN_D, size=12.5)
 
 # Row 3 ------------------------------------------------------------
-S.ns(72, 860, 348, 104, "cert-manager")
+S.ns(72, 860, 348, 104, "cert-manager", color="certs")
 S.box(88, 890, 316, 60, "cert-manager", ["gateway TLS · operator cert · lab CA"], icon="i-cert")
 S.arrow("M360 888 V802", MID, dash="3 3")
 S.label(352, 849, "issues certs", MID, anchor="end", size=12.5)
 
-S.ns(472, 860, 318, 104, "agent-sandbox-system")
+S.ns(472, 860, 318, 104, "agent-sandbox-system", color="controller")
 S.box(486, 890, 290, 60, "agent-sandbox controller", ["Sandbox CR → workload pod"], icon="i-gear")
 S.arrow("M404 790 H440 V920 H484", GREEN_D)
 S.label(440, 849, "Sandbox CR", GREEN_D, size=12.5)
-S.arrow("M630 888 V832", GREY)
-S.label(622, 849, "workload pods", GREY, anchor="end", size=12.5)
+S.arrow("M752 888 V832", GREY)
+S.label(744, 849, "workload pods", GREY, anchor="end", size=12.5)
 
-S.ns(810, 860, 322, 104, "kyverno")
+S.ns(810, 860, 322, 104, "kyverno", color="kyverno")
 S.box(826, 890, 290, 60, "Kyverno", ["guardrails on sandbox pods"], icon="i-shield")
 S.arrow("M990 888 V832", MID, dash="3 3")
 S.label(998, 849, "admission", MID, anchor="start", size=12.5)
@@ -176,5 +176,15 @@ S.arrow(f"M{lx+660} {ly} H{lx+700}", GREY)
 S.text(lx + 710, ly + 4, "HTTP routing", 13.5, False, SUB)
 S.arrow(f"M{lx+820} {ly} H{lx+860}", MID, dash="6 4")
 S.text(lx + 870, ly + 4, "telemetry", 13.5, False, SUB)
+
+# namespace colours
+ly2 = 1064
+S.text(lx, ly2 + 4, "namespaces:", 13.5, True, SUB)
+nx = lx + 100
+for key, name in [(None, "OpenShell (control plane, workspaces)"), ("keycloak", "keycloak"), ("monitoring", "monitoring"),
+                  ("litellm", "litellm"), ("certs", "cert-manager"), ("controller", "agent-sandbox"), ("kyverno", "kyverno")]:
+    stroke, tint = (GREEN_L, GREEN_T) if key is None else NS_COLORS[key][:2]
+    S.rect(nx, ly2 - 9, 22, 16, fill=tint, stroke=stroke, sw=1.4, rx=4)
+    nx += 30 + S.text(nx + 30, ly2 + 4, name, 13, False, SUB) + 22
 
 S.save(sys.argv[1])

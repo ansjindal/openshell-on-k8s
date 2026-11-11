@@ -49,17 +49,9 @@ The same platform with every component. It is dense, so read it as four paths, o
 
 ## The flow, end to end
 
-```text
-you ──▶ openshell CLI / Console ──▶ OpenShell gateway ──▶ Sandbox CR + supervisor pod
-                                                             │
-                                  agent-sandbox controller ◀─┘
-                                             │
-                                             ▼
-                             workload pod (agent) ◀──▶ supervisor pod
-                                                           │  policy check, key injected
-                                                           ▼
-                                                  LiteLLM ──▶ model API
-```
+Press **Next** to follow one sandbox from your request to the model: boxes appear as the flow reaches them, and the log says what each step did.
+
+<Scene id="flow" />
 
 You ask the gateway for a sandbox. It writes a `Sandbox` resource and starts a supervisor pod; the controller turns the resource into the workload pod running OpenClaw. The workload pod can only talk to its supervisor. When the agent calls LiteLLM, the supervisor checks the request against the sandbox's policy, swaps the placeholder in `Authorization` for the real key, and forwards it.
 

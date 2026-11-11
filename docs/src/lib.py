@@ -11,6 +11,16 @@ BG = "#f4f5f7"; GREEN = "#76b900"; GREEN_D = "#4a7a00"; GREEN_T = "#f3f9e8"; GRE
 RED = "#d62d2d"; RED_T = "#fdf0f0"
 # near-white variants so the training site can theme them apart from boxes (#fff)
 AREA = "#fefefe"; LBG = "#fffffe"
+# one hue per kind of namespace: (frame, tint, label). The training site maps
+# these to dark-mode equivalents in training/scripts/build-figures.mjs.
+NS_COLORS = {
+    "keycloak":   ("#8b5cf6", "#f6f2ff", "#6d28d9"),
+    "monitoring": ("#f59e0b", "#fff8eb", "#b45309"),
+    "litellm":    ("#3b82f6", "#eff5ff", "#1d4ed8"),
+    "certs":      ("#14b8a6", "#edfcf9", "#0f766e"),
+    "controller": ("#06b6d4", "#ecfdff", "#0e7490"),
+    "kyverno":    ("#ec4899", "#fdf2f8", "#be185d"),
+}
 
 EXTRA_SYMBOLS = {
  "i-term": '<symbol id="i-term" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M6.5 9.5l3 2.5-3 2.5M12 15h5"/></symbol>',
@@ -114,8 +124,11 @@ class Svg:
             self.warn.append(f"text overflows box height '{title}'")
         self.body.append('</g>')
 
-    def ns(self, x, y, w, h, label, green=False, sub=None):
-        if green:
+    def ns(self, x, y, w, h, label, green=False, sub=None, color=None):
+        if color:
+            stroke, tint, col = NS_COLORS[color]
+            self.rect(x, y, w, h, fill=tint, stroke=stroke, sw=1.4, rx=8)
+        elif green:
             self.rect(x, y, w, h, fill=GREEN_T, stroke=GREEN_L, sw=1.2, rx=8)
             col = GREEN_D
         else:

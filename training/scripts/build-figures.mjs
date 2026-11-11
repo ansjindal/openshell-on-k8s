@@ -18,6 +18,13 @@ const MAP = {
   "#f4f5f7": "var(--dg-vm)", "#f6f7f9": "var(--dg-ns)",
   "#76b900": "var(--color-nv)", "#4a7a00": "var(--dg-green-d)",
   "#f3f9e8": "var(--dg-green-t)", "#fbfdf7": "var(--dg-green-t)", "#b7dc7a": "var(--dg-green-l)",
+  // namespace colours: frames keep their hue, tints and labels follow the theme
+  "#8b5cf6": "#8b5cf6", "#f6f2ff": "var(--dg-ns-kc-t)", "#6d28d9": "var(--dg-ns-kc-l)",
+  "#f59e0b": "#f59e0b", "#fff8eb": "var(--dg-ns-mon-t)", "#b45309": "var(--dg-ns-mon-l)",
+  "#3b82f6": "#3b82f6", "#eff5ff": "var(--dg-ns-ll-t)", "#1d4ed8": "var(--dg-ns-ll-l)",
+  "#14b8a6": "#14b8a6", "#edfcf9": "var(--dg-ns-cm-t)", "#0f766e": "var(--dg-ns-cm-l)",
+  "#06b6d4": "#06b6d4", "#ecfdff": "var(--dg-ns-asb-t)", "#0e7490": "var(--dg-ns-asb-l)",
+  "#ec4899": "#ec4899", "#fdf2f8": "var(--dg-ns-kyv-t)", "#be185d": "var(--dg-ns-kyv-l)",
   "#d62d2d": "var(--dg-red)", "#fdf0f0": "var(--dg-red-t)", "#fbdcdc": "var(--dg-red-t)",
 };
 
