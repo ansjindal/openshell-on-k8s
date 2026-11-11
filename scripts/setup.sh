@@ -294,7 +294,7 @@ configure_lab_cli() {
   id "$u" >/dev/null 2>&1 || return 0
   local -a run
   if [[ "$(id -un)" == "$u" ]]; then run=(bash -c); else run=(sudo -u "$u" -H bash -c); fi
-  "${run[@]}" "KUBECONFIG=/etc/rancher/k3s/k3s.yaml '$ROOT/scripts/lab-cli-setup.sh' fleet '${GATEWAY_NODEPORT}'" \
+  "${run[@]}" "KUBECONFIG=/etc/rancher/k3s/k3s.yaml bash '$ROOT/scripts/lab-cli-setup.sh' fleet '${GATEWAY_NODEPORT}'" \
     || warn "Could not configure the openshell CLI for $u (re-run scripts/lab-cli-setup.sh as $u)"
 }
 LAB_USER="${LAB_USER:-$(stat -c '%U' "$ROOT" 2>/dev/null || echo ubuntu)}"
