@@ -141,12 +141,12 @@
 <text x="884" y="692.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">revision v1 → v2, no restart</text>
 </g>
 <path d="M748 470 H826" fill="none" stroke="#4a7a00" stroke-width="1.6" marker-end="url(#a4a7a00)" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="771.105" y="444.95" width="31.79" height="18" rx="3" fill="#fff" stroke="none" stroke-width="0"/>
+<rect x="771.105" y="444.95" width="31.79" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="787" y="458" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">all</text>
-<rect x="759.21" y="476.95" width="55.58" height="18" rx="3" fill="#fff" stroke="none" stroke-width="0"/>
+<rect x="759.21" y="476.95" width="55.58" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="787" y="490" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">egress</text>
 <path d="M300 360 H314 V132 H995 V148" fill="none" stroke="#4a7a00" stroke-width="1.6" marker-end="url(#a4a7a00)" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="465.155" y="122.95" width="269.69" height="18" rx="3" fill="#fff" stroke="none" stroke-width="0"/>
+<rect x="465.155" y="122.95" width="269.69" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="600" y="136" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">policy + credentials, pushed live</text>
 <rect x="1226" y="150" width="350" height="160" rx="6" fill="#fff" stroke="#76b900" stroke-width="1.8"/>
 <use href="#i-chip" xlink:href="#i-chip" x="1236" y="162" width="22" height="22" color="#4a7a00"/>
@@ -175,13 +175,13 @@
 <text x="1240" y="566" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#1f2328" text-anchor="start" xml:space="preserve">everything not in the policy</text>
 <text x="1240" y="590" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">blocked + logged as OCSF event</text>
 <path d="M1162 230 H1224" fill="none" stroke="#4a7a00" stroke-width="1.6" marker-end="url(#a4a7a00)" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="1169.17" y="208.95" width="47.65" height="18" rx="3" fill="#fff" stroke="none" stroke-width="0"/>
+<rect x="1169.17" y="208.95" width="47.65" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="1193" y="222" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">allow</text>
 <path d="M1162 410 H1224" fill="none" stroke="#4a7a00" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a4a7a00)" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="1181.07" y="388.95" width="23.86" height="18" rx="3" fill="#fff" stroke="none" stroke-width="0"/>
+<rect x="1181.07" y="388.95" width="23.86" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="1193" y="402" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">v2</text>
 <path d="M1162 564 H1224" fill="none" stroke="#d62d2d" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ad62d2d)" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="1173.14" y="542.95" width="39.72" height="18" rx="3" fill="#fff" stroke="none" stroke-width="0"/>
+<rect x="1173.14" y="542.95" width="39.72" height="18" rx="3" fill="#fffffe" stroke="none" stroke-width="0"/>
 <text x="1193" y="556" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#d62d2d" text-anchor="middle" xml:space="preserve">deny</text>
 <rect x="24" y="790" width="1552" height="116" rx="8" fill="#f4f5f7" stroke="#9aa3ad" stroke-width="1.3"/>
 <use href="#i-wheel" xlink:href="#i-wheel" x="36" y="800" width="22" height="22" color="#3d4652"/>

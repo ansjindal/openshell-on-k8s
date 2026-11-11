@@ -1,32 +1,34 @@
 "use client";
 // "Continue through the module": a card per lesson of this module (after the
-// overview), with its number, time, kind and your progress.
+// overview), in the order you take them.
 //   <ModuleLessons module="m1" />
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { CURRICULUM, ALL_LESSONS } from "@/lib/curriculum";
 import { useProgress } from "@/lib/progress";
 
 export function ModuleLessons({ module }: { module: string }) {
   const progress = useProgress();
-  const part = CURRICULUM.find((p) => p.id === module);
-  if (!part) return null;
+  if (!CURRICULUM.find((p) => p.id === module)) return null;
   const lessons = ALL_LESSONS.filter((l) => l.partId === module && !l.slug.endsWith("-overview"));
   return (
-    <div className="not-prose my-6 grid gap-3 sm:grid-cols-2">
-      {lessons.map((l) => {
+    <div className="not-prose my-5 grid items-stretch gap-x-2 gap-y-3 sm:grid-cols-[1fr_auto_1fr]">
+      {lessons.map((l, i) => {
         const done = !!progress.lessons[l.slug];
-        return (
+        return [
           <Link key={l.slug} href={`/learn/${l.slug}`}
-            className="group rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-4 py-3 transition hover:border-[var(--color-nv-dim)]">
-            <div className="flex items-center gap-2 text-xs text-[var(--color-fg-mut)]">
-              <span className="rounded bg-[var(--color-panel-2)] px-1.5 py-0.5 font-mono font-semibold text-[var(--color-fg-dim)]">{l.number}</span>
-              <span>{l.kind === "lab" ? "Lab" : l.kind === "check" ? "Check" : "Read"} · {l.minutes} min</span>
-              {done && <span className="ml-auto text-[var(--color-nv-bright)]">✓ done</span>}
+            className="group flex flex-col rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-3.5 py-3 transition hover:border-[var(--color-nv-dim)]">
+            <div className="flex items-center text-[12px] font-bold text-[var(--color-nv-bright)]">
+              {l.number}{done && <span className="ml-auto text-[11px] font-semibold">✓ done</span>}
             </div>
-            <div className="mt-1.5 font-semibold text-[var(--color-fg)] group-hover:text-[var(--color-nv-bright)]">{l.title}</div>
-            <p className="mt-1 text-sm leading-relaxed text-[var(--color-fg-dim)]">{l.blurb}</p>
-          </Link>
-        );
+            <div className="mt-0.5 text-[14px] font-bold text-[var(--color-fg)] group-hover:text-[var(--color-nv-bright)]">{l.title}</div>
+            <p className="mt-0.5 flex-1 text-[13px] leading-[19.5px] text-[var(--color-fg-dim)]">{l.blurb}</p>
+            <div className="mt-2 font-mono text-[11px] text-[var(--color-fg-mut)]">{l.kind === "lab" ? "lab: runs on your VM" : l.kind === "check" ? "questions on the page" : "reading"} · {l.minutes} min</div>
+          </Link>,
+          i % 2 === 0 && i < lessons.length - 1
+            ? <span key={l.slug + "-a"} className="hidden items-center text-[var(--color-fg-mut)] sm:flex"><ArrowRight size={14} /></span>
+            : null,
+        ];
       })}
     </div>
   );

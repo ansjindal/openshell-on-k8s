@@ -123,7 +123,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
 
   const copy = () => { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1400); };
   const codeView = (
-    <pre className="m-0 overflow-x-auto whitespace-pre rounded-lg border border-[var(--color-line)] bg-[var(--color-term-bg)] px-4 py-3 font-mono text-[13px] leading-relaxed">
+    <pre className="m-0 overflow-x-auto whitespace-pre rounded-[11px] border border-[var(--color-code-bd)] bg-[var(--color-code-bg)] px-[17.6px] py-4 font-mono text-[13px] leading-[20.8px]">
       {html
         ? <code className={`hljs language-${grammar}`} style={{ background: "transparent", padding: 0 }} dangerouslySetInnerHTML={{ __html: html }} />
         : <code className="text-[var(--color-code-fg)]">{code}</code>}
@@ -153,12 +153,12 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
 
   return (
     <div className="not-prose my-5 space-y-3">
-      <div className="overflow-hidden rounded-lg border border-[var(--color-run-line)] bg-[var(--color-run-bg)]">
-        <div className="flex items-center gap-3 border-b border-[var(--color-run-line)] px-4 py-2">
-          <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider ${isInteractive ? "bg-[var(--color-info)] text-white" : "bg-[var(--color-nv)] text-[#0a0d07]"}`}>
+      <div className="overflow-hidden rounded-[10px] border border-[var(--color-run-line)] bg-[var(--color-run-bg)]">
+        <div className="flex items-center gap-3 bg-[var(--color-run-head)] px-3 py-[7px] text-[13.5px]">
+          <span className={`rounded px-[7px] py-0.5 text-[10.5px] font-bold ${isInteractive ? "bg-[var(--color-info)] text-white" : "bg-[var(--color-nv)] text-[#0a0d07]"}`}>
             {isInteractive ? "SHELL" : "RUN"}
           </span>
-          <span className="flex-1 text-sm text-[var(--color-fg-dim)]">
+          <span className="flex-1 text-[13.5px] text-[var(--color-fg-dim)]">
             {isInteractive ? "Interactive: this opens in the cluster shell." : "Press Run to run this on your lab VM."}
           </span>
           {runnableInline && (
@@ -171,12 +171,12 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
             <Copy size={11} /> {copied ? "Copied" : "Copy"}
           </button>
         </div>
-        <div className="space-y-3 p-4">
+        <div className="space-y-3 p-3">
           {codeView}
           <button
             onClick={runnableInline ? runInline : () => runInShell(code)}
             disabled={running}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-nv-dim)] bg-[var(--color-run-btn)] py-2.5 text-sm font-semibold text-[var(--color-nv-bright)] transition hover:bg-[var(--color-run-btn-hover)] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-run-btn-line)] bg-[var(--color-run-btn)] py-3 text-[15px] font-bold text-[var(--color-nv-bright)] transition hover:bg-[var(--color-run-btn-hover)] disabled:opacity-60"
           >
             {running ? <><Loader2 size={15} className="animate-spin" /> Running…</> : runnableInline ? <>Run <Play size={14} /></> : <>Open in cluster shell <TerminalIcon size={14} /></>}
           </button>
@@ -184,8 +184,8 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
       </div>
 
       {output && !step.hasOutput && (
-        <div className="overflow-hidden rounded-lg border border-[var(--color-out-line)] bg-[var(--color-out-bg)]">
-          <div className="flex items-center gap-3 border-b border-[var(--color-out-line)] px-4 py-2">
+        <div className="overflow-hidden rounded-[10px] border border-[var(--color-out-line)] bg-[var(--color-out-bg)]">
+          <div className="flex items-center gap-3 bg-[var(--color-out-head)] px-3 py-[7px]">
             <span className="rounded bg-[var(--color-info)] px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white">OUTPUT</span>
             <span className="flex flex-1 items-center gap-2 text-sm text-[var(--color-fg-dim)]">
               {output.exitCode === null ? (

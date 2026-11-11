@@ -15,7 +15,6 @@ Good news: **the VM is already provisioned.** Ansible (`./scripts/setup.sh`) ins
 kubectl get nodes
 ```
 <Output>
-<LiveDiagram id="deploy" layer={1} />
 <ExpectedOutput>
 {`NAME             STATUS   ROLES           AGE   VERSION
 brev-abc123xyz   Ready    control-plane   40m   v1.37.2+k3s1`}
@@ -36,7 +35,6 @@ One node, `Ready`: k3s, a full Kubernetes API.
 kubectl -n openshell get pods
 ```
 <Output>
-<LiveDiagram id="deploy" layer={2} />
 <ExpectedOutput>
 {`NAME                                   READY   STATUS    RESTARTS   AGE
 openshell-0                            1/1     Running   0          20m
@@ -63,7 +61,6 @@ The CLI reaches the gateway on NodePort `30808`:
 openshell status
 ```
 <Output>
-<LiveDiagram id="deploy" layer={3} />
 <ExpectedOutput>
 {`Server Status
 
@@ -85,7 +82,6 @@ The gateway accepts no anonymous calls. Ask it who you are:
 openshell whoami
 ```
 <Output>
-<LiveDiagram id="deploy" layer={4} />
 <ExpectedOutput>
 {`Current User
 
@@ -110,7 +106,6 @@ This shell presents a client certificate with `OU=operator`, which cert-manager 
 openshell sandbox list
 ```
 <Output>
-<LiveDiagram id="deploy" layer={5} />
 <ExpectedOutput>
 {`NAME     CREATED              PHASE
 agent-0  2026-11-10 15:26:24  Ready`}
@@ -131,7 +126,6 @@ agent-0  2026-11-10 15:26:24  Ready`}
 kubectl -n litellm get pods && kubectl -n keycloak get pods
 ```
 <Output>
-<LiveDiagram id="deploy" layer={6} />
 <ExpectedOutput>
 {`NAME                       READY   STATUS    RESTARTS   AGE
 litellm-66cdf69946-xl7zw   1/1     Running   0          17m

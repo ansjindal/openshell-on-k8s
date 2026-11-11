@@ -15,7 +15,6 @@ The service is a tiny **echo API** (`manifests/demo-echo/echo.yaml`): it answers
 kubectl apply -f manifests/demo-echo/echo.yaml && kubectl -n lab-demo rollout status deploy/echo --timeout=120s
 ```
 
-<LiveDiagram id="providers" layer={1} />
 
 </Step>
 
@@ -58,7 +57,6 @@ Lint it, then import it into the gateway:
 openshell profile lint -f manifests/demo-echo/echo-api.profile.yaml && openshell profile import -f manifests/demo-echo/echo-api.profile.yaml
 ```
 <Output>
-<LiveDiagram id="providers" layer={2} />
 <ExpectedOutput>
 {`Provider profile lint passed.
 Imported 1 provider profile.`}
@@ -79,7 +77,6 @@ A **provider** is an instance of a profile holding a real credential. Pass the v
 ECHO_TOKEN=lab-secret-123 openshell provider create --name echo --type echo-api --credential ECHO_TOKEN
 ```
 <Output>
-<LiveDiagram id="providers" layer={3} />
 <ExpectedOutput>
 {`✓ Created provider echo`}
 </ExpectedOutput>
@@ -97,7 +94,6 @@ ECHO_TOKEN=lab-secret-123 openshell provider create --name echo --type echo-api 
 openshell sandbox provider attach agent-0 echo --wait
 ```
 <Output>
-<LiveDiagram id="providers" layer={4} />
 <ExpectedOutput>
 {`agent-0 / echo: ready (unspecified)
   Installed: credentials=true, policy=true, future process environment=true
@@ -117,7 +113,6 @@ New processes see the variable:
 openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
 ```
 <Output>
-<LiveDiagram id="providers" layer={5} />
 <ExpectedOutput>
 {`openshell:resolve:env:v2062283290838615716_ECHO_TOKEN`}
 </ExpectedOutput>
@@ -135,7 +130,6 @@ openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/whoami' | grep -E '"path"|authorization'
 ```
 <Output>
-<LiveDiagram id="providers" layer={6} />
 <ExpectedOutput>
 {`  "path": "/api/whoami",
     "authorization": "Bearer lab-secret-123"`}
@@ -154,7 +148,6 @@ A `POST` doesn't match, so it never leaves:
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -o /dev/null -w "HTTP %{http_code}\n" -X POST -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/x'
 ```
 <Output>
-<LiveDiagram id="providers" layer={7} />
 <ExpectedOutput>
 {`HTTP 403`}
 </ExpectedOutput>
@@ -174,7 +167,6 @@ Change the credential in the gateway; every sandbox with the provider attached p
 ECHO_TOKEN=lab-secret-456 openshell provider update echo --credential ECHO_TOKEN --wait
 ```
 
-<LiveDiagram id="providers" layer={8} />
 
 </Step>
 
@@ -184,7 +176,6 @@ ECHO_TOKEN=lab-secret-456 openshell provider update echo --credential ECHO_TOKEN
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/whoami' | grep authorization
 ```
 <Output>
-<LiveDiagram id="providers" layer={9} />
 <ExpectedOutput>
 {`    "authorization": "Bearer lab-secret-456"`}
 </ExpectedOutput>
@@ -206,7 +197,6 @@ Detaching revokes both the credential and the policy entry the profile added:
 openshell sandbox provider detach agent-0 echo --wait
 ```
 
-<LiveDiagram id="providers" layer={10} />
 
 </Step>
 

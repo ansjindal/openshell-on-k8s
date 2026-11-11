@@ -6,7 +6,9 @@ In this module **you are the security reviewer**. You follow every allow and den
   start="The audit trail."
 />
 
-## The picture builds as you read
+<Section n="1" title="Who did what, and who may">
+
+Each card is one lesson of this module. Scroll through them, or click one: the picture builds as you read.
 
 <ScrollBuild diagram="m3" items={[
   { title: "The audit trail", text: "Each supervisor writes one OCSF event per decision. Alloy ships them to Loki, and Grafana queries them across every workspace namespace." },
@@ -14,6 +16,12 @@ In this module **you are the security reviewer**. You follow every allow and den
   { title: "Users, roles & workspaces", text: "Keycloak users get a gateway role. Workspaces run in managed mode: each gets its own namespace, openshell-lab-<workspace>, and its own members." },
 ]} />
 
-## Continue through the module
+</Section>
+
+<Section n="2" title="Continue through the module">
+
+Each lab follows **Read → Run → Output**: read the step, press Run to run it on your lab VM, and compare your output with the recorded one. Click a lesson to open it:
 
 <ModuleLessons module="m3" />
+
+</Section>

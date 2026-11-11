@@ -9,6 +9,8 @@ MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
 INK = "#1f2328"; SUB = "#57606a"; GREY = "#3d4652"; MID = "#8a94a3"; LINE = "#c3c9d1"
 BG = "#f4f5f7"; GREEN = "#76b900"; GREEN_D = "#4a7a00"; GREEN_T = "#f3f9e8"; GREEN_L = "#b7dc7a"
 RED = "#d62d2d"; RED_T = "#fdf0f0"
+# near-white variants so the training site can theme them apart from boxes (#fff)
+AREA = "#fefefe"; LBG = "#fffffe"
 
 EXTRA_SYMBOLS = {
  "i-term": '<symbol id="i-term" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M6.5 9.5l3 2.5-3 2.5M12 15h5"/></symbol>',
@@ -124,7 +126,7 @@ class Svg:
         if sub:
             self.text(x + 12 + lw + lw2 + 8, y + 20, sub, 13, False, col)
 
-    def label(self, x, y, s, color=GREY, anchor="middle", size=13, mono=True, bold=False, bg="#fff"):
+    def label(self, x, y, s, color=GREY, anchor="middle", size=13, mono=True, bold=False, bg=LBG):
         size = max(size, 13)
         w = tw(s, size, mono, bold)
         x0 = x if anchor == "start" else (x - w / 2 if anchor == "middle" else x - w)

@@ -36,43 +36,40 @@ const C = {
 };
 const SANS = "var(--font-sans)";
 
-export function NodeView({ n, st, selected, onSelect }: { n: DNode; st: State; selected?: boolean; onSelect?: (n: DNode) => void }) {
+export function NodeView({ n, st }: { n: DNode; st: State | "future" }) {
   if (st === "hidden") return null;
+  const future = st === "future";
   const ghost = st === "ghost";
   const isNew = st === "new";
   const group = n.kind === "group";
   const tone = n.kind === "deny" ? C.red : n.kind === "ext" ? C.blue : n.kind === "accent" ? C.nv : C.line;
-  const stroke = selected ? C.nv : ghost ? C.mut : isNew ? C.nv : tone;
-  const sw = selected || isNew ? 2.2 : n.kind === "accent" ? 2 : 1.5;
+  const stroke = ghost ? C.mut : isNew ? C.nv : tone;
   const subs = n.sub ? n.sub.split("\n") : [];
-  const block = 15 + subs.length * 15;
+  const block = 14 + subs.length * 16;
   const y0 = n.y + (n.h - block) / 2 + 12;
-  const cx = n.x + n.w / 2;
-  const click = onSelect && n.info ? { onClick: () => onSelect(n), style: { cursor: "pointer" } } : {};
   return (
-    <g opacity={ghost ? 0.55 : 1} style={{ transition: "opacity .4s" }} className={onSelect && n.info ? "dg-hit" : undefined} {...click}>
-      <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={group ? 10 : 7}
-        fill={group ? C.group : C.box} fillOpacity={group ? 0.55 : 1} stroke={stroke} strokeWidth={sw}
+    <g opacity={future ? 0.2 : ghost ? 0.55 : 1} style={{ transition: "opacity .45s" }}>
+      <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={group ? 9 : 7}
+        fill={group ? C.group : C.box} fillOpacity={group ? 0.5 : 1} stroke={stroke} strokeWidth={isNew ? 2.2 : n.kind === "accent" ? 1.8 : 1.3}
         strokeDasharray={ghost || n.dashed ? "6 5" : undefined}
-        style={isNew || selected ? { filter: "drop-shadow(0 0 6px rgba(118,185,0,.45))" } : undefined} />
+        style={isNew ? { filter: "drop-shadow(0 0 6px rgba(146,230,0,.45))" } : undefined} />
       {group ? (
-        <text x={n.x + 12} y={n.y + 19} fontSize={12.5} fontWeight={700} fill={n.live ? C.nv : C.text} fontFamily={SANS}>{n.label}</text>
+        <text x={n.x + 12} y={n.y + 19} fontSize={12.5} fontWeight={700} fill={C.sub} fontFamily={SANS}>{n.label}</text>
       ) : (
         <>
-          <text x={cx} y={y0} fontSize={12.5} fontWeight={700} fill={ghost ? C.mut : C.text} textAnchor="middle" fontFamily={SANS}>{n.label}</text>
+          <text x={n.x + 12} y={y0} fontSize={13.5} fontWeight={700} fill={C.text} fontFamily={SANS}>{n.label}</text>
           {subs.map((line, i) => (
-            <text key={i} x={cx} y={y0 + 15 * (i + 1)} fontSize={11.5} fill={C.sub} textAnchor="middle" fontFamily={SANS}>{line}</text>
+            <text key={i} x={n.x + 12} y={y0 + 16 * (i + 1)} fontSize={12} fill={C.sub} fontFamily={SANS}>{line}</text>
           ))}
-          {ghost && <text x={n.x + n.w - 8} y={n.y + n.h - 6} fontSize={9.5} fill={C.mut} textAnchor="end" fontFamily={SANS}>this step adds it</text>}
-          {n.live && !ghost && <circle cx={n.x + n.w - 10} cy={n.y + 10} r={3.5} fill={C.nv}><title>from your run</title></circle>}
         </>
       )}
     </g>
   );
 }
 
-export function EdgeView({ e, nodes, st, uid = "" }: { e: DEdge; nodes: Record<string, DNode>; st: State; uid?: string }) {
+export function EdgeView({ e, nodes, st, uid = "" }: { e: DEdge; nodes: Record<string, DNode>; st: State | "future"; uid?: string }) {
   if (st === "hidden") return null;
+  const future = st === "future";
   const a = nodes[e.from], b = nodes[e.to];
   if (!a || !b) return null;
   const [x1, y1, x2, y2] = anchor(a, b);
@@ -81,7 +78,7 @@ export function EdgeView({ e, nodes, st, uid = "" }: { e: DEdge; nodes: Record<s
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
   const id = `ah${uid}-${e.kind ?? "n"}-${st}`;
   return (
-    <g opacity={ghost ? 0.5 : 1}>
+    <g opacity={future ? 0.18 : ghost ? 0.5 : 1} style={{ transition: "opacity .45s" }}>
       <defs>
         <marker id={id} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0 0 L10 5 L0 10 Z" fill={col} />
@@ -170,15 +167,14 @@ export function DiagramSvg({ id, layer }: { id: string; layer: number }) {
   const d = DIAGRAMS[id];
   if (!d) return null;
   const nodes = Object.fromEntries(d.nodes.map((n) => [n.id, n]));
-  const st = (n: DNode): State => {
-    const s = stateOf(n.layer, n.until, layer, true);
-    return s;
-  };
+  // Scroll-built: what earlier cards added is drawn, this card's layer glows,
+  // later layers wait faintly so the whole picture is visible from the start.
+  const st = (l: number): State | "future" => (l < layer ? "old" : l === layer ? "new" : "future");
   return (
-    <svg viewBox={`0 0 ${d.w} ${d.h}`} className="block w-full" role="img" aria-label={d.title}>
-      {d.nodes.filter((n) => n.kind === "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
-      {d.edges.map((e, i) => <EdgeView key={i} e={e} nodes={nodes} st={stateOf(e.layer, e.until, layer, true)} />)}
-      {d.nodes.filter((n) => n.kind !== "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
+    <svg viewBox={`0 0 ${d.w} ${d.h}`} className="block h-auto w-full" role="img" aria-label={d.title}>
+      {d.nodes.filter((n) => n.kind === "group").map((n) => <NodeView key={n.id} n={n} st={st(n.layer)} />)}
+      {d.edges.map((e, i) => <EdgeView key={i} e={e} nodes={nodes} st={st(e.layer)} uid={id} />)}
+      {d.nodes.filter((n) => n.kind !== "group").map((n) => <NodeView key={n.id} n={n} st={st(n.layer)} />)}
     </svg>
   );
 }

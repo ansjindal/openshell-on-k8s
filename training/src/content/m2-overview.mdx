@@ -6,7 +6,9 @@ In this module **you are the agent developer**. Your sandbox gets a model and cr
   start="Models through a provider."
 />
 
-## The picture builds as you read
+<Section n="1" title="A model, keys it never sees, skills and a task">
+
+Each card is one lesson of this module. Scroll through them, or click one: the picture builds as you read.
 
 <ScrollBuild diagram="m2" items={[
   { title: "Models through a provider", text: "The litellm provider puts a placeholder in the sandbox. The supervisor swaps in the real key only on requests its profile allows." },
@@ -16,9 +18,15 @@ In this module **you are the agent developer**. Your sandbox gets a model and cr
   { title: "Run a task", text: "Hand the agent a prompt and read what it did, step by step." },
 ]} />
 
-## Continue through the module
+</Section>
+
+<Section n="2" title="Continue through the module">
+
+Each lab follows **Read → Run → Output**: read the step, press Run to run it on your lab VM, and compare your output with the recorded one. Click a lesson to open it:
 
 <ModuleLessons module="m2" />
+
+</Section>
 
 <Optional title="Why not just set an environment variable?">
 An agent that can read its token can also send it anywhere: in a URL, a log line, or a request a prompt injection asked for. With a provider the sandbox only ever holds a placeholder, and the real value exists only inside the supervisor, on requests that match the profile.

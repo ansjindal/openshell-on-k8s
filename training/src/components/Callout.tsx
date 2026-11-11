@@ -13,11 +13,11 @@ export function Callout({ type = "note", title, children }: { type?: keyof typeo
   const k = KINDS[type] ?? KINDS.note;
   const Icon = k.icon;
   return (
-    <div className="my-5 flex gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] p-4" style={{ borderLeft: `3px solid ${k.color}` }}>
+    <div className="not-prose my-5 flex gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-ink2)] px-4 py-3 text-[14px] leading-[23.8px]" style={{ borderLeft: `3px solid ${k.color}` }}>
       <Icon size={18} style={{ color: k.color, flexShrink: 0, marginTop: 2 }} />
       <div className="min-w-0">
         <div className="mb-1 text-sm font-semibold" style={{ color: k.color }}>{title ?? k.label}</div>
-        <div className="text-sm text-[var(--color-fg-dim)] [&>*+*]:mt-2">{children}</div>
+        <div className="text-[14px] leading-[23.8px] text-[var(--color-fg-dim)] [&>*+*]:mt-2 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--color-nv-bright)] [&_strong]:text-[var(--color-fg)]">{children}</div>
       </div>
     </div>
   );

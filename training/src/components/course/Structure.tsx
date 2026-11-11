@@ -97,10 +97,10 @@ export function Section({ n, title, goal, children }: { n: string | number; titl
     <section className="my-10" id={`s-${id}`}>
       <button onClick={() => setOpen(!open)} className="not-prose flex w-full items-center gap-3 text-left">
         <ChevronDown size={20} className={`shrink-0 text-[var(--color-nv-bright)] transition ${open ? "" : "-rotate-90"}`} />
-        <span role="heading" aria-level={2} className="text-2xl font-bold tracking-tight text-[var(--color-fg)]">{id} · {title}</span>
+        <span role="heading" aria-level={2} className="text-[22px] font-bold leading-[37.4px] text-[var(--color-fg)]">{id} · {title}</span>
       </button>
       {goal && (
-        <p className="not-prose mt-3 text-sm text-[var(--color-fg-dim)]">
+        <p className="not-prose mt-2 text-[14px] text-[var(--color-fg-dim)]">
           <span className="mr-2 font-semibold text-[var(--color-fg-mut)]">Goal</span>{goal}
           {stepIds.length > 0 && <span className="text-[var(--color-fg-mut)]"> · {done} of {stepIds.length} steps done</span>}
         </p>
@@ -129,10 +129,10 @@ export function Step({ n, title, children }: { n: string | number; title: ReactN
   const markOutput = useCallback(() => { setOutputs((n) => n + 1); return () => setOutputs((n) => n - 1); }, []);
   return (
     <StepContext.Provider value={{ id: key, hasOutput: outputs > 0, live, setLive, markOutput }}>
-      <div className="step-card rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
-        <div className="not-prose flex items-center gap-3 border-b border-[var(--color-line)] px-4 py-3">
-          <span className="rounded-md bg-[var(--color-nv)] px-2 py-0.5 font-mono text-xs font-bold text-[#0a0d07]">{id}</span>
-          <button onClick={() => setOpen(!open)} className="flex-1 text-left font-semibold text-[var(--color-fg)]">{title}</button>
+      <div className="step-card overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
+        <div className="not-prose flex items-center gap-2.5 bg-[var(--color-ink2)] px-3.5 py-2.5">
+          <span className="rounded-xl bg-[var(--color-nv)] px-[7px] text-[13px] font-bold leading-[22px] text-[#08110a]">{id}</span>
+          <button onClick={() => setOpen(!open)} className="flex-1 text-left text-[15px] font-bold text-[var(--color-fg)]">{title}</button>
           <button onClick={() => setOpen(!open)} className="text-[var(--color-fg-mut)]" title={open ? "Collapse" : "Expand"}>
             <ChevronDown size={14} className={`transition ${open ? "" : "-rotate-90"}`} />
           </button>
@@ -142,7 +142,7 @@ export function Step({ n, title, children }: { n: string | number; title: ReactN
             className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold ${done ? "border-[var(--color-nv)] bg-[var(--color-nv)] text-[#0a0d07]" : "border-[var(--color-line-2)] text-transparent hover:border-[var(--color-nv)]"}`}
           >✓</button>
         </div>
-        {open && <div className="prose max-w-none px-4 py-2">{children}</div>}
+        {open && <div className="prose step-body max-w-none px-4 pb-3 pt-0.5">{children}</div>}
       </div>
     </StepContext.Provider>
   );

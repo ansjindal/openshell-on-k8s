@@ -6,7 +6,7 @@ In this module **you are the platform operator**. You start from a VM that Ansib
   start="Verify the cluster. Every command in that lesson only reads."
 />
 
-## The picture builds as you read
+<Section n="1" title="From a cluster to a sealed sandbox">
 
 Each card is one lesson. Click a card, or scroll past it: the diagram on the right gains what that lesson adds.
 
@@ -18,9 +18,15 @@ Each card is one lesson. Click a card, or scroll past it: the diagram on the rig
   { title: "Beyond REST: TCP egress", text: "A bare host:port rule is an L4 allow for one host, one port and the binaries you name; nothing else may use it." },
 ]} />
 
-## Continue through the module
+</Section>
+
+<Section n="2" title="Continue through the module">
+
+Each lab follows **Read → Run → Output**: read the step, press Run to run it on your lab VM, and compare your output with the recorded one. Click a lesson to open it:
 
 <ModuleLessons module="m1" />
+
+</Section>
 
 <Optional title="Why one supervisor pod per sandbox?">
 The supervisor holds the policy and the credentials, and the workload pod's NetworkPolicy lets it talk to its own supervisor only. Keeping them in separate pods means a compromised agent process shares no kernel namespace, no filesystem and no secrets with the component that decides what it may reach.

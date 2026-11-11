@@ -15,7 +15,6 @@ Ask the gateway for `agent-0`'s policy: its version, hash and status.
 openshell policy get agent-0
 ```
 
-<LiveDiagram id="policy" layer={1} />
 
 </Step>
 
@@ -27,7 +26,6 @@ The **effective** policy includes what attached providers added. Under `network_
 openshell policy get agent-0 --full
 ```
 <Output>
-<LiveDiagram id="policy" layer={2} />
 <ExpectedOutput>
 {`network_policies:
   _provider_litellm:
@@ -57,7 +55,6 @@ openshell policy get agent-0 --full
 openshell sandbox exec -n agent-0 -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/zen
 ```
 <Output>
-<LiveDiagram id="policy" layer={3} />
 <ExpectedOutput>
 {`HTTP 000`}
 </ExpectedOutput>
@@ -79,7 +76,6 @@ The endpoint format is `host:port[:access[:protocol[:enforcement]]]`, and the ru
 openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --wait
 ```
 <Output>
-<LiveDiagram id="policy" layer={4} />
 <ExpectedOutput>
 {`✓ Policy version 2 submitted (hash: ae09c7816c51)
 ✓ Policy version 2 loaded (active version: 2)`}
@@ -100,7 +96,6 @@ The new revision loaded into the **running** sandbox, with no restart. The parts
 openshell sandbox exec -n agent-0 -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
 ```
 <Output>
-<LiveDiagram id="policy" layer={5} />
 <ExpectedOutput>
 {`Responsive is better than fast. HTTP 200`}
 </ExpectedOutput>
@@ -116,7 +111,6 @@ A `POST` to the same host is refused by the supervisor, with the reason:
 openshell sandbox exec -n agent-0 -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{http_code}\n' https://api.github.com/markdown
 ```
 <Output>
-<LiveDiagram id="policy" layer={6} />
 <ExpectedOutput>
 {`{"error":"policy_denied","policy":"allow_api_github_com_443","rule":"POST /markdown","detail":"POST /markdown not permitted by policy","layer":"l7",...}
 HTTP 403`}
@@ -135,7 +129,6 @@ HTTP 403`}
 openshell policy list agent-0
 ```
 <Output>
-<LiveDiagram id="policy" layer={7} />
 <ExpectedOutput>
 {`VERSION  HASH           STATUS       CREATED                  ERROR
 2        ae09c7816c51   Loaded       1794324512476

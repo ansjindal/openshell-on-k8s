@@ -5,31 +5,36 @@
   --color-rh: #ee0000;
   --color-rh-bright: #ff4d4d;
   --color-nv: #76b900;
-  --color-nv-bright: #a3e635;
-  --color-nv-dim: #4d7a00;
+  --color-nv-bright: #92e600;
+  --color-nv-dim: #5a8c00;
 
   --color-bg: #0b0e0a;
-  --color-bg-2: #10140e;
-  --color-panel: #121710;
-  --color-panel-2: #182015;
-  --color-line: #242c20;
-  --color-line-2: #313b2b;
+  --color-bg-2: #11160d;
+  --color-panel: #151b10;
+  --color-panel-2: #1b220f;
+  --color-line: #2a3320;
+  --color-line-2: #3a4630;
 
   /* course panels: RUN (green), OUTPUT (blue), info */
-  --color-info: #4f8fea;
-  --color-run-bg: #141d0e;
-  --color-run-line: #2e4214;
-  --color-run-btn: #1a2a0c;
-  --color-run-btn-hover: #22380f;
-  --color-out-bg: #0f1520;
-  --color-out-line: #29436d;
+  --color-info: #4aa3ff;
+  --color-run-bg: #151b10;
+  --color-run-line: #272d34;
+  --color-run-head: #1b220f;
+  --color-run-btn: #26380d;
+  --color-run-btn-hover: #2e4410;
+  --color-run-btn-line: rgba(118, 185, 0, 0.65);
+  --color-out-bg: #151b10;
+  --color-out-line: #4f7fe0;
+  --color-out-head: #1e2c2d;
+  --color-ink2: #11160d;
+  --color-code-bd: #272d34;
 
-  --color-fg: #eef2f7;
-  --color-fg-dim: #c2cad6;
-  --color-fg-mut: #8a93a3;
+  --color-fg: #e8efe0;
+  --color-fg-dim: #9fb08c;
+  --color-fg-mut: #6f7d5f;
 
   /* code blocks + terminal */
-  --color-code-bg: #0b0e13;
+  --color-code-bg: #0e1114;
   --color-code-fg: #d6e0ec;
   --color-term-bg: #0a0d07;
   --color-term-fg: #d6e4c4;      /* matches the live terminal's xterm foreground */
@@ -37,6 +42,11 @@
 
   /* sticky site header — translucent over whatever scrolls under it */
   --color-header-bg: rgba(11, 14, 10, 0.88);
+
+  /* themed docs/*.svg figures (scripts/build-figures.mjs) */
+  --dg-grey: #8f9c84; --dg-box: #1b220f; --dg-area: #11160d; --dg-vm: #0d110b; --dg-ns: #151b10;
+  --dg-green-d: #92e600; --dg-green-t: rgba(118, 185, 0, 0.07); --dg-green-l: #3f5f12;
+  --dg-red: #f06262; --dg-red-t: rgba(229, 72, 77, 0.12); --dg-on: #0b0f05;
 
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -53,6 +63,7 @@
 .xterm .xterm-viewport { background-color: transparent !important; }
 
 /* Light mode — toggled via document.documentElement.dataset.theme = "light" */
+:root[data-theme="light"] .prose h2 { color: var(--color-fg); }
 :root[data-theme="light"] {
   --color-bg: #ffffff;
   --color-bg-2: #f3f5f9;
@@ -71,13 +82,21 @@
   --color-term-fg: #1f2937;      /* matches the live terminal's xterm foreground */
   --color-term-accent: #4d7a00;  /* matches the live terminal's xterm cursor/bright-green */
   --color-header-bg: rgba(255, 255, 255, 0.86);
+  --dg-grey: #3d4652; --dg-box: #ffffff; --dg-area: #ffffff; --dg-vm: #f4f5f7; --dg-ns: #f6f7f9;
+  --dg-green-d: #4a7a00; --dg-green-t: #f3f9e8; --dg-green-l: #b7dc7a;
+  --dg-red: #d62d2d; --dg-red-t: #fdf0f0; --dg-on: #ffffff;
   --color-info: #2f6fd0;
-  --color-run-bg: #f2f8e8;
-  --color-run-line: #c5dea0;
+  --color-run-bg: #f7f8fb;
+  --color-run-line: #d6dbe3;
+  --color-run-head: #eef3e4;
   --color-run-btn: #e6f2d3;
   --color-run-btn-hover: #d8ebbb;
-  --color-out-bg: #eef3fb;
-  --color-out-line: #b9cdee;
+  --color-run-btn-line: rgba(77, 122, 0, 0.55);
+  --color-out-bg: #f7f8fb;
+  --color-out-line: #4f7fe0;
+  --color-out-head: #e7eef9;
+  --color-ink2: #eef1f6;
+  --color-code-bd: #d6dbe3;
 }
 html { transition: background-color 0.15s ease; }
 
@@ -97,16 +116,17 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 * { box-sizing: border-box; }
 
 /* ---- prose (MDX content) ---- */
-.prose { color: var(--color-fg-dim); font-size: 1rem; line-height: 1.78; }
+.prose { color: var(--color-fg); font-size: 15px; line-height: 25.5px; }
+.prose > p, .prose > ul, .prose > ol { font-size: 16px; line-height: 25.6px; color: var(--color-fg-dim); }
 .prose > * + * { margin-top: 18px; }
 .prose h1, .prose h2, .prose h3 { color: var(--color-fg); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
-.prose h2 { font-size: 1.5rem; margin-top: 44px; }
-.prose h3 { font-size: 1.18rem; margin-top: 30px; }
+.prose h2 { font-size: 22px; line-height: 37.4px; margin-top: 40px; color: #fff; }
+.prose h3 { font-size: 17px; margin-top: 28px; }
 .prose strong { color: var(--color-fg); font-weight: 650; }
 .prose a { color: var(--color-nv-bright); border-bottom: 1px solid rgba(163, 230, 53, 0.35); }
 .prose ul, .prose ol { padding-left: 1.3em; }
 .prose li + li { margin-top: 6px; }
-.prose code { font-family: var(--font-mono); font-size: 0.88em; background: var(--color-code-bg); padding: 0.12em 0.42em; border-radius: 5px; color: var(--color-nv-bright); border: 1px solid var(--color-line); }
+.prose code { font-family: var(--font-mono); font-size: 0.8em; background: var(--color-panel-2); padding: 1.6px 6.4px; border-radius: 5.6px; color: var(--color-nv-bright); border: 1px solid var(--color-line); }
 .prose hr { border: none; border-top: 1px solid var(--color-line); margin: 32px 0; }
 .prose table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .prose th, .prose td { border: 1px solid var(--color-line); padding: 8px 12px; text-align: left; }
@@ -125,12 +145,18 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 .steps > .step-card + .step-card::before { content: ""; position: absolute; left: 42px; top: -27px; height: 26px; width: 1px; background: var(--color-line-2); }
 .steps > * + * { margin-top: 20px; }
 /* Run groups: captions as small text above each command. */
-.run-group > p { margin: 6px 0 4px; font-size: 0.85rem; color: var(--color-fg-dim); }
+.run-group > p { margin: 6px 0 4px; font-size: 13px; line-height: 22px; color: var(--color-fg-dim); }
 /* "What you learned": bold lead in white, the rest dimmed. */
 .learned ul { list-style: none; padding-left: 0; }
 .learned li { position: relative; padding-left: 22px; color: var(--color-fg-mut); }
 .learned li::before { content: "◆"; position: absolute; left: 0; color: var(--color-nv); font-size: 0.7em; top: 0.35em; }
 .learned li strong { color: var(--color-fg); }
 
-/* clickable boxes in <Fig> */
-.dg-fig .dg-hit:hover > rect { stroke: var(--color-nv-bright); }
+/* figures: the SVG fills its frame; boxes are clickable */
+.dg-svg { display: block; width: 100%; height: auto; }
+.dg-svg .dg-node { cursor: pointer; }
+.dg-svg .dg-node:hover > rect:first-of-type, .dg-svg .dg-node.dg-sel > rect:first-of-type { stroke: var(--color-nv-bright); stroke-width: 2.4; }
+.dg-svg .dg-node.dg-sel > rect:first-of-type { filter: drop-shadow(0 0 6px rgba(146, 230, 0, 0.5)); }
+
+/* inside a step, text is full-strength 15px (the page intro is 16px, dimmed) */
+.step-body > p, .step-body > ul, .step-body > ol { font-size: 15px; line-height: 25.5px; color: var(--color-fg); }

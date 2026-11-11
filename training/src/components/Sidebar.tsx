@@ -13,7 +13,7 @@ export function Sidebar() {
   const allClosed = CURRICULUM.every((m) => closed[m.id]);
 
   return (
-    <nav className="text-sm" aria-label="Course">
+    <nav className="text-[13px]" aria-label="Course">
       <div className="mb-1 px-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-mut)]">Workspace</div>
       <div className="mb-6 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] p-1.5">
         <Link href="/" className={`flex items-center gap-2.5 rounded-md px-2.5 py-1.5 ${pathname === "/" ? "text-[var(--color-nv-bright)]" : "text-[var(--color-fg-dim)] hover:text-[var(--color-fg)]"}`}>
@@ -28,7 +28,7 @@ export function Sidebar() {
         <span className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-mut)]">Modules</span>
         <button
           onClick={() => setClosed(Object.fromEntries(CURRICULUM.map((m) => [m.id, !allClosed])))}
-          className="text-[0.7rem] text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]"
+          className="text-[10.5px] text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]"
         >
           {allClosed ? "expand all" : "collapse all"}
         </button>
@@ -40,24 +40,24 @@ export function Sidebar() {
         return (
           <div key={m.id} className="border-b border-[var(--color-line)] py-3">
             <button onClick={() => setClosed({ ...closed, [m.id]: !isClosed })} className="flex w-full items-start gap-2 px-1 text-left">
-              <span className="flex-1 font-bold text-[var(--color-fg)]">Module {m.n} · {m.title}</span>
+              <span className="flex-1 text-[13.5px] font-semibold text-white">Module {m.n} · {m.title}</span>
               <span className="pt-0.5 font-mono text-[0.7rem] text-[var(--color-fg-mut)]">{done}/{m.lessons.length}</span>
               <ChevronDown size={13} className={`mt-1 text-[var(--color-fg-mut)] transition ${isClosed ? "-rotate-90" : ""}`} />
             </button>
             {!isClosed && (
               <>
-                <p className="mt-1 px-1 text-[0.74rem] leading-snug text-[var(--color-fg-mut)]">{m.subtitle}</p>
+                <p className="mt-1 px-1 text-[11.5px] leading-[15.5px] text-[var(--color-fg-mut)]">{m.subtitle}</p>
                 <div className="mt-2 space-y-0.5">
                   {m.lessons.map((l, i) => {
                     const active = pathname === `/learn/${l.slug}`;
                     const ldone = !!progress.lessons[l.slug];
                     return (
-                      <div key={l.slug} className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${active ? "bg-[var(--color-panel-2)]" : "hover:bg-[var(--color-panel)]"}`}>
+                      <div key={l.slug} className={`flex items-center gap-2 rounded-lg py-[7px] pl-[9px] pr-2.5 font-medium ${active ? "bg-[var(--color-panel-2)]" : "hover:bg-[var(--color-panel)]"}`}>
                         <Link href={`/learn/${l.slug}`} className="flex min-w-0 flex-1 items-center gap-2">
-                          <span className={`w-7 shrink-0 font-mono text-[0.7rem] ${active ? "text-[var(--color-nv-bright)]" : "text-[var(--color-fg-mut)]"}`}>{m.n}.{i + 1}</span>
+                          <span className={`w-6 shrink-0 font-mono text-[10px] font-semibold ${active ? "text-[var(--color-nv-bright)]" : "text-[var(--color-fg-mut)]"}`}>{m.n}.{i + 1}</span>
                           <span className={`truncate ${active ? "text-[var(--color-nv-bright)]" : "text-[var(--color-fg-dim)]"}`}>{l.title}</span>
                         </Link>
-                        {l.kind === "lab" && <span className="rounded border border-[var(--color-nv-dim)] px-1 font-mono text-[0.6rem] font-bold text-[var(--color-nv-bright)]">LAB</span>}
+                        {l.kind === "lab" && <span className="rounded border border-[var(--color-nv-dim)] px-[5px] py-px text-[9px] font-bold text-[var(--color-nv)]">LAB</span>}
                         <button
                           onClick={() => setLessonDone(l.slug, !ldone)}
                           title={ldone ? "Mark as not done" : "Mark as done"}

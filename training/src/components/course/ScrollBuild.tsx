@@ -4,7 +4,6 @@
 //   <ScrollBuild diagram="stack" items={[{ title: "…", text: "…" }, …]} />
 // Card i (1-based) shows layers 0..i of the diagram, with layer i highlighted.
 import { useEffect, useRef, useState } from "react";
-import { DIAGRAMS } from "@/lib/diagrams";
 import { DiagramSvg } from "./LiveDiagram";
 
 export function ScrollBuild({ diagram, items, caption }: { diagram: string; items: { title: string; text: string }[]; caption?: string }) {
@@ -18,29 +17,28 @@ export function ScrollBuild({ diagram, items, caption }: { diagram: string; item
     refs.current.forEach((r) => r && io.observe(r));
     return () => io.disconnect();
   }, []);
-  const d = DIAGRAMS[diagram];
   return (
-    <div className="not-prose my-6 grid gap-5 lg:grid-cols-[2fr_3fr]">
-      <div className="space-y-3">
+    <div className="not-prose my-6 grid gap-4 lg:grid-cols-[1fr_1.05fr]">
+      <div className="space-y-2.5">
         {items.map((it, i) => (
           <div key={i} data-i={i + 1} ref={(el) => { refs.current[i] = el; }}
             onClick={() => setActive(i + 1)}
-            className={`cursor-pointer rounded-lg border px-4 py-3 transition ${i + 1 === active ? "border-[var(--color-nv-dim)] bg-[var(--color-run-bg)]" : i + 1 < active ? "border-[var(--color-line)] bg-[var(--color-panel)]" : "border-[var(--color-line)] bg-[var(--color-panel)] opacity-60"}`}>
-            <div className="flex items-center gap-2 font-semibold text-[var(--color-fg)]">
+            className={`cursor-pointer rounded-lg border px-3.5 py-3 transition ${i + 1 === active ? "border-[var(--color-nv)] bg-[var(--color-panel)]" : i + 1 < active ? "border-[var(--color-line)] bg-[var(--color-panel)]" : "border-[var(--color-line)] bg-[var(--color-panel)] opacity-60"}`}>
+            <div className="flex items-center gap-2 text-[14px] font-bold text-[var(--color-fg)]">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-nv)] text-[11px] font-bold text-[#0a0d07]">{i + 1}</span>
               {it.title}
             </div>
-            <p className="mt-1.5 text-sm leading-relaxed text-[var(--color-fg-dim)]">{it.text}</p>
+            <p className="mt-1.5 text-[13px] leading-[19.5px] text-[var(--color-fg-dim)]">{it.text}</p>
           </div>
         ))}
       </div>
       <div>
         <div className="sticky top-24">
-          <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-out-bg)] p-3">
-            {d && <div className="mb-2 text-center text-xs font-semibold text-[var(--color-fg-dim)]">{d.title}</div>}
+          <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-ink2)] p-2.5">
+            
             <DiagramSvg id={diagram} layer={active} />
           </div>
-          <p className="mt-2 text-center text-xs text-[var(--color-fg-mut)]">{caption ?? "Scroll through the steps: the picture builds as you read."}</p>
+          <p className="mt-2 text-center text-[13px] text-[var(--color-fg-dim)]">{caption ?? "Scroll through the steps: the picture builds as you read."}</p>
         </div>
       </div>
     </div>

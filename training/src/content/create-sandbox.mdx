@@ -28,7 +28,6 @@ fleet logs <agent-i>                  # OpenShell logs for one sandbox
 ./scripts/fleet up 2
 ```
 <Output>
-<LiveDiagram id="create-sandbox" layer={1} />
 <ExpectedOutput>
 {`Scaling fleet to 2 sandbox(es)...
   agent-0 (already exists)
@@ -101,7 +100,6 @@ The CLI never touches Kubernetes. It calls the **gateway**, which:
 kubectl -n openshell-lab-default get sandboxes
 ```
 <Output>
-<LiveDiagram id="create-sandbox" layer={2} />
 <ExpectedOutput>
 {`NAME      READY   REASON              AGE
 agent-0   True    DependenciesReady   75s
@@ -119,7 +117,6 @@ Each pod is labelled with its role and its pair:
 kubectl -n openshell-lab-default get pods -L openshell.ai/boundary-role,openshell.ai/boundary-pair
 ```
 <Output>
-<LiveDiagram id="create-sandbox" layer={3} />
 <ExpectedOutput>
 {`NAME                                                 READY   STATUS    AGE   BOUNDARY-ROLE   BOUNDARY-PAIR
 agent-0                                              1/1     Running   75s   workload        bb5457b5-93bf-40d1-8421-7ce92d1984cf

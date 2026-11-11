@@ -30,7 +30,7 @@ S.box(250, 228, 430, 58, "socat", ["host ports 3001 / 3002 → Envoy Gateway"], 
 S.box(700, 228, 390, 58, "Training site", ["Next.js + live terminal · systemd · :3000"], icon="i-portal")
 
 # ---- k3s
-S.rect(36, 308, 1528, 674, fill="#fff", stroke=LINE, sw=1.2, rx=8)
+S.rect(36, 308, 1528, 674, fill=AREA, stroke=LINE, sw=1.2, rx=8)
 S.icon("i-wheel", 46, 314, 22, GREY)
 S.text(74, 331, "k3s v1.37 · single node", 15, True)
 
@@ -73,18 +73,30 @@ S.label(62, 300, "mTLS · OU=operator = platform admin → NodePort 30808", GREE
 # ---- workspaces: managed mode gives each workspace its own namespace
 S.ns(472, 510, 660, 236, "openshell-lab-default", green=True, sub="· workspace default")
 # agent-1 and more, compact
+def pair(x, y, small=False):
+    """A sandbox's two pods, side by side: workload (grey) and supervisor (green)."""
+    w1, w2, h = (76, 76, 40)
+    S.raw('<g class="dg-node" data-node="workload pod">')
+    S.rect(x, y, w1, h, fill="#fff", stroke=GREY, sw=1.2, rx=6)
+    S.text(x + 7, y + 25, "workload", 13, False, INK, check=False)
+    S.raw('</g>')
+    S.raw('<g class="dg-node" data-node="supervisor pod">')
+    S.rect(x + w1 + 6, y, w2, h, fill="#fff", stroke=GREEN, sw=1.5, rx=6)
+    S.text(x + w1 + 11, y + 25, "supervisor", 13, False, INK, check=False)
+    S.raw('</g>')
+
 S.raw('<g class="dg-node" data-node="agent-1">')
 S.rect(496, 574, 172, 82, fill=GREEN_T, stroke=GREEN_L, sw=1, rx=8)
 S.rect(488, 566, 172, 82, fill="#fff", stroke=GREEN, sw=1.4, rx=8)
-S.icon("i-cube", 498, 574, 20, GREEN_D)
-S.text(524, 590, "agent-1", 14.5, True)
-S.text(500, 614, "workload + supervisor", 13, False, SUB)
-S.text(500, 634, "Ready", 13, True, GREEN_D)
+S.icon("i-cube", 498, 572, 18, GREEN_D)
+S.text(522, 587, "agent-1", 14, True)
+S.text(584, 587, "· Ready", 13, True, GREEN_D)
 S.raw('</g>')
+pair(496, 598)
 S.raw('<g class="dg-node" data-node="more sandboxes">')
 S.rect(488, 664, 172, 70, fill="#fff", stroke=GREEN_L, sw=1.2, rx=8, dash="5 4")
 S.text(500, 690, "+ more sandboxes", 13.5, True, GREEN_D)
-S.text(500, 712, "fleet up · console", 13, False, SUB)
+S.text(500, 712, "each its own pair", 13, False, SUB)
 S.raw('</g>')
 # agent-0 in detail
 S.raw('<g class="dg-node" data-node="agent-0">')
@@ -103,12 +115,12 @@ S.label(901, 664, "port", GREEN_D, size=12.5)
 
 S.ns(472, 758, 660, 72, "openshell-lab-team-a", green=True, sub="· workspace team-a")
 S.raw('<g class="dg-node" data-node="lab-a">')
-S.rect(900, 766, 216, 56, fill="#fff", stroke=GREEN, sw=1.4, rx=8)
-S.icon("i-cube", 910, 772, 20, GREEN_D)
-S.text(936, 788, "lab-a", 14.5, True)
-S.text(982, 788, "· Ready", 13.5, True, GREEN_D)
-S.text(912, 810, "learner is a member", 13, False, SUB)
+S.rect(872, 764, 248, 60, fill="#fff", stroke=GREEN, sw=1.4, rx=8)
+S.icon("i-cube", 880, 770, 18, GREEN_D)
+S.text(902, 786, "lab-a", 14, True)
+S.text(882, 810, "Ready", 13, True, GREEN_D)
 S.raw('</g>')
+pair(958, 774)
 
 # gateway -> workspaces (creates namespaces, sandboxes, policy)
 S.arrow("M404 710 H458 V552 H1010 V596", GREEN_D)

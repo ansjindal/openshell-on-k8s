@@ -55,17 +55,17 @@ export function Run({ children }: { children: ReactNode }) {
 
   return (
     <div className="not-prose my-5 space-y-3">
-      <div className="overflow-hidden rounded-lg border border-[var(--color-run-line)] bg-[var(--color-run-bg)]">
-        <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 border-b border-[var(--color-run-line)] px-4 py-2 text-left">
+      <div className="overflow-hidden rounded-[10px] border border-[var(--color-run-line)] bg-[var(--color-run-bg)]">
+        <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 bg-[var(--color-run-head)] px-3 py-[7px] text-[13.5px] text-left">
           <ChevronDown size={14} className={`text-[var(--color-fg-mut)] transition ${open ? "" : "-rotate-90"}`} />
-          <span className="rounded bg-[var(--color-nv)] px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-[#0a0d07]">RUN</span>
-          <span className="text-sm text-[var(--color-fg-dim)]">Press Run to run {count === 1 ? "this command" : `these ${count || ""} commands`} on your lab VM.</span>
+          <span className="rounded bg-[var(--color-nv)] px-[7px] py-0.5 text-[10.5px] font-bold text-[#0b0f05]">RUN</span>
+          <span className="text-[13.5px] text-[var(--color-fg-dim)]">Press Run to run {count === 1 ? "this command" : `these ${count || ""} commands`} on your lab VM.</span>
         </button>
         {open && (
-          <div className="run-group space-y-2 p-4 text-sm text-[var(--color-fg-dim)]">
+          <div className="run-group space-y-2 p-3 text-[13px] text-[var(--color-fg-dim)]">
             <RunContext.Provider value={{ register }}>{children}</RunContext.Provider>
             <button onClick={runAll} disabled={running}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-nv-dim)] bg-[var(--color-run-btn)] py-2.5 text-sm font-semibold text-[var(--color-nv-bright)] transition hover:bg-[var(--color-run-btn-hover)] disabled:opacity-60">
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-run-btn-line)] bg-[var(--color-run-btn)] py-3 text-[15px] font-bold text-[var(--color-nv-bright)] transition hover:bg-[var(--color-run-btn-hover)] disabled:opacity-60">
               {running ? <><Loader2 size={15} className="animate-spin" /> Running…</> : <>Run <Play size={14} /></>}
             </button>
           </div>

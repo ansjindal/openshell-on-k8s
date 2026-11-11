@@ -32,18 +32,18 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   }
 
   return (
-    <article className="mx-auto max-w-6xl">
+    <article className="mx-auto max-w-[1117px]">
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-fg-mut)]">
+          <div className="flex flex-wrap items-center gap-2 text-[12px] uppercase tracking-[0.12em] text-[var(--color-fg-mut)]">
             <span>{current.partTitle}</span>
             {current.kind === "lab" && <span className="rounded border border-[var(--color-nv-dim)] px-1.5 font-mono text-[0.65rem] font-bold text-[var(--color-nv-bright)]">LAB</span>}
             {current.kind === "check" && <span className="rounded border border-[var(--color-info)] px-1.5 font-mono text-[0.65rem] font-bold text-[var(--color-info)]">CHECK</span>}
           </div>
           {current.kind === "lab" && <CollapseAll />}
         </div>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-[var(--color-fg)] md:text-4xl">
-          <span className="mr-3 font-mono text-[var(--color-fg-mut)]">{current.number}</span>{current.title}
+        <h1 className="mt-2 text-[28px] font-bold leading-[47.6px] text-white [:root[data-theme=light]_&]:text-[var(--color-fg)]">
+          {current.slug.endsWith("-overview") ? <>Module {current.moduleN} · {current.partTitle.split(" · ").slice(1).join(" · ")}</> : <><span className="mr-2.5 text-[var(--color-fg-mut)]">{current.number}</span>{current.title}</>}
         </h1>
         <div className="mt-3 flex items-center gap-1 text-xs text-[var(--color-fg-mut)]"><Clock size={13} /> {current.minutes} min</div>
       </div>
