@@ -1,4 +1,4 @@
-Check what you took away from Module 4 before you build the fleet.
+Check what you took away from Module 3 before you build the fleet.
 
 ## What you learned
 
@@ -11,7 +11,7 @@ Check what you took away from Module 4 before you build the fleet.
 
 ## Check your understanding
 
-<Quiz title="Test your knowledge: Module 4">
+<Quiz title="Test your knowledge: Module 3">
 <Q q="An OCSF line shows NET:REFUSE for example.org with reason policy_dns_ineligible. What happened?" options={["The supervisor opened the connection and logged it", "example.org returned a DNS error", "example.org is in no rule, so the supervisor did not even resolve it", "The gateway was unreachable"]} answer={2} why="example.org isn't in any rule, so the supervisor didn't even resolve it: DNS is part of the seal." />
 <Q q={"In an OCSF line, what does engine:l7 tell you?"} options={["The decision was made at the connection level", "The decision was made at the request level (method and path)", "The event came from the gateway, not the supervisor", "The request was allowed"]} answer={1} why="The engine is the layer that decided: opa means the connection, l7 means the request." />
 <Q q="What ships the supervisors' logs to Loki?" options={["Alloy", "Tempo", "The OpenShell Console", "Kyverno"]} answer={0} why="The supervisors' logs are shipped to Loki by Alloy, so the events for every sandbox are queryable with LogQL." />

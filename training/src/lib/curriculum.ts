@@ -19,35 +19,22 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "os", n: 1, title: "OpenShell", accent: "nv",
-    subtitle: "The runtime that puts the boundary outside the agent: gateway, supervisor, policy, keys, kernel filters and audit, and how it all runs on Kubernetes.",
+    id: "os", n: 1, title: "OpenShell", accent: "nv", role: "You are the platform operator.",
+    subtitle: "The runtime that puts the boundary outside the agent. Each chapter explains one part with the talks' scenes, then you try it on your VM.",
     lessons: [
-      L("openshell", "Enter OpenShell", "The same agent and the same poisoned issue, inside a sandbox: every harmful step stops at the boundary.", 10),
-      L("os-architecture", "Gateway and supervisor", "The control plane, a supervisor per sandbox, and the boundary between the agent and its supervisor.", 9),
-      L("security", "The policy file and the kernel", "One YAML file with two lifetimes, the kernel filters that hold the agent in, and the layers around it.", 12),
-      L("request-flow", "One request, end to end", "Follow one request through the supervisor, and see why the agent never holds the key.", 8),
-      L("audit-signals", "Signals and audit events", "Logs, traces and metrics tied to one sandbox ID, and how to read an OCSF event.", 7),
-      L("big-picture", "OpenShell on Kubernetes: this lab", "One sandbox on Kubernetes, then this lab's whole platform, path by path.", 10),
+      L("openshell", "Enter OpenShell", "The boundary outside the agent; then build an agent with pi and run the same agent sealed in a sandbox.", 25, "lab"),
+      L("os-architecture", "Gateway and supervisor", "The control plane and a supervisor per sandbox; then create a sandbox and find its two halves.", 20, "lab"),
+      L("os-kernel", "Inside the sandbox: the kernel", "seccomp, Landlock and the sandbox user; then test the seal from inside.", 20, "lab"),
+      L("security", "The policy file", "One YAML file, two lifetimes; then open the network rule by rule, REST and TCP.", 25, "lab"),
+      L("request-flow", "One request, end to end", "The checkpoints a request passes and why the agent never holds the key; then see it on agent-0.", 15, "lab"),
+      L("audit-signals", "Signals and audit events", "Traces, metrics and OCSF events on one sandbox ID; then read the events your requests made.", 15, "lab"),
+      L("big-picture", "OpenShell on Kubernetes: this lab", "One sandbox on Kubernetes, this lab's platform path by path; then verify your cluster.", 20, "lab"),
       L("sentry", "NVIDIA Sentry: beyond the host", "When the host itself is compromised: the same policy, enforced on BlueField-4.", 6),
-      L("os-check", "Summary & knowledge check", "Agents and OpenShell, before the labs.", 6, "check"),
+      L("os-check", "Summary & knowledge check", "Agents, OpenShell, sandboxes and policies.", 8, "check"),
     ],
   },
   {
-    id: "m1", n: 2, title: "Sandboxes & Policy", accent: "nv", role: "You are the platform operator.",
-    subtitle: "You are the platform operator. Verify the cluster, build an agent and seal it in a sandbox, then open the network one rule at a time.",
-    lessons: [
-      L("m1-overview", "Overview", "What this module builds: a sealed sandbox, opened one rule at a time.", 4),
-      L("deploy", "Verify the cluster", "Confirm k3s, the gateway, the console and LiteLLM are healthy.", 8, "lab"),
-      L("build-an-agent", "Build an agent", "pi on the VM, connected to your model; then the same agent in a sandbox with a policy.", 15, "lab"),
-      L("create-sandbox", "Create a sandbox", "openshell sandbox create → a workload pod and a supervisor pod → Ready.", 9, "lab"),
-      L("into-the-sandbox", "Into the sandbox", "Exec in and test the seal: filesystem, user, network.", 8, "lab"),
-      L("policy", "The seal: egress policy", "Deny by default; grant one endpoint live, then narrow it to GET with an L7 rule.", 10, "lab"),
-      L("tcp-egress", "Beyond REST: TCP egress", "An L4 host:port rule for non-HTTP traffic, scoped to one binary.", 6, "lab"),
-      L("m1-check", "Summary & knowledge check", "Sandboxes, pods and policies.", 5, "check"),
-    ],
-  },
-  {
-    id: "m2", n: 3, title: "Models & Credentials", accent: "nv", role: "You are the agent developer.",
+    id: "m2", n: 2, title: "Models & Credentials", accent: "nv", role: "You are the agent developer.",
     subtitle: "You are the agent developer. Give agents a model and credentials they never see, shape their persona, install governed skills, and run tasks.",
     lessons: [
       L("m2-overview", "Overview", "What this module builds: a model, credentials the agent never sees, skills and a task.", 4),
@@ -60,7 +47,7 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m3", n: 4, title: "Audit, Console & Access", accent: "nv", role: "You are the security reviewer.",
+    id: "m3", n: 3, title: "Audit, Console & Access", accent: "nv", role: "You are the security reviewer.",
     subtitle: "You are the security reviewer. Read the audit trail, drive the same gateway from the web console, and give people roles and workspaces.",
     lessons: [
       L("m3-overview", "Overview", "What this module builds: an audit trail, the web console and people with roles.", 4),
@@ -71,7 +58,7 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m4", n: 5, title: "Capstone: SRE Copilot Fleet", accent: "nv", role: "You are the SRE.",
+    id: "m4", n: 4, title: "Capstone: SRE Copilot Fleet", accent: "nv", role: "You are the SRE.",
     subtitle: "You are the SRE. Bring up a fleet of sealed specialists, break a real service, let the fleet find the root cause, and approve the fix yourself.",
     lessons: [
       L("m4-overview", "Overview", "What this module builds: a fleet of sealed specialists that finds a real fault.", 4),
@@ -85,7 +72,7 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m5", n: 6, title: "Going Further",
+    id: "m5", n: 5, title: "Going Further",
     subtitle: "Where to take it next: high availability, more nodes, a namespace per team, credentials in Vault.",
     lessons: [
       L("next-steps", "Next steps & resources", "HA, multi-node, tenancy, credential drivers, other agents.", 6),

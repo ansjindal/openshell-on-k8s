@@ -1,16 +1,12 @@
-An autonomous agent is, by design, an untrusted process you've given a shell and a network. The point of this stack is to make that *safe*, not with one big wall but with layers, so that defeating any single one doesn't get an attacker much.
+The kernel holds the agent's process in; the **supervisor** decides where it may go. Both are configured by one short YAML file per sandbox. Here is that file, then you open the network on a running sandbox one rule at a time.
 
-<Fig id="sandbox-anatomy" n="0.3" caption="The layers around one agent: kernel, pod, supervisor, cluster." />
+<BeforeYouStart
+  learn="the four parts of a sandbox policy and their two lifetimes, deny by default, and how one network entry narrows access to a host, a method, a path and a program."
+  prereq="1.3 Inside the sandbox: the kernel."
+  time="about twenty-five minutes, with two exercises."
+/>
 
-## 1 · The workload pod: what the agent process can touch
-
-The agent runs as the unprivileged user `sandbox`. The sandbox runtime applies the policy's static parts before the agent starts:
-
-- **Landlock** (a Linux security module) limits the filesystem: here `/usr`, `/lib`, `/etc` are read-only, `/sandbox` and `/tmp` are writable, everything else is invisible. OpenShell 0.1 requires Landlock ABI v3, so the node needs Linux 6.2 or newer.
-- **seccomp** filters dangerous system calls, and the process cannot regain root.
-- These are **static**: fixed when the sandbox is created.
-
-## 2 · The supervisor pod: what the agent can reach
+## The supervisor pod: what the agent can reach
 
 The workload pod has no network of its own. A Kubernetes **NetworkPolicy** lets it talk only to its supervisor, and the supervisor decides everything else:
 
@@ -19,36 +15,11 @@ The workload pod has no network of its own. A Kubernetes **NetworkPolicy** lets 
 - **L7**: for `protocol: rest`, which HTTP method and path, even inside TLS. `GET /repos/**` allowed, `DELETE` refused with `403 policy_denied`.
 - **Live**: network rules are **dynamic**; a new revision loads into a running sandbox without a restart.
 
-## 3 · Credentials: the agent never holds the key
+## The policy file, line by line
 
-A **provider** stores a credential in the gateway. A sandbox with the provider attached sees only a placeholder, such as `LITELLM_API_KEY=openshell:resolve:env:…`. The supervisor swaps in the real value on requests that match the provider's endpoint and rules, and nowhere else.
-
-<Fig id="credential-flow" n="0.4" caption="The key the agent never sees: the supervisor adds it only to requests its rules allow." />
-
-A fully compromised agent (prompt-injected, hijacked) cannot exfiltrate the key, because it never had it, and cannot even *use* it outside the allowed calls.
-
-## 4 · The control plane: who may change any of this
-
-The gateway accepts no anonymous calls. People sign in with **Keycloak** and act within their role and their workspaces; the lab's CLI uses an `OU=operator` client certificate; supervisors use tokens scoped to their own sandbox. **cert-manager** issues and rotates the gateway's TLS certificates.
-
-## 5 · Kubernetes guardrails
-
-- **Resource admission**: a sandbox may use a cluster resource (a RuntimeClass, a PriorityClass, a volume) only if the operator labelled it `openshell.ai/sandbox-attachable=true`.
-- **Kyverno** rejects any sandbox pod that asks for the host's network, PID or IPC namespace.
-
-## 6 · The audit trail
-
-Every decision the supervisor and the gateway make, allowed or denied, is an **OCSF** event: in `openshell logs`, in the supervisor's pod log and in Loki. You'll query it in [The Audit Trail](/learn/audit).
-
-## 7 · The policy file that drives it
-
-Every layer above is configured by one short YAML file per sandbox: its **policy**. You'll edit policies in almost every lab, so here it is line by line. Press **Next** to step through it: the lines that matter light up on the left, and on the right you see what they let through and what they stop.
+Every layer of a sandbox is configured by one short YAML file: its **policy**. You'll edit policies in almost every lab, so here it is line by line. Press **Next** to step through it: the lines that matter light up on the left, and on the right you see what they let through and what they stop.
 
 <DeckScene src="openshell" only="policy" title="One YAML file, two lifetimes" />
-
-The sections that lock at startup (`filesystem_policy`, `landlock`, `process`) are enforced by the kernel. Here is how:
-
-<DeckScene src="openshell" only="kernel" title="Two kernel filters" />
 
 | Part | Controls | Enforced by | Changes on a running sandbox? |
 |---|---|---|---|
@@ -69,13 +40,279 @@ A few details the labs rely on:
 No single layer is the answer. Landlock and seccomp bound the process, the supervisor bounds the network, providers bound the secrets, identities bound the control plane, and the audit trail tells you what happened. Together they make a compromised agent a contained problem instead of a cluster-wide one.
 </Callout>
 
+## Exercise: the seal, rule by rule
+
+A sandbox's network is governed by its **policy**. Every connection the agent opens goes to its **supervisor**, which allows it only if a `network_policies` entry says so: deny by default, with a short allow-list you control.
+
+<Section n="1" title="What the sandbox may reach today" goal="Read the effective policy, including what providers added.">
+
+<Step n="1" title="The policy and its version">
+
+Ask the gateway for `agent-0`'s policy: its version, hash and status.
+
+```bash
+openshell policy get agent-0
+```
+
+
+</Step>
+
+<Step n="2" title="The full effective policy">
+
+The **effective** policy includes what attached providers added. Under `network_policies` you'll find `_provider_litellm`, merged in from the `litellm` provider's profile: its endpoint, its L7 rules and the binaries allowed to use them. Anything not listed is denied, and every decision is audited.
+
+```bash
+openshell policy get agent-0 --full
+```
+<Output>
+<ExpectedOutput>
+{`network_policies:
+  _provider_litellm:
+    endpoints:
+      - host: litellm.litellm.svc.cluster.local
+        port: 4000
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: {method: GET, path: /v1/models}
+          - allow: {method: POST, path: /v1/chat/completions}
+          ...
+    binaries:
+      - path: /**`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="2" title="Deny by default, in practice" goal="Prove the internet is closed to the agent.">
+
+<Step n="1" title="Try GitHub from inside the sandbox">
+
+```bash
+openshell sandbox exec -n agent-0 -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/zen
+```
+<Output>
+<ExpectedOutput>
+{`HTTP 000`}
+</ExpectedOutput>
+</Output>
+
+`000` means no HTTP response at all: the supervisor refused the connection. No cluster API, no internet, nothing you didn't grant.
+
+</Step>
+
+</Section>
+
+<Section n="3" title="Grant one endpoint, live" goal="Open GitHub's API for GET only, while the sandbox runs.">
+
+<Step n="1" title="Add a read-only endpoint">
+
+The endpoint format is `host:port[:access[:protocol[:enforcement]]]`, and the rule applies only to the binaries you name with `--binary`:
+
+```bash
+openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --wait
+```
+<Output>
+<ExpectedOutput>
+{`✓ Policy version 2 submitted (hash: ae09c7816c51)
+✓ Policy version 2 loaded (active version: 2)`}
+</ExpectedOutput>
+</Output>
+
+The new revision loaded into the **running** sandbox, with no restart. The parts of the rule:
+
+- `read-only`: an access preset: `GET`, `HEAD` and `OPTIONS` only.
+- `rest`: inspect requests at **L7** (method and path), even inside TLS.
+- `enforce`: block what breaks the rule. The default is `audit`, which only logs.
+
+</Step>
+
+<Step n="2" title="GET now works">
+
+```bash
+openshell sandbox exec -n agent-0 -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
+```
+<Output>
+<ExpectedOutput>
+{`Responsive is better than fast. HTTP 200`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="POST is refused at L7">
+
+A `POST` to the same host is refused by the supervisor, with the reason:
+
+```bash
+openshell sandbox exec -n agent-0 -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{http_code}\n' https://api.github.com/markdown
+```
+<Output>
+<ExpectedOutput>
+{`{"error":"policy_denied","policy":"allow_api_github_com_443","rule":"POST /markdown","detail":"POST /markdown not permitted by policy","layer":"l7",...}
+HTTP 403`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="4" title="Revisions" goal="See every change as a numbered revision.">
+
+<Step n="1" title="List the policy history">
+
+```bash
+openshell policy list agent-0
+```
+<Output>
+<ExpectedOutput>
+{`VERSION  HASH           STATUS       CREATED                  ERROR
+2        ae09c7816c51   Loaded       1794324512476
+1        76a21cf40933   Superseded   1794324384281`}
+</ExpectedOutput>
+</Output>
+
+`openshell policy get agent-0 --rev 1 --full` shows an older one. To write a whole policy at once, keep it in a YAML file and apply it with `openshell policy set agent-0 --policy <file> --wait`; the [Skills](/learn/skills) lesson does that.
+
+<Callout type="note" title="Only the network part is live">
+Network rules are <strong>dynamic</strong>: they change on a running sandbox. The filesystem and process sections are <strong>static</strong>: fixed at creation, because Landlock and the sandbox user are applied before the agent starts.
+</Callout>
+
+</Step>
+
+</Section>
+
+<Callout type="rh" title="The policy is the contract">
+The policy says <em>what the agent may reach</em>, down to the method and path, and every decision is on the audit log. That's what makes a sandbox something you can hand untrusted agent code and <em>prove</em> what it can and cannot do.
+</Callout>
+
+## Exercise: beyond REST, TCP egress
+
+[The Seal](/learn/security) covered REST endpoints, where the supervisor inspects every request and filters by method and path. Not everything is HTTP: a database connection, an MQTT broker, any raw TCP service. For those the policy has a plainer endpoint: **host and port, no request inspection**, an L4 allow.
+
+<Section n="5" title="The two endpoint shapes" goal="Preview a REST rule and a bare L4 rule side by side.">
+
+<Step n="1" title="Preview a REST rule">
+
+Preview a REST rule with `--dry-run` (it prints the merged policy and sends nothing):
+
+```bash
+openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --dry-run | grep -A12 'allow_api_github_com_443:'
+```
+<Output>
+<ExpectedOutput>
+{`allow_api_github_com_443:
+  name: allow_api_github_com_443
+  endpoints:
+    - host: api.github.com
+      port: 443
+      protocol: rest
+      enforcement: enforce
+      access: read-only
+  binaries:
+    - path: /usr/bin/curl`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Preview the bare form">
+
+…and compare the bare form, just `host:port`:
+
+```bash
+openshell policy update agent-0 --add-endpoint 'example.com:443' --binary /usr/bin/curl --dry-run | grep -A7 'allow_example_com_443:'
+```
+<Output>
+<ExpectedOutput>
+{`allow_example_com_443:
+  name: allow_example_com_443
+  endpoints:
+    - host: example.com
+      port: 443
+  binaries:
+    - path: /usr/bin/curl`}
+</ExpectedOutput>
+</Output>
+
+That's the whole difference. The REST rule carries `protocol`, `enforcement` and `access`: the supervisor inspects every request. The bare entry has none: no protocol parsing, no method or path filtering. It's a firewall-style allow for one host, one port and the named binaries.
+
+<Callout type="nv" title="Why this exists">
+A sandbox that needs Postgres, an MQTT broker or any raw TCP service has no verbs or paths to filter on. The L4 form gives it a real allow rule without pretending to inspect a protocol the supervisor can't parse. Deny by default still holds for every other host and port, and for every binary you didn't name.
+</Callout>
+
+</Step>
+
+</Section>
+
+<Section n="6" title="Try it" goal="Apply the L4 rule and test its host and binary limits.">
+
+<Step n="1" title="Apply the bare rule">
+
+```bash
+openshell policy update agent-0 --add-endpoint 'example.com:443' --binary /usr/bin/curl --wait
+```
+
+</Step>
+
+<Step n="2" title="curl reaches the host">
+
+```bash
+openshell sandbox exec -n agent-0 -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://example.com/
+```
+<Output>
+<ExpectedOutput>
+{`HTTP 200`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="Every other host is still closed">
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'curl -s -m 8 -o /dev/null https://example.org/ || echo "blocked (curl exit $?)"'
+```
+<Output>
+<ExpectedOutput>
+{`blocked (curl exit 7)`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="4" title="Another binary is refused">
+
+The rule is **per binary**: Python, going to the very same host, is refused:
+
+```bash
+openshell sandbox exec -n agent-0 -- python3 -c 'import urllib.request; print(urllib.request.urlopen("https://example.com").status)'
+```
+<Output>
+<ExpectedOutput>
+{`urllib.error.URLError: <urlopen error [Errno 13] Permission denied>`}
+</ExpectedOutput>
+</Output>
+
+That binary check is what stops an agent from exfiltrating data through an unexpected tool, even to a host it's allowed to reach. Every one of these decisions is in the audit trail; you'll read it in [The Audit Trail](/learn/audit).
+
+</Step>
+
+</Section>
+
 ## What you learned
 
 <Learned next="/learn/request-flow" nextLabel="One request, end to end">
 
-- **Layers, not a wall.** The kernel bounds the process, the supervisor bounds the network, providers bound the secrets, identities bound the control plane, and the audit trail records it all.
-- **One policy file per sandbox.** Filesystem, process and network, in a few lines of YAML.
-- **Fixed and live.** Files and process are set at creation; network rules change on a running sandbox.
-- **Doors, not walls.** Nothing is reachable until an entry allows it, down to the method, the path and the program.
+- **One policy file per sandbox.** Filesystem, process and network, in a few lines of YAML; files and process are fixed at creation, network rules change live.
+- **What the sandbox may reach today.** Read the effective policy, including what providers added.
+- **Deny by default, in practice.** Prove the internet is closed to the agent.
+- **Grant one endpoint, live.** Open GitHub's API for GET only, while the sandbox runs.
+- **Revisions.** See every change as a numbered revision.
+- **The two endpoint shapes.** Preview a REST rule and a bare L4 rule side by side.
+- **Try it.** Apply the L4 rule and test its host and binary limits.
 
 </Learned>

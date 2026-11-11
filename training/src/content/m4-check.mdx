@@ -1,4 +1,4 @@
-Check what you took away from Module 5, the SRE copilot fleet.
+Check what you took away from Module 4, the SRE copilot fleet.
 
 ## What you learned
 
@@ -11,7 +11,7 @@ Check what you took away from Module 5, the SRE copilot fleet.
 
 ## Check your understanding
 
-<Quiz title="Test your knowledge: Module 5">
+<Quiz title="Test your knowledge: Module 4">
 <Q q="How are the columns in fleet.txt separated?" options={["By colons", "By commas", "By tabs only", "By whitespace, because the backend itself contains a colon"]} answer={3} why="The backend is a host:port, so fleet.sh splits columns on whitespace and reads the first three fields." />
 <Q q="What can the analyst agent reach?" options={["Loki only", "Nothing: it has no egress and no tools", "Every backend the other agents can reach", "Only the Kubernetes API"]} answer={1} why="The analyst gets no telemetry rule at all; it only reasons over the others' findings." />
 <Q q={"Why do fleet agents use the cluster-telemetry skill instead of OpenClaw's web_fetch?"} options={["web_fetch refuses private/internal/cluster addresses (an SSRF guard)", "web_fetch cannot parse JSON", "web_fetch bypasses the egress policy", "web_fetch is not installed in the sandbox image"]} answer={0} why="Loki, Prometheus and Tempo live on *.svc.cluster.local, which web_fetch refuses; the skill uses curl, still bounded by the agent's policy." />

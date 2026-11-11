@@ -1,9 +1,31 @@
-You created `agent-0` and saw it become two pods. The agent lives in the **workload** pod. To poke at it directly you go **into the sandbox**, through the gateway and the supervisor, with an ordinary `exec`.
+An agent is, by design, an untrusted process you've given a shell and a network. OpenShell holds it in with layers, so that defeating any single one doesn't get an attacker much. This chapter is the inner layers: what the kernel lets the agent's process touch, and the Kubernetes guardrails around its pod. Then you test them from inside.
 
 <BeforeYouStart
-  will="open a shell inside agent-0, test its user and filesystem limits, prove its network seal, and read the NetworkPolicy behind it."
-  time="about ten minutes. Nothing outside agent-0 changes."
+  learn="the kernel filters (seccomp, Landlock) and the unprivileged user that hold the agent in, the guardrails around its pod, and how to prove the seal from inside."
+  prereq="1.2 Gateway and supervisor."
+  time="about twenty minutes, with an exercise."
 />
+
+<Fig id="sandbox-anatomy" n="1.2" caption="The layers around one agent: kernel, pod, supervisor, cluster." />
+
+## The workload pod: what the agent process can touch
+
+The agent runs as the unprivileged user `sandbox`. The sandbox runtime applies the policy's static parts before the agent starts:
+
+- **Landlock** (a Linux security module) limits the filesystem: here `/usr`, `/lib`, `/etc` are read-only, `/sandbox` and `/tmp` are writable, everything else is invisible. OpenShell 0.1 requires Landlock ABI v3, so the node needs Linux 6.2 or newer.
+- **seccomp** filters dangerous system calls, and the process cannot regain root.
+- These are **static**: fixed when the sandbox is created.
+
+<DeckScene src="openshell" only="kernel" title="Two kernel filters" />
+
+## Kubernetes guardrails
+
+- **Resource admission**: a sandbox may use a cluster resource (a RuntimeClass, a PriorityClass, a volume) only if the operator labelled it `openshell.ai/sandbox-attachable=true`.
+- **Kyverno** rejects any sandbox pod that asks for the host's network, PID or IPC namespace.
+
+## Exercise: test the seal from inside
+
+You created `agent-0` and saw it become two pods. The agent lives in the **workload** pod. To poke at it directly you go **into the sandbox**, through the gateway and the supervisor, with an ordinary `exec`.
 
 <Section n="1" title="Confirm it's there" goal="Find the workload pod and its supervisor.">
 
@@ -165,7 +187,7 @@ No magic VM: a workload pod with a locked-down process, a supervisor pod that ow
 
 ## What you learned
 
-<Learned next="/learn/policy" nextLabel="The seal: egress policy">
+<Learned next="/learn/security" nextLabel="The policy file">
 
 - **Confirm it's there.** Find the workload pod and its supervisor.
 - **Get a shell inside.** Explore the sandbox from an interactive shell.

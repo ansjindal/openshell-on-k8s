@@ -2,8 +2,8 @@ Follow one ordinary request, the agent's `gh` call to read issue #142, through e
 
 <BeforeYouStart
   learn="the checkpoints a request passes, where the real credential is added, and what happens to a request the policy doesn't allow."
-  prereq="1.3 The policy file and the kernel."
-  time="about eight minutes. No commands in this lesson."
+  prereq="1.4 The policy file."
+  time="about fifteen minutes, with an exercise."
 />
 
 <Section n="1" title="One request, end to end">
@@ -19,6 +19,80 @@ The connection is **paused** at `connect()` inside the sandbox and handed to the
 <DeckScene src="openshell" only="creds" title="The agent never holds the key" />
 
 **Providers** keep credentials in the gateway. Inside the sandbox the agent sees only placeholders such as `openshell:resolve:env:GITHUB_TOKEN`. The supervisor swaps in the real value only for the endpoints the provider allows; a request to the wrong host gets no secret. Steal the environment and you get placeholders. Rotate a key once in the gateway, with no restart.
+
+</Section>
+
+## Credentials in one picture
+
+A **provider** stores a credential in the gateway. A sandbox with the provider attached sees only a placeholder, such as `LITELLM_API_KEY=openshell:resolve:env:…`. The supervisor swaps in the real value on requests that match the provider's endpoint and rules, and nowhere else.
+
+<Fig id="credential-flow" n="1.3" caption="The key the agent never sees: the supervisor adds it only to requests its rules allow." />
+
+A fully compromised agent (prompt-injected, hijacked) cannot exfiltrate the key, because it never had it, and cannot even *use* it outside the allowed calls.
+
+## Exercise: a key the agent doesn't hold
+
+agent-0 has the `litellm` provider attached. See what it holds, use it, and watch the supervisor refuse the one call the provider doesn't allow.
+
+<Section n="3" title="What the agent sees" goal="Call the model from agent-0 with a key it doesn't hold.">
+
+<Step n="1" title="A placeholder, not a key">
+
+`agent-0` was created with `--provider litellm`. Look at its environment:
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'echo $LITELLM_API_KEY'
+```
+<Output>
+<ExpectedOutput>
+{`openshell:resolve:env:v1535812..._LITELLM_API_KEY`}
+</ExpectedOutput>
+</Output>
+
+A placeholder. There is no key anywhere in the sandbox to steal.
+
+</Step>
+
+<Step n="2" title="List the models">
+
+Now use it:
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $LITELLM_API_KEY" http://litellm.litellm.svc.cluster.local:4000/v1/models | head -c 300; echo'
+```
+
+LiteLLM answers with its model list, so it received the **real** key: the supervisor swapped it in on the way.
+
+</Step>
+
+<Step n="3" title="A chat completion">
+
+And a one-line chat completion:
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'curl -s http://litellm.litellm.svc.cluster.local:4000/v1/chat/completions -H "Authorization: Bearer $LITELLM_API_KEY" -H "Content-Type: application/json" -d "{\"model\":\"default\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in five words.\"}]}" | grep -o "\"content\":\"[^\"]*\""'
+```
+
+</Step>
+
+</Section>
+
+<Section n="4" title="What the agent can't do with it" goal="See the admin API refused at L7.">
+
+<Step n="1" title="Try to generate a key">
+
+The same key would open LiteLLM's **admin API** (create keys, read spend). The profile doesn't allow it, so the supervisor refuses before anything leaves the sandbox:
+
+```bash
+openshell sandbox exec -n agent-0 -- sh -c 'curl -s -X POST -H "Authorization: Bearer $LITELLM_API_KEY" http://litellm.litellm.svc.cluster.local:4000/key/generate; echo'
+```
+<Output>
+<ExpectedOutput>
+{`{"error":"policy_denied","policy":"_provider_litellm","rule":"POST /key/generate","detail":"POST /key/generate not permitted by policy","layer":"l7",...}`}
+</ExpectedOutput>
+</Output>
+
+</Step>
 
 </Section>
 

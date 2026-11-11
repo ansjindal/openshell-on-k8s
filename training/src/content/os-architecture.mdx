@@ -3,7 +3,7 @@ OpenShell splits the work in two. A **gateway** governs: it stores sandboxes, po
 <BeforeYouStart
   learn="the control plane and the data plane, what runs inside the agent's pod and what runs beside it, and how the two halves talk."
   prereq="1.1 Enter OpenShell."
-  time="about nine minutes. No commands in this lesson."
+  time="about twenty minutes, with an exercise at the end."
 />
 
 <Section n="1" title="The big picture">
@@ -32,12 +32,150 @@ In 0.0.x the supervisor ran inside the agent's container, as its parent, with th
 
 </Optional>
 
+## Exercise: create a sandbox, find its two halves
+
+In [Enter OpenShell](/learn/openshell) you created one sandbox by hand and installed pi in it. The lab's default agent, **OpenClaw**, comes preinstalled in the sandbox image, and a small helper, `fleet`, creates as many sandboxes as you ask for with the same `openshell sandbox create`. Here you use it, read the command behind it, and look at what a sandbox is made of on the cluster.
+
+<Section n="3" title="The easy way: the fleet helper" goal="Create agent-1 with one helper command.">
+
+<Step n="1" title="Meet the fleet helper">
+
+`./scripts/fleet` is a thin wrapper around the `openshell` CLI and `kubectl` that the next lessons reach for:
+
+```bash-ref
+fleet up [N]                          # create sandboxes agent-0 … agent-(N-1)
+fleet down                            # delete every fleet sandbox
+fleet status                          # sandboxes + the pods behind them
+fleet task "<prompt>" [agent-i|all]   # run a prompt across the fleet, in parallel
+fleet shell <agent-i>                 # interactive shell inside one sandbox
+fleet logs <agent-i>                  # OpenShell logs for one sandbox
+```
+
+</Step>
+
+<Step n="2" title="Bring the fleet to two">
+
+```bash
+./scripts/fleet up 2
+```
+<Output>
+<ExpectedOutput>
+{`Scaling fleet to 2 sandbox(es)...
+  agent-0 (already exists)
+  created agent-1
+
+== openshell sandboxes ==
+NAME     CREATED              PHASE
+agent-0  2026-11-11 13:19:44  Ready
+agent-1  2026-11-11 13:20:46  Ready
+
+== Kubernetes (openshell-lab-default): one workload pod + one supervisor pod per sandbox ==
+NAME      READY   REASON              AGE
+agent-0   True    DependenciesReady   75s
+agent-1   True    DependenciesReady   13s
+NAME                                                 READY   STATUS    RESTARTS   AGE
+agent-0                                              1/1     Running   0          75s
+agent-1                                              1/1     Running   0          13s
+os-supervisor-593394eb-6dd0-4be8-a33c-e07a89f40f9b   0/1     Running   0          13s
+os-supervisor-bb5457b5-93bf-40d1-8421-7ce92d1984cf   1/1     Running   0          75s
+
+Fleet ready: 2/2`}
+</ExpectedOutput>
+</Output>
+
+A new sandbox is `Ready` in about fifteen seconds.
+
+</Step>
+
+</Section>
+
+<Section n="4" title="The direct way: the openshell CLI" goal="Read the command fleet up runs for each agent.">
+
+<Step n="1" title="The create command and its flags">
+
+`fleet up` runs this for each agent:
+
+```bash-ref
+openshell sandbox create --name agent-1 \
+  --provider litellm \
+  --policy manifests/policies/baseline.yaml \
+  --memory 3Gi \
+  --no-tty --detach -- sleep infinity
+```
+
+| Flag | What it does |
+|---|---|
+| `--provider litellm` | attach model access: a placeholder `LITELLM_API_KEY`, plus the provider's policy entry |
+| `--policy …baseline.yaml` | start from the lab baseline: deny all network, `/sandbox` and `/tmp` writable |
+| `--memory 3Gi` | the workload pod's memory request and limit (one OpenClaw turn peaks near 2 GB). `--cpu` would also become a *request*: on an 8-vCPU VM a few of those fill the node |
+| `--detach` and `-- sleep infinity` | the command after `--` is the sandbox's **main process**; the sandbox lives as long as it runs |
+| (no `--from`) | the gateway's default image, `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox`: OpenClaw on the OpenShell community base |
+
+Without a trailing command and `--detach`, `openshell sandbox create` opens an interactive shell in the new sandbox instead; type `exit` to leave.
+
+</Step>
+
+</Section>
+
+<Section n="5" title="What happened on the cluster" goal="Trace the gateway's work down to Kubernetes objects.">
+
+<Step n="1" title="List the Sandbox resources">
+
+The CLI never touches Kubernetes. It calls the **gateway**, which:
+
+1. stores the sandbox and its policy (revision 1);
+2. writes a `Sandbox` resource in the workspace's namespace, `openshell-lab-default` (the gateway creates one namespace per workspace); the **agent-sandbox controller** turns it into the **workload pod** `agent-1`;
+3. starts the **supervisor pod** `os-supervisor-<id>`, which fetches the policy and the provider credentials and becomes the workload's only network path.
+
+```bash
+kubectl -n openshell-lab-default get sandboxes
+```
+<Output>
+<ExpectedOutput>
+{`NAME      READY   REASON              AGE
+agent-0   True    DependenciesReady   75s
+agent-1   True    DependenciesReady   13s`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="See each pod's role and pair">
+
+Each pod is labelled with its role and its pair:
+
+```bash
+kubectl -n openshell-lab-default get pods -L openshell.ai/boundary-role,openshell.ai/boundary-pair
+```
+<Output>
+<ExpectedOutput>
+{`NAME                                                 READY   STATUS    AGE   BOUNDARY-ROLE   BOUNDARY-PAIR
+agent-0                                              1/1     Running   75s   workload        bb5457b5-93bf-40d1-8421-7ce92d1984cf
+agent-1                                              1/1     Running   13s   workload        593394eb-6dd0-4be8-a33c-e07a89f40f9b
+os-supervisor-593394eb-6dd0-4be8-a33c-e07a89f40f9b   1/1     Running   13s   supervisor      593394eb-6dd0-4be8-a33c-e07a89f40f9b
+os-supervisor-bb5457b5-93bf-40d1-8421-7ce92d1984cf   1/1     Running   75s   supervisor      bb5457b5-93bf-40d1-8421-7ce92d1984cf`}
+</ExpectedOutput>
+</Output>
+
+`openshell sandbox get agent-1` shows the same sandbox from the gateway's side: its id, image, phase and attached providers.
+
+</Step>
+
+</Section>
+
+<Callout type="note" title="Keep agent-0 around">
+The rest of the course, including the console and the Module 4 capstone, assumes <code>agent-0</code> is up. To scale back without tearing everything down: <code>openshell sandbox delete agent-1</code>. <code>fleet down</code> is for when you're done with the launchable.
+</Callout>
+
 ## What you learned
 
-<Learned next="/learn/security" nextLabel="The policy file and the kernel">
+<Learned next="/learn/os-kernel" nextLabel="Inside the sandbox: the kernel">
 
 - **Two planes.** The gateway governs; a supervisor per sandbox decides every connection.
 - **Two halves of a sandbox.** An untrusted workload with nothing worth stealing, a trusted supervisor with the policy and the keys.
 - **Fail closed.** No supervisor, no network.
+- **The easy way: the fleet helper.** Create agent-1 with one helper command.
+- **The direct way: the openshell CLI.** Read the command fleet up runs for each agent.
+- **What happened on the cluster.** Trace the gateway's work down to Kubernetes objects.
 
 </Learned>

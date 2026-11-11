@@ -1,4 +1,4 @@
-A quick look back at Module 3 before you move on.
+A quick look back at Module 2 before you move on.
 
 ## What you learned
 
@@ -11,7 +11,7 @@ A quick look back at Module 3 before you move on.
 
 ## Check your understanding
 
-<Quiz title="Test your knowledge: Module 3">
+<Quiz title="Test your knowledge: Module 2">
 <Q q="What does a sandbox see in LITELLM_API_KEY?" options={["The real nvapi- key from .env", "A placeholder such as openshell:resolve:env:..._LITELLM_API_KEY", "Nothing: the variable is empty", "A short-lived copy of the key that expires after one call"]} answer={1} why="The sandbox only holds a placeholder; the supervisor swaps in the real key on requests that match the provider's rules, so there is no key in the sandbox to steal." />
 <Q q="What happens when agent-0 sends POST /key/generate to LiteLLM with its key?" options={["LiteLLM creates a new key", "LiteLLM answers 401 because the placeholder is not a valid key", "The supervisor refuses it with policy_denied at L7, before anything leaves the sandbox", "The connection hangs and returns HTTP 000"]} answer={2} why="The litellm profile only allows model calls. The admin API is not in its rules, so the supervisor refuses the request at L7." />
 <Q q="After openshell provider update rotates the echo token, what does agent-0 need to use the new value?" options={["Nothing: it picks it up without a restart, and its placeholder stays the same", "A restart of the sandbox", "Detaching and re-attaching the provider", "Re-importing the provider profile"]} answer={0} why="Every sandbox with the provider attached picks up the new credential without a restart; only the value behind the placeholder changes." />
