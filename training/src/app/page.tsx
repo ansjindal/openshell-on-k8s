@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CURRICULUM, FIRST_SLUG } from "@/lib/curriculum";
 import { LearnShell } from "@/components/LearnShell";
-import { Fig } from "@/components/course/Fig";
+import { ScrollBuild } from "@/components/course/ScrollBuild";
 import { RoadmapCircle, RoadmapTable, STACK } from "@/components/course/Roadmap";
 
 export default function Home() {
@@ -49,7 +49,18 @@ export default function Home() {
           ))}
         </div>
 
-        <Fig id="architecture" caption="The whole lab on one VM: two workspaces, each its own namespace, with their sandboxes running inside." />
+        <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> The platform, layer by layer</h2>
+        <p className="mt-4 text-[1.05rem] leading-relaxed text-[var(--color-fg-dim)]">
+          Six layers, from the machine up to the audit trail. Scroll through the cards, or click one: the picture gains each layer as it is explained.
+        </p>
+        <ScrollBuild diagram="platform" caption="The full figure, with every component, is in The big picture (lesson 0.2)." items={[
+  { title: "One VM, one Kubernetes node", text: "Everything runs on a single Brev VM. Ansible installed k3s, a full Kubernetes API, plus the controllers OpenShell needs. Nothing to set up: you only use it." },
+  { title: "The OpenShell gateway", text: "The control plane. You ask it for a sandbox from the openshell CLI; it stores each sandbox, its policy and the credentials it may use, and decides who may do what." },
+  { title: "A sandbox: two pods", text: "Each agent gets a workload pod, where it runs sealed in (Landlock, seccomp, an unprivileged user), and a supervisor pod that owns its network. Nothing leaves without passing the supervisor, and by default nothing is allowed." },
+  { title: "Models without keys", text: "The agent calls the model through LiteLLM. It only holds a placeholder; the supervisor adds the real key, and only on the calls the provider's rules allow." },
+  { title: "People and roles", text: "People sign in with Keycloak and get a role. The OpenShell Console is the same gateway in a browser, with the same permissions as the CLI, and workspaces keep teams apart." },
+  { title: "Every decision on record", text: "Every allow and deny is written as an OCSF event and shipped to Loki, so Grafana can show what each agent reached, and what it was refused." },
+]} />
 
         <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> Your roadmap</h2>
         <p className="mt-4 text-[1.05rem] leading-relaxed text-[var(--color-fg-dim)]">

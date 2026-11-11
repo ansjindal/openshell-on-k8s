@@ -257,6 +257,34 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
 
+  // ---- the platform, one layer per card (Overview page, The big picture)
+  platform: {
+    title: "The platform, layer by layer",
+    w: 600, h: 470,
+    layers: [{ n: 0, name: "" }, { n: 1, name: "One VM" }, { n: 2, name: "The gateway" }, { n: 3, name: "A sandbox" }, { n: 4, name: "Models" }, { n: 5, name: "People" }, { n: 6, name: "Audit" }],
+    nodes: [
+      { id: "vm", x: 10, y: 10, w: 580, h: 450, label: "Brev VM · k3s, one Kubernetes node", layer: 1, kind: "group" },
+      { id: "gw", x: 30, y: 45, w: 210, h: 60, label: "OpenShell gateway", sub: "sandboxes · policies · keys", layer: 2, kind: "accent" },
+      { id: "you", x: 370, y: 45, w: 200, h: 60, label: "You", sub: "openshell CLI (mTLS)", layer: 2 },
+      { id: "ns", x: 30, y: 130, w: 540, h: 150, label: "namespace openshell-lab-default · workspace default", layer: 3, kind: "group" },
+      { id: "wl", x: 45, y: 165, w: 200, h: 60, label: "workload pod", sub: "the agent, sealed in", layer: 3 },
+      { id: "sup", x: 355, y: 165, w: 200, h: 60, label: "supervisor pod", sub: "policy · keys · audit", layer: 3, kind: "accent" },
+      { id: "ll", x: 30, y: 310, w: 170, h: 56, label: "LiteLLM → model", sub: "real key added", layer: 4, kind: "ext" },
+      { id: "net", x: 215, y: 310, w: 170, h: 56, label: "everything else", sub: "denied by default", layer: 3, kind: "deny" },
+      { id: "loki", x: 400, y: 310, w: 170, h: 56, label: "Loki · Grafana", sub: "every allow and deny", layer: 6, kind: "ext" },
+      { id: "kc", x: 30, y: 390, w: 250, h: 56, label: "Keycloak", sub: "people sign in, get a role", layer: 5, kind: "ext" },
+      { id: "con", x: 320, y: 390, w: 250, h: 56, label: "OpenShell Console", sub: "the same gateway, in a browser", layer: 5, kind: "ext" },
+    ],
+    edges: [
+      { from: "you", to: "gw", label: "create", layer: 2, kind: "ok" },
+      { from: "gw", to: "sup", label: "creates", layer: 3, kind: "ok", dx: -95, dy: -14 },
+      { from: "wl", to: "sup", label: "only way out", layer: 3, kind: "dash" },
+      { from: "sup", to: "net", layer: 3, kind: "deny" },
+      { from: "sup", to: "ll", label: "allowed calls", layer: 4, kind: "ok", dx: -40, dy: 6 },
+      { from: "sup", to: "loki", label: "OCSF", layer: 6, kind: "dash", dx: 22 },
+      { from: "kc", to: "con", label: "sign-in", layer: 5, kind: "ok" },
+    ],
+  },
   // ---- module overviews (ScrollBuild): one layer per lesson, 600 wide so the
   // diagram fills the sticky panel beside the cards.
   m1: {
