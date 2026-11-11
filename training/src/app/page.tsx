@@ -61,6 +61,7 @@ export default function Home() {
         <h3 className="mt-8 text-[17px] font-bold text-[var(--color-fg)]">What you&apos;ll do here, step by step</h3>
         <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-stretch">
           {[
+            ["Understand", "what-is-an-agent", "Modules 0–1", "See what an agent is, how one poisoned issue turns it against you, and how OpenShell builds a boundary outside it."],
             ["Seal", "m1-overview", "Module 2", "Build an agent, then put it in a sandbox: nothing gets out by default, and you test that from inside."],
             ["Grant", "m1-overview", "Module 2", "Open exactly one door while it runs: one host, one HTTP method, one path, one program."],
             ["Inject", "m2-overview", "Module 3", "Give it a model and an API key it never actually holds: the sandbox only sees a placeholder."],
@@ -72,7 +73,7 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-nv)] text-[11px] font-extrabold text-[#0b0f05]">{i + 1}</span>
                   <span className="text-[14px] font-bold text-[var(--color-nv-bright)]">{t}</span>
-                  <span className="ml-auto text-[11px] text-[var(--color-fg-mut)]">{mod}</span>
+                  <span className="ml-auto whitespace-nowrap text-[11px] text-[var(--color-fg-mut)]">{mod}</span>
                 </div>
                 <p className="mt-1.5 flex-1 text-[13px] leading-[19.5px] text-[var(--color-fg-dim)] group-hover:text-[var(--color-fg)]">{d}</p>
               </Link>
@@ -121,7 +122,7 @@ export default function Home() {
 
         <section className="mt-12 rounded-2xl border border-[var(--color-nv-dim)] bg-[var(--color-run-bg)] p-8 text-center">
           <h2 className="text-2xl font-bold">Ready?</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-[var(--color-fg-dim)]">Module 0 takes about half an hour and needs no commands. The first lab starts in Module 2.</p>
+          <p className="mx-auto mt-3 max-w-2xl text-[var(--color-fg-dim)]">Modules 0 and 1 take about an hour and need no commands: you play animated scenes. The first lab starts in Module 2.</p>
           <Link href={`/learn/${FIRST_SLUG}`} className="mt-6 inline-block rounded-lg bg-[var(--color-nv)] px-5 py-2.5 text-sm font-bold text-[#0a0d07] hover:bg-[var(--color-nv-bright)]">
             Start with Module 0 →
           </Link>

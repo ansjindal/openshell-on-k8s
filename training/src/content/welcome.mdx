@@ -4,23 +4,20 @@ Everything runs on one VM that's already provisioned: **k3s** (single-node upstr
 
 ## What you'll learn
 
-- How the stack fits together, from `openshell sandbox create` to a pair of running pods.
-- Why an agent's network is **deny by default**, and how to grant exactly one host, one method, one path.
+- **What an AI agent is**: a model in a loop, a harness that runs its tools, and why that harness acting with your access is the problem.
+- **How NVIDIA OpenShell puts a boundary outside the agent**: a gateway that governs, a supervisor that decides every connection, a policy file, and kernel filters that hold the agent in.
+- Why an agent's network is **deny by default**, and how to grant exactly one host, one method, one path, one program.
 - How an agent uses an API key it **never holds**: providers, profiles and credential placeholders.
-- How to read the **audit trail** OpenShell writes for every allow and deny.
-- How people sign in with **Keycloak** and what an admin, a user and a workspace can do.
+- How to read the **audit trail** OpenShell writes for every allow and deny, and how people sign in with **Keycloak**, with roles and workspaces.
+- How a small **fleet** of sealed agents finds the root cause of a real outage.
 
-## How the labs work
+## How the course works
 
-The course has **modules**, each played from one role: platform operator, agent developer, security reviewer, SRE. Lessons marked **LAB** are hands-on:
-
-- Each lab is split into numbered **sections** (with a goal) and **steps**.
-- A step's **RUN** panel shows the command; **Run ▷** executes it on your lab VM and streams the result into an **OUTPUT** panel. A successful run ticks the step off.
-- The **OUTPUT** panel first shows what was recorded on a VM like yours, often with a **live diagram** of what the step adds. After Run it switches to your VM's output, and the diagram fills in with the names, states and ids your commands found. Names, ages and ids differ; the shape is what to compare.
-- Each module opens with an **Overview** whose diagram builds as you scroll, and each lab ends with **What you learned**.
-- **Cluster shell** (top right) opens a real bash shell on the VM, with `kubectl` and an `openshell` CLI already signed in as the lab operator. Use it to edit a command or keep a session; blocks marked **SHELL** open there automatically.
-- Your progress (steps, lessons, quiz answers) is kept in this browser. **Clear outputs** in the sidebar wipes the run outputs.
-- Each module ends with a **summary and knowledge check**.
+- **Modules 0 and 1 are concepts**: what an agent is, then OpenShell from the inside. They use animated scenes from the OpenShell talks: press **Next** in a scene (or click inside it and use →) to play each step, **Replay** to start again, **Full screen** for a bigger view. No commands yet.
+- **Modules 2 to 5 are hands-on**, each played from one role: platform operator, agent developer, security reviewer, SRE. Each opens with an **Overview** whose diagram builds as you scroll. Module 6 is where to go next.
+- Lessons marked **LAB** are split into numbered **sections** (with a goal) and **steps**. A step's **RUN** panel shows the command; **Run ▷** executes it on your lab VM and the **OUTPUT** panel switches from the output recorded on a VM like yours to yours. Names, ages and ids differ; the shape is what to compare. A successful run ticks the step off.
+- The **Cluster shell**, docked at the bottom of every page, is a real bash shell on the VM with `kubectl` and an `openshell` CLI already signed in as the lab operator. Drag its top edge to resize it, ▁ to minimize it. Blocks marked **SHELL** open there.
+- Each lab ends with **What you learned**, and each module with a **summary and knowledge check**. Your progress is kept in this browser; **Clear outputs** in the sidebar wipes the run outputs.
 
 ## The one-command bring-up
 
@@ -31,5 +28,5 @@ If you're standing this up yourself, Ansible provisions everything behind one sc
 ```
 
 <Callout type="tip" title="Want to get hands-on fast?">
-Skim Modules 0 and 1, then jump to <strong>Verify the Cluster</strong>. The concept lessons are there when you want the <em>why</em>.
+Play the scenes in Modules 0 and 1, then jump to <strong>Verify the cluster</strong> in Module 2. The concept lessons are there when you want the <em>why</em>.
 </Callout>

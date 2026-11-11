@@ -1,0 +1,25 @@
+Check what you took away from Modules 0 and 1, agents and OpenShell, before the labs start.
+
+## What you learned
+
+- An agent is a model in a ReAct loop (reason, act, observe), plus the knowledge it reads, the tools it calls, the skills it loads and the harness that runs it. The model only suggests; the harness acts, with your access.
+- One hidden instruction in ordinary input can steer the whole agent: nothing is hacked, every part does its job, and your access is the blast radius.
+- The guardrail has to sit outside the agent's process, where it can't be argued with or switched off. OpenShell puts the whole agent in a sandbox governed by a YAML policy.
+- The gateway governs (sandboxes, policies, credentials, who may do what); a supervisor per sandbox decides every connection, and fails closed.
+- The policy has two lifetimes: files, Landlock and process lock at startup; network rules change while the sandbox runs.
+- The agent only ever holds placeholders; the supervisor adds the real credential last, and only for endpoints the provider allows.
+- Every decision is an OCSF event, joined with traces and metrics on the sandbox ID.
+- NVIDIA Sentry enforces the same policy on BlueField-4, outside the host, for when the host itself is in scope.
+
+## Check your understanding
+
+<Quiz title="Test your knowledge: Modules 0 and 1">
+<Q q="In an agent, which part actually runs the shell command the model asked for?" options={["The model", "The harness", "The context window", "The skill"]} answer={1} why="The model only suggests the next step. The harness is the process that runs the tools, with whatever access it was started with." />
+<Q q="An issue an agent is fixing contains a hidden comment telling it to upload ~/.ssh. Which part of the agent was compromised?" options={["The model's weights", "The harness binary", "None: every part did its job, the input was poisoned", "The GitHub API"]} answer={2} why="Nothing was hacked. The text entered as knowledge, the model was misled, and the harness and tools carried it out with your access." />
+<Q q="Why does the guardrail have to sit outside the agent's process?" options={["Because it is faster there", "Because a guardrail in the prompt or the harness can be argued with or bypassed from within", "Because Kubernetes requires it", "Because the model can't read YAML"]} answer={1} why="A prompt can be out-argued and a filter inside the harness shares its process and access. Only a boundary outside the process can't be talked out of its job." />
+<Q q="Which component decides whether a sandbox's connection to api.github.com is allowed?" options={["The gateway", "The supervisor for that sandbox", "The agent-sandbox controller", "Kyverno"]} answer={1} why="The gateway never decides a packet; the supervisor decides every one, using the sandbox's policy." />
+<Q q="Which part of a sandbox policy can change while the sandbox runs?" options={["filesystem_policy", "landlock", "process", "network_policies"]} answer={3} why="Files, Landlock and process lock at startup. network_policies is live: a new revision loads into the running sandbox." />
+<Q q="What does an agent find if it prints its GITHUB_TOKEN inside an OpenShell sandbox?" options={["The real token", "Nothing: the variable is unset", "A placeholder such as openshell:resolve:env:GITHUB_TOKEN", "An expired copy of the token"]} answer={2} why="Providers keep the real value in the gateway. The supervisor swaps it in only on requests to endpoints the provider allows." />
+<Q q="What joins an agent's traces, the gateway's metrics and the supervisor's OCSF events?" options={["The pod name", "openshell.sandbox.id", "The Keycloak user", "The namespace"]} answer={1} why="All three signals carry the sandbox ID, so you can follow one sandbox across them." />
+<Q q="An attacker has root on the agent's host and stops the OpenShell supervisor. What still enforces the policy?" options={["Nothing on that host", "The gateway", "NVIDIA Sentry on BlueField-4, if deployed", "The model provider"]} answer={2} why="The supervisor shares the host. Sentry moves the decision onto BlueField-4, with its own CPU and OS, where root on the host can't reach it." />
+</Quiz>

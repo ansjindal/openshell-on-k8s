@@ -29,6 +29,7 @@ export const CURRICULUM: Part[] = [
       L("audit-signals", "Signals and audit events", "Logs, traces and metrics tied to one sandbox ID, and how to read an OCSF event.", 7),
       L("big-picture", "OpenShell on Kubernetes: this lab", "One sandbox on Kubernetes, then this lab's whole platform, path by path.", 10),
       L("sentry", "NVIDIA Sentry: beyond the host", "When the host itself is compromised: the same policy, enforced on BlueField-4.", 6),
+      L("os-check", "Summary & knowledge check", "Agents and OpenShell, before the labs.", 6, "check"),
     ],
   },
   {
