@@ -15,7 +15,8 @@
 #   FLEET_SIZE   default count for `up`
 #   AGENT_CMD    agent binary run inside the sandbox for tasks (default: openclaw)
 #   PROVIDER     provider to attach (default: litellm)
-#   SANDBOX_NS   sandbox namespace (default: openshell-sandboxes)
+#   OPENSHELL_WORKSPACE  workspace (default: default); its sandboxes run in the
+#                namespace openshell-<gateway id>-<workspace>, e.g. openshell-lab-default
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,7 +28,8 @@ export NO_COLOR=1
 FLEET_SIZE="${FLEET_SIZE:-1}"
 AGENT_CMD="${AGENT_CMD:-openclaw}"
 PROVIDER="${PROVIDER:-litellm}"
-SANDBOX_NS="${SANDBOX_NS:-openshell-sandboxes}"
+# Managed workspaces: the gateway (id "lab") creates one namespace per workspace.
+SANDBOX_NS="${SANDBOX_NS:-openshell-${GATEWAY_ID:-lab}-${OPENSHELL_WORKSPACE:-default}}"
 GATEWAY_NODEPORT="${GATEWAY_NODEPORT:-30808}"
 POLICY="${HERE}/manifests/policies/baseline.yaml"
 OSH=(openshell --gateway fleet)

@@ -6,11 +6,9 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   block:
-    - name: Ensure gateway + sandbox namespaces
+    - name: Ensure the gateway namespace
       ansible.builtin.shell: |
-        for ns in {{ openshell_namespace }} {{ k3s_sandbox_namespace }}; do
-          kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f -
-        done
+        kubectl create namespace {{ openshell_namespace }} --dry-run=client -o yaml | kubectl apply -f -
       args: { executable: /bin/bash }
       changed_when: false
 
@@ -53,7 +51,6 @@
         helm upgrade --install openshell {{ openshell_chart }} \
           --version {{ openshell_chart_version }} \
           --namespace {{ openshell_namespace }} \
-          --set server.sandboxNamespace={{ k3s_sandbox_namespace }} \
           --set sandbox.image.repository={{ sandbox_image_repository }} \
           --set-string sandbox.image.tag={{ sandbox_image_tag }} \
           -f /tmp/openshell-values.yaml \
@@ -96,30 +93,6 @@
         EOF
       args: { executable: /bin/bash }
       changed_when: false
-
-    # Supervisor pods mount openshell-client-tls (the chart CA, to verify the
-    # gateway) but run in the sandbox namespace; Secrets don't cross namespaces
-    # and the chart creates this one only in its release namespace. Without the
-    # copy every supervisor pod stays in ContainerCreating.
-    - name: Wait for the client TLS secret
-      ansible.builtin.shell: |
-        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o jsonpath='{.data.ca\.crt}'
-      register: _client_tls
-      changed_when: false
-      retries: 30
-      delay: 4
-      until: _client_tls.rc == 0 and (_client_tls.stdout | length) > 0
-      when: k3s_sandbox_namespace != openshell_namespace
-
-    - name: Copy the client TLS secret into the sandbox namespace
-      ansible.builtin.shell: |
-        set -euo pipefail
-        kubectl -n {{ openshell_namespace }} get secret openshell-client-tls -o json \
-          | python3 -c 'import sys,json; s=json.load(sys.stdin); print(json.dumps({"apiVersion":"v1","kind":"Secret","type":s["type"],"metadata":{"name":"openshell-client-tls","namespace":"{{ k3s_sandbox_namespace }}","labels":{"app.kubernetes.io/managed-by":"openshell-lab"}},"data":s["data"]}))' \
-          | kubectl apply -f -
-      args: { executable: /bin/bash }
-      changed_when: false
-      when: k3s_sandbox_namespace != openshell_namespace
 
     # OU=operator => platform admin across all workspaces (mtls_auth.operator_enabled
     # in values.yaml). Issued by the chart's own CA, so the gateway trusts it.

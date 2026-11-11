@@ -38,14 +38,21 @@ server:
     # Never accept anonymous callers. Browser users (the console) sign in with
     # Keycloak; the lab's CLI uses an mTLS operator certificate (see below).
     allowUnauthenticatedUsers: false
+  # Gateway id: part of every managed namespace name and of the tokens the
+  # gateway mints for supervisors. Keep it stable once workspaces exist.
+  sandboxJwt:
+    gatewayId: lab   # = openshell_gateway_id in group_vars
   # A policy that fails validation deactivates the previous one.
   policyValidationFailureMode: fail_closed
   drivers:
     kubernetes:
-      # Every workspace shares one sandbox namespace (the role sets
-      # server.sandboxNamespace to k3s_sandbox_namespace), separate from the
-      # gateway's own namespace.
-      workspaceMode: shared
+      # One namespace per workspace, created (and deleted) by the gateway:
+      # openshell-<gateway id>-<workspace>, e.g. openshell-lab-default and
+      # openshell-lab-team-a. The driver creates each namespace's sandbox
+      # ServiceAccount, RBAC and NetworkPolicy, and copies the client TLS
+      # Secret into it. (shared = one namespace for all workspaces; operator =
+      # pre-created namespaces with the openshell-workspace chart.)
+      workspaceMode: managed
       # Resource admission: a sandbox may use a cluster resource (RuntimeClass,
       # PriorityClass, volumes) only when it carries the operator's approval
       # labels: openshell.ai/sandbox-attachable=true and

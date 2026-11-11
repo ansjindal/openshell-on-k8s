@@ -47,8 +47,8 @@
 <text x="78" y="535.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">workspaces</text>
 <rect x="330" y="96" width="850" height="668" rx="8" fill="#f3f9e8" stroke="#b7dc7a" stroke-width="1.2"/>
 <text x="342" y="116" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="415.45" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">openshell-sandboxes</text>
-<text x="579.915" y="116" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">· one sandbox</text>
+<text x="415.45" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">openshell-lab-default</text>
+<text x="596.385" y="116" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">· workspace default · one sandbox</text>
 <rect x="348" y="150" width="400" height="596" rx="8" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-bot" xlink:href="#i-bot" x="360" y="160" width="22" height="22" color="#3d4652"/>
 <text x="390" y="177" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">workload pod</text>

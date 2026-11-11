@@ -139,7 +139,8 @@
 <text x="62" y="300" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">mTLS · OU=operator = platform admin → NodePort 30808</text>
 <rect x="472" y="510" width="660" height="320" rx="8" fill="#f3f9e8" stroke="#b7dc7a" stroke-width="1.2"/>
 <text x="484" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="557.45" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">openshell-sandboxes</text>
+<text x="557.45" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">openshell-lab-&lt;workspace&gt;</text>
+<text x="771.325" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">· one namespace per workspace (managed)</text>
 <rect x="498" y="588" width="620" height="230" rx="8" fill="#fbfdf7" stroke="#b7dc7a" stroke-width="1"/>
 <rect x="490" y="580" width="620" height="230" rx="8" fill="#fff" stroke="#76b900" stroke-width="1.4"/>
 <use href="#i-cube" xlink:href="#i-cube" x="500" y="588" width="20" height="20" color="#4a7a00"/>

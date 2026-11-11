@@ -24,12 +24,9 @@ k3s_channel: "v1.37"
 k3s_version: ""
 # helm used by every role (pinned release tarball, checksum-verified)
 helm_version: "v3.22.1"
-# Namespace where agent sandbox pods land — kept SEPARATE from the gateway's
-# namespace for isolation. The chart creates the sandbox ServiceAccount, Role,
-# RoleBinding and NetworkPolicy in this namespace (verified via `helm template`);
-# the gateway role creates the namespace before install. Set equal to
-# openshell_namespace if you'd rather co-locate them.
-k3s_sandbox_namespace: openshell-sandboxes
+# Sandboxes run in one namespace per workspace, created by the gateway
+# (workspaceMode managed): openshell-<gateway_id>-<workspace>.
+openshell_gateway_id: lab
 
 # ---- agent-sandbox controller ----------------------------------------------
 # PIN the version; do NOT track "latest". The OpenShell chart runs a preflight
