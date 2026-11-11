@@ -113,6 +113,11 @@ cmd_task() {
   local pids=()
   for a in "${agents[@]}"; do
     ( out="$("${OSH[@]}" sandbox exec -n "${a}" -- "${agent_argv[@]}" 2>&1 || true)"
+      # agent-0 runs OpenClaw's own Gateway (the Control UI); then --local is
+      # refused and the turn goes through that Gateway instead.
+      if [ "${AGENT_CMD}" = "openclaw" ] && printf '%s' "${out}" | grep -q "A Gateway is running"; then
+        out="$("${OSH[@]}" sandbox exec -n "${a}" -- "${AGENT_CMD}" agent --agent main --message "${prompt}" 2>&1 || true)"
+      fi
       printf '\n── [%s] ───────────────\n%s\n' "${a}" "${out}" ) &
     pids+=("$!")
   done
