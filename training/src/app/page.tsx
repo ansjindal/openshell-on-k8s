@@ -7,7 +7,7 @@ import { RoadmapCircle, RoadmapTable, STACK } from "@/components/course/Roadmap"
 export default function Home() {
   return (
     <LearnShell>
-      <div className="mx-auto max-w-6xl">
+      <div className="w-full">
         <section className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-panel)] p-8 md:p-10">
           <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-nv-bright)]">OpenShell on Kubernetes · Hands-on</div>
           <h1 className="mt-3 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">

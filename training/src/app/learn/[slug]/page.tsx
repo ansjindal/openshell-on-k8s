@@ -32,7 +32,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   }
 
   return (
-    <article className="mx-auto max-w-[1117px]">
+    <article className="w-full">
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2 text-[12px] uppercase tracking-[0.12em] text-[var(--color-fg-mut)]">
