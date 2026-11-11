@@ -10,7 +10,7 @@ import { StepContext, useLesson } from "./Structure";
 import { stepOutput, useProgress } from "@/lib/progress";
 import { OutputContext } from "./Output";
 
-type State = "hidden" | "ghost" | "new" | "old";
+export type State = "hidden" | "ghost" | "new" | "old";
 
 function stateOf(layer: number, until: number | undefined, cur: number, done: boolean): State {
   if (until !== undefined && (cur > until || (cur === until && done))) return "hidden";
@@ -27,62 +27,71 @@ function anchor(a: DNode, b: DNode): [number, number, number, number] {
   return [acx, a.y, bcx, b.y + b.h];
 }
 
+// Drawn in the course template's figure style: panels on the page background,
+// centered titles, one accent colour for what matters.
 const C = {
-  stroke: "var(--color-line-2)", text: "var(--color-fg)", sub: "var(--color-fg-mut)",
-  nv: "var(--color-nv)", nvb: "var(--color-nv-bright)", red: "#e5484d", blue: "var(--color-info)",
-  box: "var(--color-panel-2)", group: "transparent",
+  line: "var(--color-line-2)", text: "var(--color-fg)", sub: "var(--color-fg-dim)", mut: "var(--color-fg-mut)",
+  nv: "var(--color-nv-bright)", red: "#e5484d", blue: "var(--color-info)",
+  box: "var(--color-panel-2)", group: "var(--color-panel)",
 };
+const SANS = "var(--font-sans)";
 
-function NodeView({ n, st }: { n: DNode; st: State }) {
+export function NodeView({ n, st, selected, onSelect }: { n: DNode; st: State; selected?: boolean; onSelect?: (n: DNode) => void }) {
   if (st === "hidden") return null;
   const ghost = st === "ghost";
   const isNew = st === "new";
   const group = n.kind === "group";
-  const tone = n.kind === "deny" ? C.red : n.kind === "ext" ? C.blue : n.kind === "accent" ? C.nv : C.stroke;
-  const stroke = ghost ? C.sub : isNew ? C.nvb : tone;
+  const tone = n.kind === "deny" ? C.red : n.kind === "ext" ? C.blue : n.kind === "accent" ? C.nv : C.line;
+  const stroke = selected ? C.nv : ghost ? C.mut : isNew ? C.nv : tone;
+  const sw = selected || isNew ? 2.2 : n.kind === "accent" ? 2 : 1.5;
+  const subs = n.sub ? n.sub.split("\n") : [];
+  const block = 15 + subs.length * 15;
+  const y0 = n.y + (n.h - block) / 2 + 12;
+  const cx = n.x + n.w / 2;
+  const click = onSelect && n.info ? { onClick: () => onSelect(n), style: { cursor: "pointer" } } : {};
   return (
-    <g opacity={ghost ? 0.55 : 1} style={{ transition: "opacity .4s" }}>
-      <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={group ? 12 : 9}
-        fill={group ? C.group : C.box} stroke={stroke} strokeWidth={isNew ? 2.2 : group ? 1.2 : 1.4}
-        strokeDasharray={ghost ? "6 5" : group ? "4 4" : undefined}
-        style={isNew ? { filter: "drop-shadow(0 0 6px rgba(118,185,0,.55))" } : undefined} />
+    <g opacity={ghost ? 0.55 : 1} style={{ transition: "opacity .4s" }} className={onSelect && n.info ? "dg-hit" : undefined} {...click}>
+      <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={group ? 10 : 7}
+        fill={group ? C.group : C.box} fillOpacity={group ? 0.55 : 1} stroke={stroke} strokeWidth={sw}
+        strokeDasharray={ghost || n.dashed ? "6 5" : undefined}
+        style={isNew || selected ? { filter: "drop-shadow(0 0 6px rgba(118,185,0,.45))" } : undefined} />
       {group ? (
-        <text x={n.x + 12} y={n.y + 18} fontSize={11.5} fill={n.live ? C.nvb : C.sub} fontFamily="var(--font-mono)">{n.label}</text>
+        <text x={n.x + 12} y={n.y + 19} fontSize={12.5} fontWeight={700} fill={n.live ? C.nv : C.text} fontFamily={SANS}>{n.label}</text>
       ) : (
         <>
-          <text x={n.x + 12} y={n.y + (n.sub ? 24 : n.h / 2 + 5)} fontSize={13.5} fontWeight={700} fill={ghost ? C.sub : C.text}>{n.label}</text>
-          {n.sub && n.sub.split("\n").map((line, i) => (
-            <text key={i} x={n.x + 12} y={n.y + 42 + i * 15} fontSize={11.5} fill={C.sub} fontFamily="var(--font-mono)">{line}</text>
+          <text x={cx} y={y0} fontSize={12.5} fontWeight={700} fill={ghost ? C.mut : C.text} textAnchor="middle" fontFamily={SANS}>{n.label}</text>
+          {subs.map((line, i) => (
+            <text key={i} x={cx} y={y0 + 15 * (i + 1)} fontSize={11.5} fill={C.sub} textAnchor="middle" fontFamily={SANS}>{line}</text>
           ))}
-          {ghost && <text x={n.x + n.w - 10} y={n.y + n.h - 8} fontSize={10} fill={C.sub} textAnchor="end">▷ this step adds it</text>}
-          {n.live && !ghost && <circle cx={n.x + n.w - 12} cy={n.y + 13} r={4} fill={C.nvb}><title>from your run</title></circle>}
+          {ghost && <text x={n.x + n.w - 8} y={n.y + n.h - 6} fontSize={9.5} fill={C.mut} textAnchor="end" fontFamily={SANS}>this step adds it</text>}
+          {n.live && !ghost && <circle cx={n.x + n.w - 10} cy={n.y + 10} r={3.5} fill={C.nv}><title>from your run</title></circle>}
         </>
       )}
     </g>
   );
 }
 
-function EdgeView({ e, nodes, st }: { e: DEdge; nodes: Record<string, DNode>; st: State }) {
+export function EdgeView({ e, nodes, st, uid = "" }: { e: DEdge; nodes: Record<string, DNode>; st: State; uid?: string }) {
   if (st === "hidden") return null;
   const a = nodes[e.from], b = nodes[e.to];
   if (!a || !b) return null;
   const [x1, y1, x2, y2] = anchor(a, b);
   const ghost = st === "ghost";
-  const col = ghost ? C.sub : e.kind === "deny" ? C.red : e.kind === "ok" || st === "new" ? C.nvb : C.sub;
+  const col = ghost ? C.mut : e.kind === "deny" ? C.red : e.kind === "ok" || st === "new" ? C.nv : C.mut;
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-  const id = `ah-${e.kind ?? "n"}-${st}`;
+  const id = `ah${uid}-${e.kind ?? "n"}-${st}`;
   return (
     <g opacity={ghost ? 0.5 : 1}>
       <defs>
-        <marker id={id} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill={col} />
+        <marker id={id} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill={col} />
         </marker>
       </defs>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={st === "new" ? 2.2 : 1.5}
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={e.kind === "ok" || st === "new" ? 2 : 1.7}
         strokeDasharray={ghost || e.kind === "dash" ? "5 4" : undefined} markerEnd={`url(#${id})`} />
-      {e.kind === "deny" && <text x={mx} y={my + 5} fontSize={16} fontWeight={700} fill={C.red} textAnchor="middle">✕</text>}
+      {e.kind === "deny" && <text x={mx} y={my + 5} fontSize={15} fontWeight={700} fill={C.red} textAnchor="middle">✕</text>}
       {e.label && (
-        <text x={mx + (e.dx ?? 0)} y={my - 7 + (e.dy ?? 0)} fontSize={11} fill={col} textAnchor="middle" fontFamily="var(--font-mono)"
+        <text x={mx + (e.dx ?? 0)} y={my - 6 + (e.dy ?? 0)} fontSize={10.5} fontWeight={700} fill={e.kind === "ok" ? C.nv : C.text} textAnchor="middle" fontFamily={SANS}
           stroke="var(--color-bg)" strokeWidth={4} paintOrder="stroke">{e.label}</text>
       )}
     </g>

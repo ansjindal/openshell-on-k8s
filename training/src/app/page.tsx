@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CURRICULUM, FIRST_SLUG } from "@/lib/curriculum";
 import { LearnShell } from "@/components/LearnShell";
-import { Figure } from "@/components/Figure";
+import { Fig } from "@/components/course/Fig";
 import { RoadmapCircle, RoadmapTable, STACK } from "@/components/course/Roadmap";
 
 export default function Home() {
@@ -49,7 +49,7 @@ export default function Home() {
           ))}
         </div>
 
-        <Figure src="/diagrams/architecture.svg" alt="The lab on one VM: the training site, Keycloak and Grafana; the OpenShell gateway, sandboxes (workload + supervisor pods), LiteLLM and the monitoring stack." caption="The whole lab on one VM" />
+        <Fig id="architecture" caption="The whole lab on one VM: two workspaces, each its own namespace, with their sandboxes running inside." />
 
         <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> Your roadmap</h2>
         <p className="mt-4 text-[1.05rem] leading-relaxed text-[var(--color-fg-dim)]">

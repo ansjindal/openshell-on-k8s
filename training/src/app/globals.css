@@ -131,3 +131,6 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 .learned li { position: relative; padding-left: 22px; color: var(--color-fg-mut); }
 .learned li::before { content: "◆"; position: absolute; left: 0; color: var(--color-nv); font-size: 0.7em; top: 0.35em; }
 .learned li strong { color: var(--color-fg); }
+
+/* clickable boxes in <Fig> */
+.dg-fig .dg-hit:hover > rect { stroke: var(--color-nv-bright); }

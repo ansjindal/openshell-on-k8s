@@ -5,7 +5,7 @@ An agent is only useful once it can think, so it needs a model. On this platform
   time="about ten minutes. Each step has a Run button that runs its command on your lab VM."
 />
 
-<Figure src="/diagrams/credential-flow.svg" alt="The agent sends Authorization: Bearer placeholder; the supervisor matches the litellm provider's rules, injects the real key and forwards to LiteLLM; an admin call is refused with 403." caption="The key the agent never sees" />
+<Fig id="credential-flow" n="2.1" caption="The key the agent never sees: a placeholder in the sandbox, the real key on allowed calls only." />
 
 <Section n="1" title="Your model and key" goal="See where the model and key are set, and check they work.">
 

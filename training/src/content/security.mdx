@@ -1,6 +1,6 @@
 An autonomous agent is, by design, an untrusted process you've given a shell and a network. The point of this stack is to make that *safe*, not with one big wall but with layers, so that defeating any single one doesn't get an attacker much.
 
-<Figure src="/diagrams/sandbox-anatomy.svg" alt="Security layers of a sandbox: workload pod with Landlock, seccomp and a sandbox user; a supervisor pod that owns the network; Kubernetes NetworkPolicy, resource admission and Kyverno around them." caption="The layers around one agent" />
+<Fig id="sandbox-anatomy" n="0.3" caption="The layers around one agent: kernel, pod, supervisor, cluster." />
 
 ## 1 · The workload pod: what the agent process can touch
 
@@ -23,7 +23,7 @@ The workload pod has no network of its own. A Kubernetes **NetworkPolicy** lets 
 
 A **provider** stores a credential in the gateway. A sandbox with the provider attached sees only a placeholder, such as `LITELLM_API_KEY=openshell:resolve:env:…`. The supervisor swaps in the real value on requests that match the provider's endpoint and rules, and nowhere else.
 
-<Figure src="/diagrams/credential-flow.svg" alt="The agent sends a request with a placeholder; the supervisor checks the policy, injects the real key and forwards to LiteLLM; a request to an endpoint the profile does not allow is refused with 403 and logged." caption="The key the agent never sees" />
+<Fig id="credential-flow" n="0.4" caption="The key the agent never sees: the supervisor adds it only to requests its rules allow." />
 
 A fully compromised agent (prompt-injected, hijacked) cannot exfiltrate the key, because it never had it, and cannot even *use* it outside the allowed calls.
 

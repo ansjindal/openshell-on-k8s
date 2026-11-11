@@ -25,26 +25,34 @@
 <rect width="1600" height="930" fill="#ffffff"/>
 <text x="24" y="38" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">What a sandbox is</text>
 <text x="24" y="64" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">Security layers around one agent: an OpenShell sandbox is a workload pod plus a supervisor pod</text>
+<g class="dg-node" data-node="You · Console · CLI">
 <rect x="24" y="140" width="276" height="92" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-people" xlink:href="#i-people" x="34" y="156.25" width="22" height="22" color="#3d4652"/>
 <text x="64" y="171.65" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">You · Console · CLI</text>
 <text x="64" y="190.65" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">openshell sandbox create</text>
 <text x="64" y="209.65" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">openshell policy update</text>
+</g>
 <path d="M162 232 V286" fill="none" stroke="#4a7a00" stroke-width="1.6" marker-end="url(#a4a7a00)" stroke-linejoin="round" stroke-linecap="round"/>
 <rect x="24" y="288" width="276" height="300" rx="6" fill="#fff" stroke="#76b900" stroke-width="1.8"/>
 <use href="#i-server" xlink:href="#i-server" x="34" y="300" width="22" height="22" color="#4a7a00"/>
 <text x="64" y="317" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">OpenShell gateway</text>
+<g class="dg-node" data-node="policy store">
 <rect x="38" y="338" width="248" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-doc" xlink:href="#i-doc" x="48" y="351.75" width="22" height="22" color="#3d4652"/>
 <text x="78" y="366.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">policy store</text>
 <text x="78" y="384.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">revisions v1, v2 …</text>
+</g>
+<g class="dg-node" data-node="provider store">
 <rect x="38" y="418" width="248" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-key" xlink:href="#i-key" x="48" y="431.75" width="22" height="22" color="#3d4652"/>
 <text x="78" y="446.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">provider store</text>
 <text x="78" y="464.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">real credentials</text>
+</g>
+<g class="dg-node" data-node="workspaces">
 <rect x="38" y="498" width="248" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-bundle" xlink:href="#i-bundle" x="48" y="520.75" width="22" height="22" color="#3d4652"/>
 <text x="78" y="535.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">workspaces</text>
+</g>
 <rect x="330" y="96" width="850" height="668" rx="8" fill="#f3f9e8" stroke="#b7dc7a" stroke-width="1.2"/>
 <text x="342" y="116" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">namespace </text>
 <text x="415.45" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">openshell-lab-default</text>
@@ -53,61 +61,85 @@
 <use href="#i-bot" xlink:href="#i-bot" x="360" y="160" width="22" height="22" color="#3d4652"/>
 <text x="390" y="177" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">workload pod</text>
 <text x="500" y="177" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">· the agent</text>
+<g class="dg-node" data-node="Agent process">
 <rect x="364" y="196" width="368" height="76" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-user" xlink:href="#i-user" x="374" y="214.75" width="22" height="22" color="#3d4652"/>
 <text x="404" y="229.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Agent process</text>
 <text x="404" y="247.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">e.g. OpenClaw · runs as user sandbox</text>
+</g>
+<g class="dg-node" data-node="Landlock filesystem policy">
 <rect x="364" y="298" width="368" height="94" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-lock" xlink:href="#i-lock" x="374" y="316.75" width="22" height="22" color="#3d4652"/>
 <text x="404" y="331.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Landlock filesystem policy</text>
 <text x="404" y="349.35" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">read-only:  /usr /etc …</text>
 <text x="404" y="367.35" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">read-write: /sandbox /tmp</text>
+</g>
+<g class="dg-node" data-node="seccomp">
 <rect x="364" y="418" width="368" height="76" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-shield" xlink:href="#i-shield" x="374" y="436.75" width="22" height="22" color="#3d4652"/>
 <text x="404" y="451.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">seccomp</text>
 <text x="404" y="469.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">system-call filter on the agent</text>
+</g>
+<g class="dg-node" data-node="No direct network">
 <rect x="364" y="520" width="368" height="94" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-ban" xlink:href="#i-ban" x="374" y="538.75" width="22" height="22" color="#3d4652"/>
 <text x="404" y="553.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">No direct network</text>
 <text x="404" y="571.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">NetworkPolicy: only the supervisor</text>
 <text x="404" y="589.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">may connect to this pod</text>
+</g>
+<g class="dg-node" data-node="Placeholders, not secrets">
 <rect x="364" y="640" width="368" height="94" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-key" xlink:href="#i-key" x="374" y="658.75" width="22" height="22" color="#3d4652"/>
 <text x="404" y="673.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Placeholders, not secrets</text>
 <text x="404" y="691.35" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">LITELLM_API_KEY=</text>
 <text x="404" y="709.35" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">openshell:resolve:env:…</text>
+</g>
 <rect x="828" y="150" width="334" height="596" rx="8" fill="#fff" stroke="#76b900" stroke-width="1.8"/>
 <use href="#i-shield" xlink:href="#i-shield" x="840" y="160" width="22" height="22" color="#4a7a00"/>
 <text x="870" y="177" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">supervisor pod</text>
 <text x="990" y="177" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">· the guard</text>
+<g class="dg-node" data-node="Network policy engine">
 <rect x="844" y="196" width="302" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-shield" xlink:href="#i-shield" x="854" y="209.75" width="22" height="22" color="#3d4652"/>
 <text x="884" y="224.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Network policy engine</text>
 <text x="884" y="242.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">deny by default</text>
+</g>
+<g class="dg-node" data-node="L4 rules">
 <rect x="844" y="271" width="302" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-svc" xlink:href="#i-svc" x="854" y="284.75" width="22" height="22" color="#3d4652"/>
 <text x="884" y="299.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">L4 rules</text>
 <text x="884" y="317.35" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">host:port + binary</text>
+</g>
+<g class="dg-node" data-node="L7 rules (rest)">
 <rect x="844" y="346" width="302" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-route" xlink:href="#i-route" x="854" y="359.75" width="22" height="22" color="#3d4652"/>
 <text x="884" y="374.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">L7 rules (rest)</text>
 <text x="884" y="392.35" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">method + path</text>
+</g>
+<g class="dg-node" data-node="Credential injection">
 <rect x="844" y="421" width="302" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-key" xlink:href="#i-key" x="854" y="434.75" width="22" height="22" color="#3d4652"/>
 <text x="884" y="449.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Credential injection</text>
 <text x="884" y="467.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">placeholder → real key</text>
+</g>
+<g class="dg-node" data-node="DNS">
 <rect x="844" y="496" width="302" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-globe" xlink:href="#i-globe" x="854" y="509.75" width="22" height="22" color="#3d4652"/>
 <text x="884" y="524.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">DNS</text>
 <text x="884" y="542.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">FQDN only</text>
+</g>
+<g class="dg-node" data-node="OCSF audit">
 <rect x="844" y="571" width="302" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-doc" xlink:href="#i-doc" x="854" y="584.75" width="22" height="22" color="#3d4652"/>
 <text x="884" y="599.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">OCSF audit</text>
 <text x="884" y="617.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">audit events → Loki</text>
+</g>
+<g class="dg-node" data-node="Live policy updates">
 <rect x="844" y="646" width="302" height="66" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-sync" xlink:href="#i-sync" x="854" y="659.75" width="22" height="22" color="#3d4652"/>
 <text x="884" y="674.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Live policy updates</text>
 <text x="884" y="692.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">revision v1 → v2, no restart</text>
+</g>
 <path d="M748 470 H826" fill="none" stroke="#4a7a00" stroke-width="1.6" marker-end="url(#a4a7a00)" stroke-linejoin="round" stroke-linecap="round"/>
 <rect x="771.105" y="444.95" width="31.79" height="18" rx="3" fill="#fff" stroke="none" stroke-width="0"/>
 <text x="787" y="458" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="middle" xml:space="preserve">all</text>
@@ -155,14 +187,18 @@
 <use href="#i-wheel" xlink:href="#i-wheel" x="36" y="800" width="22" height="22" color="#3d4652"/>
 <text x="66" y="817" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Kubernetes layer</text>
 <text x="212" y="817" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">· cluster-side guardrails around every sandbox</text>
+<g class="dg-node" data-node="Resource admission labels">
 <rect x="40" y="832" width="640" height="62" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-doc" xlink:href="#i-doc" x="50" y="843.25" width="22" height="22" color="#3d4652"/>
 <text x="80" y="857.85" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Resource admission labels</text>
 <text x="80" y="876.85" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.0" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">openshell.ai/sandbox-attachable on cluster resources</text>
+</g>
+<g class="dg-node" data-node="Kyverno guardrail on sandbox pods">
 <rect x="700" y="832" width="520" height="62" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <use href="#i-shield" xlink:href="#i-shield" x="710" y="843.25" width="22" height="22" color="#3d4652"/>
 <text x="740" y="857.85" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Kyverno guardrail on sandbox pods</text>
 <text x="740" y="876.85" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">no host network · no host PID · no host IPC</text>
+</g>
 <path d="M1244 850 H1280" fill="none" stroke="#4a7a00" stroke-width="1.6" marker-end="url(#a4a7a00)" stroke-linejoin="round" stroke-linecap="round"/>
 <text x="1290" y="855" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">allowed by policy</text>
 <path d="M1244 878 H1280" fill="none" stroke="#d62d2d" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ad62d2d)" stroke-linejoin="round" stroke-linecap="round"/>

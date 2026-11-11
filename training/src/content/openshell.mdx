@@ -1,6 +1,6 @@
 **OpenShell** is what makes "run an autonomous agent *safely*" practical. In one line: **to be useful, agents need access; to be safe, they need zero trust**, and OpenShell is the runtime that gives you both. It is a gateway plus guardrails, built on the open-source `agent-sandbox` Kubernetes primitive.
 
-<Figure src="/diagrams/sandbox-anatomy.svg" alt="A sandbox is a workload pod (agent as user sandbox, Landlock, seccomp, no direct network) and a supervisor pod (network policy, credential injection, OCSF audit); destinations are allowed or denied by policy." caption="What a sandbox is" />
+<Fig id="sandbox-anatomy" n="0.2" caption="A sandbox is a workload pod and a supervisor pod, inside its workspace's namespace." />
 
 ## The pieces
 

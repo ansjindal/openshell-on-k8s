@@ -12,6 +12,10 @@ export type DNode = {
   layer: number; until?: number; kind?: "group" | "ext" | "deny" | "accent";
   dyn?: (out: Out) => Partial<Pick<DNode, "label" | "sub">> | undefined;
   live?: boolean;
+  /** dashed outline: something that may exist (more sandboxes, …) */
+  dashed?: boolean;
+  /** shown when the box is clicked in a <Fig> */
+  info?: string;
 };
 export type DEdge = {
   from: string; to: string; label?: string; layer: number; until?: number; kind?: "ok" | "deny" | "dash"; dx?: number; dy?: number;
