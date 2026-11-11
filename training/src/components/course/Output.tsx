@@ -7,19 +7,21 @@
 // Before you run the step it shows what was recorded on a lab VM like yours.
 // After Run it shows your VM's output (and the diagram fills in from it); the
 // recorded text stays one click away.
-import { Children, createContext, isValidElement, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { StepContext } from "./Structure";
 
-export const OutputContext = createContext<{ inside: boolean; collapsePrinted: boolean }>({ inside: false, collapsePrinted: false });
+export const OutputContext = createContext<{ inside: boolean; collapsePrinted: boolean; markDiagram: () => () => void }>({ inside: false, collapsePrinted: false, markDiagram: () => () => {} });
 
 export function Output({ summary, children }: { summary?: ReactNode; children?: ReactNode }) {
-  const { live } = useContext(StepContext);
+  const { live, markOutput } = useContext(StepContext);
   const [open, setOpen] = useState(true);
-  let hasDiagram = false;
-  Children.forEach(children, (c) => {
-    if (isValidElement(c) && typeof c.type === "function" && (c.type as { displayName?: string }).displayName === "LiveDiagram") hasDiagram = true;
-  });
+  // Children register themselves (a server-rendered page hands us lazy
+  // references, so their types can't be inspected).
+  useEffect(() => markOutput(), [markOutput]);
+  const [diagrams, setDiagrams] = useState(0);
+  const markDiagram = useCallback(() => { setDiagrams((n) => n + 1); return () => setDiagrams((n) => n - 1); }, []);
+  const hasDiagram = diagrams > 0;
   const running = live && live.exit === null;
   return (
     <div className="not-prose my-5 overflow-hidden rounded-lg border border-[var(--color-out-line)] bg-[var(--color-out-bg)]">
@@ -50,7 +52,7 @@ export function Output({ summary, children }: { summary?: ReactNode; children?: 
                 {live.text || (running ? "" : "(no output)")}
               </Printed>
             )}
-            <OutputContext.Provider value={{ inside: true, collapsePrinted: hasDiagram || !!live }}>
+            <OutputContext.Provider value={{ inside: true, collapsePrinted: hasDiagram || !!live, markDiagram }}>
               {children}
             </OutputContext.Provider>
           </div>

@@ -8,18 +8,18 @@
 //   <Optional title="…">…</Optional>
 //   <Learned next="/learn/x" nextLabel="…"> - **Lead.** detail </Learned>
 // Numbers combine with the lesson's own number: lesson 1.4, section 1, step 2 -> 1.4.1.2.
-import { Children, createContext, isValidElement, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { setStepDone, useProgress } from "@/lib/progress";
 
 type LessonCtx = { slug: string; number: string };
 const LessonContext = createContext<LessonCtx>({ slug: "", number: "" });
-const SectionContext = createContext<{ id: string }>({ id: "" });
+const SectionContext = createContext<{ id: string; register: (stepKey: string) => () => void }>({ id: "", register: () => () => {} });
 
 export type LiveRun = { text: string; exit: number | null } | null;
-export const StepContext = createContext<{ id: string; hasOutput: boolean; live: LiveRun; setLive: (r: LiveRun) => void }>({
-  id: "", hasOutput: false, live: null, setLive: () => {},
+export const StepContext = createContext<{ id: string; hasOutput: boolean; live: LiveRun; setLive: (r: LiveRun) => void; markOutput: () => () => void }>({
+  id: "", hasOutput: false, live: null, setLive: () => {}, markOutput: () => () => {},
 });
 
 export function LessonProvider({ slug, number, children }: LessonCtx & { children: ReactNode }) {
@@ -74,18 +74,20 @@ export function Learned({ next, nextLabel, children }: { next?: string; nextLabe
   );
 }
 
-// Match on an explicit displayName (function names are minified in builds).
-const isType = (c: ReactNode, name: string) =>
-  isValidElement(c) && typeof c.type === "function" && (c.type as { displayName?: string }).displayName === name;
 
 export function Section({ n, title, goal, children }: { n: string | number; title: ReactNode; goal?: ReactNode; children: ReactNode }) {
   const { slug, number } = useLesson();
   const id = `${number}.${n}`;
   const [open, setOpen] = useState(true);
   const progress = useProgress();
-  const stepIds: string[] = [];
-  Children.forEach(children, (c) => { if (isValidElement(c) && c.type === Step) stepIds.push(`${id}.${(c.props as { n: string | number }).n}`); });
-  const done = stepIds.filter((s) => progress.steps[`${slug}:${s}`]).length;
+  // Steps register themselves (children of a server-rendered MDX page arrive
+  // as lazy client references, so their types can't be inspected here).
+  const [stepIds, setStepIds] = useState<string[]>([]);
+  const register = useCallback((k: string) => {
+    setStepIds((a) => (a.includes(k) ? a : [...a, k]));
+    return () => setStepIds((a) => a.filter((x) => x !== k));
+  }, []);
+  const done = stepIds.filter((k) => progress.steps[k]).length;
   useEffect(() => {
     const on = (e: Event) => setOpen((e as CustomEvent<{ open: boolean }>).detail.open);
     window.addEventListener("osk8s:sections", on);
@@ -103,14 +105,14 @@ export function Section({ n, title, goal, children }: { n: string | number; titl
           {stepIds.length > 0 && <span className="text-[var(--color-fg-mut)]"> · {done} of {stepIds.length} steps done</span>}
         </p>
       )}
-      {open && <SectionContext.Provider value={{ id }}><div className="steps mt-5">{children}</div></SectionContext.Provider>}
+      {open && <SectionContext.Provider value={{ id, register }}><div className="steps mt-5">{children}</div></SectionContext.Provider>}
     </section>
   );
 }
 
 export function Step({ n, title, children }: { n: string | number; title: ReactNode; children: ReactNode }) {
   const { slug } = useLesson();
-  const { id: sectionId } = useContext(SectionContext);
+  const { id: sectionId, register } = useContext(SectionContext);
   const id = `${sectionId}.${n}`;
   const key = `${slug}:${id}`;
   const progress = useProgress();
@@ -122,10 +124,11 @@ export function Step({ n, title, children }: { n: string | number; title: ReactN
     window.addEventListener("osk8s:clear-outputs", clear);
     return () => window.removeEventListener("osk8s:clear-outputs", clear);
   }, []);
-  let hasOutput = false;
-  Children.forEach(children, (c) => { if (isType(c, "Output")) hasOutput = true; });
+  useEffect(() => register(key), [register, key]);
+  const [outputs, setOutputs] = useState(0);
+  const markOutput = useCallback(() => { setOutputs((n) => n + 1); return () => setOutputs((n) => n - 1); }, []);
   return (
-    <StepContext.Provider value={{ id: key, hasOutput, live, setLive }}>
+    <StepContext.Provider value={{ id: key, hasOutput: outputs > 0, live, setLive, markOutput }}>
       <div className="step-card rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
         <div className="not-prose flex items-center gap-3 border-b border-[var(--color-line)] px-4 py-3">
           <span className="rounded-md bg-[var(--color-nv)] px-2 py-0.5 font-mono text-xs font-bold text-[#0a0d07]">{id}</span>

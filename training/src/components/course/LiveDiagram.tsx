@@ -4,7 +4,7 @@
 // Layers below `layer` are drawn; this step's layer is a dashed placeholder until
 // the step is done (a successful Run ticks it), then it fills in, highlighted as
 // "new in this step". Later layers stay hidden. Specs live in lib/diagrams.ts.
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { DIAGRAMS, type DNode, type DEdge } from "@/lib/diagrams";
 import { StepContext, useLesson } from "./Structure";
 import { stepOutput, useProgress } from "@/lib/progress";
@@ -92,7 +92,9 @@ function EdgeView({ e, nodes, st }: { e: DEdge; nodes: Record<string, DNode>; st
 export function LiveDiagram({ id, layer }: { id: string; layer: number }) {
   const d = DIAGRAMS[id];
   const step = useContext(StepContext);
-  const inOutput = useContext(OutputContext).inside;
+  const octx = useContext(OutputContext);
+  const inOutput = octx.inside;
+  useEffect(() => octx.markDiagram(), [octx.markDiagram]); // eslint-disable-line react-hooks/exhaustive-deps
   const { slug, number } = useLesson();
   const progress = useProgress();
   if (!d) return null;
