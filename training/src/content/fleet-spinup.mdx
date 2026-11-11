@@ -60,10 +60,10 @@ Then watch them reach Ready (`status` wraps `openshell sandbox list`):
 
 <Step n="1" title="The sandbox pods">
 
-See the sandbox **pods** on the cluster (each agent is a sealed pod — they live in the `openshell-sandboxes` namespace; the gateway control plane stays in `openshell`):
+See the sandbox **pods** on the cluster (each agent is a sealed pod — they live in the workspace's namespace, `openshell-lab-default`; the gateway control plane stays in `openshell`):
 
 ```bash
-kubectl get pods -n openshell-sandboxes
+kubectl get pods -n openshell-lab-default
 ```
 
 </Step>
@@ -73,7 +73,7 @@ kubectl get pods -n openshell-sandboxes
 The same fleet as **Sandbox custom resources** — what the OpenShell gateway reconciles into those pods:
 
 ```bash
-kubectl get sandboxes -n openshell-sandboxes
+kubectl get sandboxes -n openshell-lab-default
 ```
 
 </Step>
@@ -202,3 +202,15 @@ Adding a fifth agent is one more line in <code>fleet.txt</code> + one persona fo
 </Section>
 
 Bring the fleet up, confirm `status` shows them Ready, then head to the next chapter to drive them.
+
+## What you learned
+
+<Learned next="/learn/fleet-status" nextLabel="The fleet at a glance">
+
+- **The spec.** Describe the whole fleet in one file, one agent per line.
+- **Bring the fleet up.** Create every sandbox, scope its policy and stage its persona with one helper.
+- **Look at what's running.** See the fleet as pods, as Sandbox resources and from the gateway.
+- **Each agent's soul.** See how one persona per specialist makes each behave differently.
+- **The cluster-telemetry skill.** Understand how a sealed agent reads its in-cluster backend.
+
+</Learned>

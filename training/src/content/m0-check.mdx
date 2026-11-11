@@ -1,6 +1,6 @@
 Check what you took away from Part I before you start the labs.
 
-## Summary
+## What you learned
 
 - One VM runs the whole lab: k3s, the agent-sandbox controller, the OpenShell gateway, LiteLLM, Keycloak, the OpenShell Console and the monitoring stack.
 - A sandbox is a pair of pods plus a policy: the agent's workload pod and a supervisor pod that owns its network.
@@ -8,6 +8,8 @@ Check what you took away from Part I before you start the labs.
 - Landlock and seccomp bound the agent process; these static parts are fixed when the sandbox is created.
 - The network is deny by default, filtered at L4 (host, port, binary) and L7 (method, path), and its rules can change on a running sandbox.
 - Providers keep credentials in the gateway; the agent only sees a placeholder, and every decision is written as an OCSF audit event.
+
+## Check your understanding
 
 <Quiz title="Test your knowledge: Module 0">
 <Q q="Which pod enforces a sandbox's network policy?" options={["The workload pod running the agent", "The supervisor pod paired with the sandbox", "The gateway pod openshell-0", "The agent-sandbox controller"]} answer={1} why="The supervisor is the sandbox's only way out: it evaluates every connection and request against the policy." />

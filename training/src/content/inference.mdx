@@ -57,10 +57,12 @@ Model access is an OpenShell **provider** named `litellm`, created at provisioni
 ```bash
 openshell provider list
 ```
+<Output>
 <ExpectedOutput>
 {`NAME     TYPE     CREDENTIAL_KEYS   CONFIG_KEYS
 litellm  litellm  1                 0`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -71,6 +73,7 @@ Its type is a **provider profile**, the access contract: which variable the sand
 ```bash
 openshell profile describe litellm
 ```
+<Output>
 <ExpectedOutput>
 {`Credentials:
   api_key (required)
@@ -86,6 +89,7 @@ Endpoints (declared policy):
     Rules: 6 allow, 0 deny
     Enforcement: enforce`}
 </ExpectedOutput>
+</Output>
 
 The six rules are model calls only: `GET /v1/models`, `POST /v1/chat/completions`, `/v1/completions`, `/v1/responses`, `/v1/embeddings`, `/v1/messages`. The file is `ansible/roles/10-cli_providers/files/litellm-profile.yaml`.
 
@@ -102,9 +106,11 @@ The six rules are model calls only: `GET /v1/models`, `POST /v1/chat/completions
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'echo $LITELLM_API_KEY'
 ```
+<Output>
 <ExpectedOutput>
 {`openshell:resolve:env:v1535812..._LITELLM_API_KEY`}
 </ExpectedOutput>
+</Output>
 
 A placeholder. There is no key anywhere in the sandbox to steal.
 
@@ -143,9 +149,11 @@ The same key would open LiteLLM's **admin API** (create keys, read spend). The p
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -X POST -H "Authorization: Bearer $LITELLM_API_KEY" http://litellm.litellm.svc.cluster.local:4000/key/generate; echo'
 ```
+<Output>
 <ExpectedOutput>
 {`{"error":"policy_denied","policy":"_provider_litellm","rule":"POST /key/generate","detail":"POST /key/generate not permitted by policy","layer":"l7",...}`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -160,3 +168,15 @@ Everything funnels through LiteLLM, so the model is one setting: edit `MODEL_NAM
 <Callout type="note" title="What changed from older OpenShell">
 Earlier releases routed every sandbox through a managed endpoint, <code>inference.local</code>. OpenShell 0.1 removed it: a sandbox reaches a model only through a provider you attach to <em>that</em> sandbox, and the agent calls the model's own API. Access is per sandbox and explicit, and the provider's L7 rules define exactly which calls are allowed.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/providers" nextLabel="Your own provider">
+
+- **Your model and key.** See where the model and key are set, and check they work.
+- **The provider.** See what a sandbox is given for model access.
+- **What the agent sees.** Call the model from agent-0 with a key it doesn't hold.
+- **What the agent can't do with it.** See the admin API refused at L7.
+- **Change the model later.** Know the one setting that picks the model.
+
+</Learned>

@@ -14,7 +14,7 @@ One VM runs the whole thing. From the bottom up, each layer hands a safer, more 
 - **k3s**: single-node upstream Kubernetes. Lightweight, but a real cluster: the same CRDs, RBAC, NetworkPolicy and scheduler you'd use anywhere. The kubeconfig is `/etc/rancher/k3s/k3s.yaml`.
 - **agent-sandbox controller**: [kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox). It reconciles each `Sandbox` custom resource (`agents.x-k8s.io`) into a pod, the way a Deployment controller reconciles ReplicaSets.
 - **OpenShell gateway** (namespace `openshell`): the control plane. It creates sandboxes, stores their policies and provider credentials, and decides who may do what. The CLI reaches it on NodePort **30808**.
-- **Sandboxes** (namespace `openshell-sandboxes`): each one is **two pods**, the agent's workload pod and its supervisor pod. The supervisor owns the agent's network.
+- **Sandboxes** (one namespace per workspace, e.g. `openshell-lab-default`, created by the gateway): each one is **two pods**, the agent's workload pod and its supervisor pod. The supervisor owns the agent's network.
 - **LiteLLM** (namespace `litellm`): one OpenAI-compatible endpoint in front of the model. Agents reach it through the `litellm` **provider**, with a key they never see.
 - **Keycloak**, **Envoy Gateway** and the **OpenShell Console**: people sign in with Keycloak; Envoy publishes the training site, Keycloak and Grafana on one host and the console on its own.
 - **Monitoring**: Prometheus and Grafana for metrics, Loki for logs and OpenShell's audit events, Tempo for traces.

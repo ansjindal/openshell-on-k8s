@@ -1,6 +1,6 @@
 Check what you took away from Module 4, the SRE copilot fleet.
 
-## Summary
+## What you learned
 
 - The fleet is four read-only specialists (logs, metrics, traces, events), each with egress to exactly one backend, plus an analyst with no egress at all.
 - `fleet.txt` describes the whole fleet, one agent per whitespace-separated line, and `scripts/fleet.sh up` creates each sandbox, scopes its policy and stages its persona.
@@ -8,6 +8,8 @@ Check what you took away from Module 4, the SRE copilot fleet.
 - The orchestrator runs a fixed plan with one prescribed probe per specialist, then hands all findings to the analyst for a root cause and a recommended fix.
 - In the incident lab you take `payments` down for real; the fleet diagnoses it from live telemetry and a human approves the fix.
 - Extending the fleet is always the same three moves: add an egress line, add a persona, add a probe.
+
+## Check your understanding
 
 <Quiz title="Test your knowledge: Module 4">
 <Q q="How are the columns in fleet.txt separated?" options={["By colons", "By commas", "By tabs only", "By whitespace, because the backend itself contains a colon"]} answer={3} why="The backend is a host:port, so fleet.sh splits columns on whitespace and reads the first three fields." />

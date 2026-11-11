@@ -1,0 +1,22 @@
+In this module **you are the SRE**. You bring up a fleet of sealed specialists, break a real service, let the fleet find the root cause, and approve the fix yourself.
+
+<BeforeYouStart
+  learn="how several narrowly scoped agents add up to one investigation, and why adding an agent never widens the trust boundary."
+  prereq="Modules 1 to 3. A model configured (MODEL_API_KEY) so the agents can think."
+  start="The challenge."
+/>
+
+## The picture builds as you read
+
+<ScrollBuild diagram="m4" items={[
+  { title: "The challenge", text: "incident-desk is a small service with a real dependency. You will break it on purpose." },
+  { title: "Spin up the fleet", text: "One command: an analyst and four specialists for logs, metrics, traces and events, each with a persona, a skill and a policy scoped to its one tool." },
+  { title: "The fleet at a glance", text: "Every agent's status, the exact egress its policy allows, and its SOUL." },
+  { title: "Investigate an incident", text: "The analyst asks the specialists, combines their findings, and names the root cause. You approve the fix." },
+  { title: "Under the hood", text: "The plan, the probes and the synthesis: the code and prompts behind the fleet." },
+  { title: "Build your own", text: "A new agent is one line and one persona folder, plus a policy that reaches exactly one more host." },
+]} />
+
+## Continue through the module
+
+<ModuleLessons module="m4" />

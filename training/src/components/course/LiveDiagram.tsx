@@ -6,8 +6,9 @@
 // "new in this step". Later layers stay hidden. Specs live in lib/diagrams.ts.
 import { useContext } from "react";
 import { DIAGRAMS, type DNode, type DEdge } from "@/lib/diagrams";
-import { StepContext } from "./Structure";
-import { useProgress } from "@/lib/progress";
+import { StepContext, useLesson } from "./Structure";
+import { stepOutput, useProgress } from "@/lib/progress";
+import { OutputContext } from "./Output";
 
 type State = "hidden" | "ghost" | "new" | "old";
 
@@ -46,14 +47,15 @@ function NodeView({ n, st }: { n: DNode; st: State }) {
         strokeDasharray={ghost ? "6 5" : group ? "4 4" : undefined}
         style={isNew ? { filter: "drop-shadow(0 0 6px rgba(118,185,0,.55))" } : undefined} />
       {group ? (
-        <text x={n.x + 12} y={n.y + 18} fontSize={11.5} fill={C.sub} fontFamily="var(--font-mono)">{n.label}</text>
+        <text x={n.x + 12} y={n.y + 18} fontSize={11.5} fill={n.live ? C.nvb : C.sub} fontFamily="var(--font-mono)">{n.label}</text>
       ) : (
         <>
           <text x={n.x + 12} y={n.y + (n.sub ? 24 : n.h / 2 + 5)} fontSize={13.5} fontWeight={700} fill={ghost ? C.sub : C.text}>{n.label}</text>
           {n.sub && n.sub.split("\n").map((line, i) => (
             <text key={i} x={n.x + 12} y={n.y + 42 + i * 15} fontSize={11.5} fill={C.sub} fontFamily="var(--font-mono)">{line}</text>
           ))}
-          {ghost && <text x={n.x + n.w - 10} y={n.y + 18} fontSize={10} fill={C.sub} textAnchor="end">▷ this step adds it</text>}
+          {ghost && <text x={n.x + n.w - 10} y={n.y + n.h - 8} fontSize={10} fill={C.sub} textAnchor="end">▷ this step adds it</text>}
+          {n.live && !ghost && <circle cx={n.x + n.w - 12} cy={n.y + 13} r={4} fill={C.nvb}><title>from your run</title></circle>}
         </>
       )}
     </g>
@@ -90,42 +92,82 @@ function EdgeView({ e, nodes, st }: { e: DEdge; nodes: Record<string, DNode>; st
 export function LiveDiagram({ id, layer }: { id: string; layer: number }) {
   const d = DIAGRAMS[id];
   const step = useContext(StepContext);
+  const inOutput = useContext(OutputContext).inside;
+  const { slug, number } = useLesson();
   const progress = useProgress();
   if (!d) return null;
   const done = !!(step.id && progress.steps[step.id]);
-  const nodes = Object.fromEntries(d.nodes.map((n) => [n.id, n]));
+  // Output of the step behind each layer (if you ran it): diagrams draw what
+  // your commands actually found, not only the textbook picture.
+  const out = (n: number) => {
+    const l = d.layers.find((x) => x.n === n);
+    return l?.step ? stepOutput(progress, `${slug}:${number}.${l.step}`) : undefined;
+  };
+  const resolved: DNode[] = d.nodes.map((n) => {
+    if (!n.dyn) return n;
+    try { const v = n.dyn(out); return v ? { ...n, ...v, live: true } : n; } catch { return n; }
+  });
+  const edges: DEdge[] = d.edges.map((e) => {
+    if (!e.dyn) return e;
+    try { const v = e.dyn(out); return v ? { ...e, label: v } : e; } catch { return e; }
+  });
+  const anyLive = resolved.some((n) => n.live) || edges.some((e, i) => e.label !== d.edges[i].label);
+  const nodes = Object.fromEntries(resolved.map((n) => [n.id, n]));
   const cur = d.layers.find((l) => l.n === layer);
   // A not-yet-done node that replaces a visible one (same position) waits
   // behind it instead of drawing a placeholder on top.
   const st = (n: DNode): State => {
     const s = stateOf(n.layer, n.until, layer, done);
-    if (s === "ghost" && d.nodes.some((o) => o !== n && o.x === n.x && o.y === n.y && stateOf(o.layer, o.until, layer, done) === "old")) return "hidden";
+    if (s === "ghost" && resolved.some((o) => o.id !== n.id && o.x === n.x && o.y === n.y && stateOf(o.layer, o.until, layer, done) === "old")) return "hidden";
     return s;
   };
   return (
-    <div className="not-prose my-5 overflow-hidden rounded-lg border border-[var(--color-out-line)] bg-[var(--color-out-bg)]">
-      <div className="flex items-center gap-3 border-b border-[var(--color-out-line)] px-4 py-2">
-        <span className="rounded bg-[var(--color-info)] px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white">DIAGRAM</span>
-        <span className="text-sm text-[var(--color-fg-dim)]">{d.title}</span>
-        <span className="ml-auto text-xs text-[var(--color-fg-mut)]">{done ? "updated by this step" : "complete this step to add its layer"}</span>
+    <div className={inOutput ? "not-prose my-2" : "not-prose my-5 overflow-hidden rounded-lg border border-[var(--color-out-line)] bg-[var(--color-out-bg)]"}>
+      <div className={inOutput ? "flex items-center gap-3 pb-1 text-xs" : "flex items-center gap-3 border-b border-[var(--color-out-line)] px-4 py-2"}>
+        {!inOutput && <span className="rounded bg-[var(--color-info)] px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white">DIAGRAM</span>}
+        <span className={inOutput ? "font-semibold text-[var(--color-fg-dim)]" : "text-sm text-[var(--color-fg-dim)]"}>{d.title}</span>
+        <span className="ml-auto text-xs text-[var(--color-fg-mut)]">
+          {anyLive && <span className="mr-3 text-[var(--color-nv-bright)]">● values from your runs</span>}
+          {done ? "updated by this step" : "run this step to add its layer"}
+        </span>
       </div>
-      <div className="overflow-x-auto px-3 py-3">
+      <div className={inOutput ? "overflow-x-auto rounded-lg border border-[var(--color-info)]/60 bg-[var(--color-out-bg)] px-3 py-3" : "overflow-x-auto px-3 py-3"}>
         <svg viewBox={`0 0 ${d.w} ${d.h}`} className="mx-auto block w-full" style={{ maxWidth: d.w, minWidth: 640 }} role="img" aria-label={d.title}>
-          {d.nodes.filter((n) => n.kind === "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
-          {d.edges.map((e, i) => <EdgeView key={i} e={e} nodes={nodes} st={stateOf(e.layer, e.until, layer, done)} />)}
-          {d.nodes.filter((n) => n.kind !== "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
+          {resolved.filter((n) => n.kind === "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
+          {edges.map((e, i) => <EdgeView key={i} e={e} nodes={nodes} st={stateOf(e.layer, e.until, layer, done)} />)}
+          {resolved.filter((n) => n.kind !== "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
         </svg>
       </div>
-      <div className="flex flex-wrap gap-2 border-t border-[var(--color-out-line)] px-4 py-2.5">
+      <div className={inOutput ? "flex flex-wrap gap-2 py-2.5" : "flex flex-wrap gap-2 border-t border-[var(--color-out-line)] px-4 py-2.5"}>
         {d.layers.filter((l) => l.n > 0).map((l) => (
           <span key={l.n} className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
             l.n === layer ? (done ? "border-[var(--color-nv)] text-[var(--color-nv-bright)]" : "border-dashed border-[var(--color-fg-mut)] text-[var(--color-fg-mut)]")
             : l.n < layer ? "border-[var(--color-line-2)] text-[var(--color-fg-dim)]" : "border-[var(--color-line)] text-[var(--color-fg-mut)] opacity-50"}`}>
-            {l.n === layer ? "+ " : ""}{l.name}{l.n === layer ? ": new in this step" : ""}
+            {l.n === layer ? "+ " : l.n < layer ? "✓ " : ""}{l.name}{l.n === layer ? ": new in this step" : ""}
           </span>
         ))}
       </div>
-      {cur?.note && <p className="border-t border-[var(--color-out-line)] px-4 py-2.5 text-sm text-[var(--color-fg-dim)]">{cur.note}</p>}
+      {cur?.note && <p className={inOutput ? "flex gap-2 text-sm text-[var(--color-fg-dim)]" : "border-t border-[var(--color-out-line)] px-4 py-2.5 text-sm text-[var(--color-fg-dim)]"}>{inOutput && <span className="text-[var(--color-nv-bright)]">◆</span>}<span>{cur.note}</span></p>}
     </div>
+  );
+}
+LiveDiagram.displayName = "LiveDiagram";
+
+/** The same drawing without a step: layers up to `layer`, the last highlighted.
+ *  Used by ScrollBuild (module overviews), where scrolling picks the layer. */
+export function DiagramSvg({ id, layer }: { id: string; layer: number }) {
+  const d = DIAGRAMS[id];
+  if (!d) return null;
+  const nodes = Object.fromEntries(d.nodes.map((n) => [n.id, n]));
+  const st = (n: DNode): State => {
+    const s = stateOf(n.layer, n.until, layer, true);
+    return s;
+  };
+  return (
+    <svg viewBox={`0 0 ${d.w} ${d.h}`} className="block w-full" role="img" aria-label={d.title}>
+      {d.nodes.filter((n) => n.kind === "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
+      {d.edges.map((e, i) => <EdgeView key={i} e={e} nodes={nodes} st={stateOf(e.layer, e.until, layer, true)} />)}
+      {d.nodes.filter((n) => n.kind !== "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
+    </svg>
   );
 }

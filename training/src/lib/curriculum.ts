@@ -24,6 +24,7 @@ export const CURRICULUM: Part[] = [
     id: "m1", n: 1, title: "Sandboxes & Policy", accent: "nv", role: "You are the platform operator.",
     subtitle: "You are the platform operator. Verify the cluster, create sandboxes, test the seal from the inside, and open the network one rule at a time.",
     lessons: [
+      L("m1-overview", "Overview", "What this module builds: a sealed sandbox, opened one rule at a time.", 4),
       L("deploy", "Verify the cluster", "Confirm k3s, the gateway, the console and LiteLLM are healthy.", 8, "lab"),
       L("create-sandbox", "Create a sandbox", "openshell sandbox create → a workload pod and a supervisor pod → Ready.", 9, "lab"),
       L("into-the-sandbox", "Into the sandbox", "Exec in and test the seal: filesystem, user, network.", 8, "lab"),
@@ -36,6 +37,7 @@ export const CURRICULUM: Part[] = [
     id: "m2", n: 2, title: "Models & Credentials", accent: "nv", role: "You are the agent developer.",
     subtitle: "You are the agent developer. Give agents a model and credentials they never see, shape their persona, install governed skills, and run tasks.",
     lessons: [
+      L("m2-overview", "Overview", "What this module builds: a model, credentials the agent never sees, skills and a task.", 4),
       L("inference", "Models through a provider", "The litellm provider: a placeholder key in the sandbox, the real key injected on allowed calls only.", 9, "lab"),
       L("providers", "Your own provider", "Write a profile, attach it live, watch the real token arrive upstream, rotate it.", 10, "lab"),
       L("workspace", "Give it a soul: workspace files", "IDENTITY/SOUL/BOOTSTRAP Markdown shape the agent.", 8, "lab"),
@@ -48,6 +50,7 @@ export const CURRICULUM: Part[] = [
     id: "m3", n: 3, title: "Audit, Console & Access", accent: "nv", role: "You are the security reviewer.",
     subtitle: "You are the security reviewer. Read the audit trail, drive the same gateway from the web console, and give people roles and workspaces.",
     lessons: [
+      L("m3-overview", "Overview", "What this module builds: an audit trail, the web console and people with roles.", 4),
       L("audit", "The audit trail", "Every allow and deny as an OCSF event: CLI, Loki, Grafana; agent traces in Tempo.", 9, "lab"),
       L("console", "The OpenShell Console", "Sandboxes, logs, terminal, policy revisions and the proposals inbox.", 8, "lab"),
       L("access-control", "Users, roles & workspaces", "Keycloak identities on the gateway: an admin, a user, a workspace.", 10, "lab"),
@@ -58,6 +61,7 @@ export const CURRICULUM: Part[] = [
     id: "m4", n: 4, title: "Capstone: SRE Copilot Fleet", accent: "nv", role: "You are the SRE.",
     subtitle: "You are the SRE. Bring up a fleet of sealed specialists, break a real service, let the fleet find the root cause, and approve the fix yourself.",
     lessons: [
+      L("m4-overview", "Overview", "What this module builds: a fleet of sealed specialists that finds a real fault.", 4),
       L("what-youll-build", "The challenge", "Sealed agents for logs, metrics, traces and events, combined by an analyst.", 8),
       L("fleet-spinup", "Spin up the fleet", "One command: five agents, each with a persona, a skill and a policy scoped to its tool.", 10, "lab"),
       L("fleet-status", "The fleet at a glance", "Every agent's status, the exact egress its policy allows, and its SOUL.", 6, "lab"),

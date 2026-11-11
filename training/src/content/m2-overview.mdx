@@ -1,0 +1,25 @@
+In this module **you are the agent developer**. Your sandbox gets a model and credentials it can never read, a persona written in Markdown, skills installed from a registry you control, and then a real task.
+
+<BeforeYouStart
+  learn="how providers inject a real key on allowed calls only, how to write and rotate your own provider profile, how workspace files shape an agent, and how skills stay governed."
+  prereq="Module 1: agent-0 is running and you know how its policy is updated."
+  start="Models through a provider."
+/>
+
+## The picture builds as you read
+
+<ScrollBuild diagram="m2" items={[
+  { title: "Models through a provider", text: "The litellm provider puts a placeholder in the sandbox. The supervisor swaps in the real key only on requests its profile allows." },
+  { title: "Your own provider", text: "Write a profile for an echo API, attach it to a running sandbox, watch the real token arrive upstream, then rotate it with one command." },
+  { title: "Give it a soul: workspace files", text: "IDENTITY, SOUL and BOOTSTRAP Markdown files set who the agent is and how it works." },
+  { title: "Skills: governed capabilities", text: "Skills come only from the in-cluster registry, through a policy scoped to npm." },
+  { title: "Run a task", text: "Hand the agent a prompt and read what it did, step by step." },
+]} />
+
+## Continue through the module
+
+<ModuleLessons module="m2" />
+
+<Optional title="Why not just set an environment variable?">
+An agent that can read its token can also send it anywhere: in a URL, a log line, or a request a prompt injection asked for. With a provider the sandbox only ever holds a placeholder, and the real value exists only inside the supervisor, on requests that match the profile.
+</Optional>

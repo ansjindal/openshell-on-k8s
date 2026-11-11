@@ -16,7 +16,8 @@ The course has **modules**, each played from one role: platform operator, agent 
 
 - Each lab is split into numbered **sections** (with a goal) and **steps**.
 - A step's **RUN** panel shows the command; **Run ▷** executes it on your lab VM and streams the result into an **OUTPUT** panel. A successful run ticks the step off.
-- The **EXPECTED** panel shows what the command printed when the lesson was written, on a VM like yours. Names, ages and ids differ; the shape is what to compare.
+- The **OUTPUT** panel first shows what was recorded on a VM like yours, often with a **live diagram** of what the step adds. After Run it switches to your VM's output, and the diagram fills in with the names, states and ids your commands found. Names, ages and ids differ; the shape is what to compare.
+- Each module opens with an **Overview** whose diagram builds as you scroll, and each lab ends with **What you learned**.
 - **Cluster shell** (top right) opens a real bash shell on the VM, with `kubectl` and an `openshell` CLI already signed in as the lab operator. Use it to edit a command or keep a session; blocks marked **SHELL** open there automatically.
 - Your progress (steps, lessons, quiz answers) is kept in this browser. **Clear outputs** in the sidebar wipes the run outputs.
 - Each module ends with a **summary and knowledge check**.

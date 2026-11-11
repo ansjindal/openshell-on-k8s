@@ -1,6 +1,6 @@
 A quick look back at Module 2 before you move on.
 
-## Summary
+## What you learned
 
 - Agents reach a model through LiteLLM via the `litellm` provider: the sandbox holds only a placeholder, and the supervisor injects the real key on model calls the profile allows.
 - A provider profile is the access contract: which variable the sandbox gets, where the credential may go, and which requests are allowed there. Anything else, like LiteLLM's admin API, is refused at L7.
@@ -8,6 +8,8 @@ A quick look back at Module 2 before you move on.
 - An agent's persona is plain Markdown in its workspace (`IDENTITY.md`, `SOUL.md`, `BOOTSTRAP.md`), re-read each session.
 - Skills are governed three ways: the registry they come from, whether they are enabled, and what they can reach.
 - `./scripts/fleet task` hands a prompt to one agent or the whole fleet, each working in its own sandbox.
+
+## Check your understanding
 
 <Quiz title="Test your knowledge: Module 2">
 <Q q="What does a sandbox see in LITELLM_API_KEY?" options={["The real nvapi- key from .env", "A placeholder such as openshell:resolve:env:..._LITELLM_API_KEY", "Nothing: the variable is empty", "A short-lived copy of the key that expires after one call"]} answer={1} why="The sandbox only holds a placeholder; the supervisor swaps in the real key on requests that match the provider's rules, so there is no key in the sandbox to steal." />

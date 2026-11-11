@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CURRICULUM, FIRST_SLUG } from "@/lib/curriculum";
 import { LearnShell } from "@/components/LearnShell";
 import { Figure } from "@/components/Figure";
+import { RoadmapCircle, RoadmapTable, STACK } from "@/components/course/Roadmap";
 
 export default function Home() {
   return (
@@ -50,6 +51,27 @@ export default function Home() {
 
         <Figure src="/diagrams/architecture.svg" alt="The lab on one VM: the training site, Keycloak and Grafana; the OpenShell gateway, sandboxes (workload + supervisor pods), LiteLLM and the monitoring stack." caption="The whole lab on one VM" />
 
+        <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> Your roadmap</h2>
+        <p className="mt-4 text-[1.05rem] leading-relaxed text-[var(--color-fg-dim)]">
+          One loop around the platform: each module hands the next one something that works. Click a module to start it.
+        </p>
+        <div className="mt-6 grid items-center gap-6 xl:grid-cols-[360px_1fr]">
+          <RoadmapCircle />
+          <RoadmapTable />
+        </div>
+
+        <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> Your lab environment</h2>
+        <p className="mt-4 text-[1.05rem] leading-relaxed text-[var(--color-fg-dim)]">
+          One VM, already built by Ansible when it came up. Nothing to install: every lab reads or changes this stack.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {STACK.map(([n, d]) => (
+            <span key={n} className="rounded-full border border-[var(--color-line)] bg-[var(--color-panel)] px-3 py-1 text-sm">
+              <span className="font-semibold text-[var(--color-fg)]">{n}</span> <span className="text-[var(--color-fg-mut)]">· {d}</span>
+            </span>
+          ))}
+        </div>
+
         <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> How the modules fit together</h2>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           {CURRICULUM.map((m) => (
@@ -63,6 +85,14 @@ export default function Home() {
             </Link>
           ))}
         </div>
+
+        <section className="mt-12 rounded-2xl border border-[var(--color-nv-dim)] bg-[var(--color-run-bg)] p-8 text-center">
+          <h2 className="text-2xl font-bold">Ready?</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-[var(--color-fg-dim)]">Module 0 takes about half an hour and needs no commands. The first lab starts in Module 1.</p>
+          <Link href={`/learn/${FIRST_SLUG}`} className="mt-6 inline-block rounded-lg bg-[var(--color-nv)] px-5 py-2.5 text-sm font-bold text-[#0a0d07] hover:bg-[var(--color-nv-bright)]">
+            Start with Module 0 →
+          </Link>
+        </section>
       </div>
     </LearnShell>
   );

@@ -108,9 +108,11 @@ Registry and egress control **where a skill can come from**. There's a separate 
 ```bash
 openshell sandbox exec -n agent-0 -- openclaw plugins disable hello-world
 ```
+<Output>
 <ExpectedOutput>
 {`Disabled plugin "hello-world". Restart the gateway to apply.`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -196,3 +198,16 @@ openshell sandbox exec -n agent-0 -- openclaw plugins install @workshop/myskill 
 <Callout type="rh" title="A supply chain you can prove">
 A skill is gated three ways — its registry, its enablement, and its egress — and every byte it moves is on the audit log. Flipping between two committed policy files (<code>skills-locked</code> ↔ <code>skills-clawhub</code>) is the whole story: the door is open only while a reviewed policy says so, and locking it back down is one command. That's the difference between an agent that's <em>extensible</em> and one that's extensible <em>and</em> governable.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/run-a-task" nextLabel="Run a task">
+
+- **The locked default: registry only.** Make the in-cluster registry the agent's only install egress.
+- **Open a temporary ClawHub door.** Allow ClawHub and public npm, and install a ClawHub skill.
+- **Gate ClawHub package by package.** Use L7 rules to block one package while allowing the rest.
+- **Enabled, not just installed.** Switch an installed skill off and on again.
+- **Publish your own skill.** Publish a skill to the in-cluster registry and install it by name.
+- **Lock the door again.** Return to registry-only and prove the boundary.
+
+</Learned>

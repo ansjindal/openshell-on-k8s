@@ -4,9 +4,13 @@ import { Callout } from "@/components/Callout";
 import { CodeBlock } from "@/components/CodeBlock";
 import { ExpectedOutput } from "@/components/ExpectedOutput";
 import { Figure } from "@/components/Figure";
-import { BeforeYouStart, Section, Step } from "@/components/course/Structure";
+import { BeforeYouStart, Section, Step, Optional, Learned } from "@/components/course/Structure";
+import { Output } from "@/components/course/Output";
+import { Run } from "@/components/course/Run";
 import { Quiz, Q } from "@/components/course/Quiz";
 import { LiveDiagram } from "@/components/course/LiveDiagram";
+import { ScrollBuild } from "@/components/course/ScrollBuild";
+import { ModuleLessons } from "@/components/course/ModuleLessons";
 import { PolicyExplorer } from "@/components/diagrams/PolicyExplorer";
 import { SkillSupplyChain } from "@/components/diagrams/SkillSupplyChain";
 import { FleetOrchestration } from "@/components/diagrams/FleetOrchestration";
@@ -23,8 +27,14 @@ const components: MDXComponents = {
   BeforeYouStart,
   Section,
   Step,
+  Optional,
+  Learned,
+  Output,
+  Run,
   Quiz,
   LiveDiagram,
+  ScrollBuild,
+  ModuleLessons,
   Q,
   PolicyExplorer,
   SkillSupplyChain,

@@ -14,6 +14,7 @@ Preview a REST rule with `--dry-run` (it prints the merged policy and sends noth
 ```bash
 openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --dry-run | grep -A12 'allow_api_github_com_443:'
 ```
+<Output>
 <ExpectedOutput>
 {`allow_api_github_com_443:
   name: allow_api_github_com_443
@@ -26,6 +27,7 @@ openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:res
   binaries:
     - path: /usr/bin/curl`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -36,6 +38,7 @@ openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:res
 ```bash
 openshell policy update agent-0 --add-endpoint 'example.com:443' --binary /usr/bin/curl --dry-run | grep -A7 'allow_example_com_443:'
 ```
+<Output>
 <ExpectedOutput>
 {`allow_example_com_443:
   name: allow_example_com_443
@@ -45,6 +48,7 @@ openshell policy update agent-0 --add-endpoint 'example.com:443' --binary /usr/b
   binaries:
     - path: /usr/bin/curl`}
 </ExpectedOutput>
+</Output>
 
 That's the whole difference. The REST rule carries `protocol`, `enforcement` and `access`: the supervisor inspects every request. The bare entry has none: no protocol parsing, no method or path filtering. It's a firewall-style allow for one host, one port and the named binaries.
 
@@ -71,9 +75,11 @@ openshell policy update agent-0 --add-endpoint 'example.com:443' --binary /usr/b
 ```bash
 openshell sandbox exec -n agent-0 -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://example.com/
 ```
+<Output>
 <ExpectedOutput>
 {`HTTP 200`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -82,9 +88,11 @@ openshell sandbox exec -n agent-0 -- curl -s -o /dev/null -w 'HTTP %{http_code}\
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -m 8 -o /dev/null https://example.org/ || echo "blocked (curl exit $?)"'
 ```
+<Output>
 <ExpectedOutput>
 {`blocked (curl exit 7)`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -95,12 +103,23 @@ The rule is **per binary**: Python, going to the very same host, is refused:
 ```bash
 openshell sandbox exec -n agent-0 -- python3 -c 'import urllib.request; print(urllib.request.urlopen("https://example.com").status)'
 ```
+<Output>
 <ExpectedOutput>
 {`urllib.error.URLError: <urlopen error [Errno 13] Permission denied>`}
 </ExpectedOutput>
+</Output>
 
 That binary check is what stops an agent from exfiltrating data through an unexpected tool, even to a host it's allowed to reach. Every one of these decisions is in the audit trail; you'll read it in [The Audit Trail](/learn/audit).
 
 </Step>
 
 </Section>
+
+## What you learned
+
+<Learned next="/learn/m1-check" nextLabel="Summary & knowledge check">
+
+- **The two endpoint shapes.** Preview a REST rule and a bare L4 rule side by side.
+- **Try it.** Apply the L4 rule and test its host and binary limits.
+
+</Learned>

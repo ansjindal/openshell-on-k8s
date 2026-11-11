@@ -1,12 +1,15 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useContext, useState, type ReactNode } from "react";
+import { OutputContext, Printed } from "./course/Output";
 import { ChevronDown } from "lucide-react";
 
 // What a command printed when this lesson was written, on a lab VM like yours.
 // Place right after a runnable fence: <ExpectedOutput>{`…`}</ExpectedOutput>.
 // Names, ages and ids differ on your VM; the shape is what to compare.
 export function ExpectedOutput({ children, title }: { children: ReactNode; title?: string }) {
+  const ctx = useContext(OutputContext);
   const [open, setOpen] = useState(true);
+  if (ctx.inside) return <Printed title="What the command printed (recorded)" open={!ctx.collapsePrinted}>{children}</Printed>;
   return (
     <div className="not-prose -mt-2 mb-5 overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-code-bg)]">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 px-4 py-2 text-left">

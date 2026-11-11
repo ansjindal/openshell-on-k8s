@@ -119,3 +119,15 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 
 /* Code inside run/output panels: no inline-code chip styling. */
 .prose pre code, .not-prose pre code { border: 0 !important; background: transparent !important; padding: 0 !important; font-size: inherit !important; color: inherit; }
+
+/* Step cards joined by a short connector, like a timeline. */
+.steps > .step-card + .step-card { margin-top: 26px; position: relative; }
+.steps > .step-card + .step-card::before { content: ""; position: absolute; left: 42px; top: -27px; height: 26px; width: 1px; background: var(--color-line-2); }
+.steps > * + * { margin-top: 20px; }
+/* Run groups: captions as small text above each command. */
+.run-group > p { margin: 6px 0 4px; font-size: 0.85rem; color: var(--color-fg-dim); }
+/* "What you learned": bold lead in white, the rest dimmed. */
+.learned ul { list-style: none; padding-left: 0; }
+.learned li { position: relative; padding-left: 22px; color: var(--color-fg-mut); }
+.learned li::before { content: "◆"; position: absolute; left: 0; color: var(--color-nv); font-size: 0.7em; top: 0.35em; }
+.learned li strong { color: var(--color-fg); }

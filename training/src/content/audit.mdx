@@ -26,11 +26,14 @@ Now read the sandbox's log:
 ```bash
 openshell logs agent-0 -n 200 --source sandbox --since 5m | grep OCSF
 ```
+<Output>
+<LiveDiagram id="audit" layer={2} />
 <ExpectedOutput>
 {`[sandbox] [OCSF ] [ocsf] NET:REFUSE [MED] DENIED example.org [reason:policy_dns_ineligible]
 [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/curl(0) -> example.org:443 [reason:transparent_tcp_policy_denied]
 [sandbox] [OCSF ] [ocsf] HTTP:POST [MED] DENIED POST http://litellm.litellm.svc.cluster.local:4000/key/generate [policy:_provider_litellm engine:l7] [reason:L7_REQUEST deny POST ...]`}
 </ExpectedOutput>
+</Output>
 
 How to read a line:
 
@@ -44,8 +47,6 @@ How to read a line:
 
 Note the first line: `example.org` isn't in any rule, so the supervisor didn't even resolve it. DNS is part of the seal.
 
-<LiveDiagram id="audit" layer={2} />
-
 </Step>
 
 </Section>
@@ -57,7 +58,7 @@ Note the first line: `example.org` isn't in any rule, so the supervisor didn't e
 The supervisors' logs are shipped to **Loki** by Alloy. The same events, for every sandbox, queryable with LogQL. Find the Loki service and ask for the denials of the last 15 minutes:
 
 ```bash
-L=$(kubectl -n monitoring get svc loki -o jsonpath='{.spec.clusterIP}'); curl -sG "http://$L:3100/loki/api/v1/query_range" --data-urlencode 'query={namespace="openshell-sandboxes", container="supervisor"} |= "OCSF" |= "DENIED"' --data-urlencode limit=10 | python3 -c 'import sys,json; [print(s["stream"]["pod"], v[1][:150]) for s in json.load(sys.stdin)["data"]["result"] for v in s["values"]]'
+L=$(kubectl -n monitoring get svc loki -o jsonpath='{.spec.clusterIP}'); curl -sG "http://$L:3100/loki/api/v1/query_range" --data-urlencode 'query={namespace=~"openshell-lab-.+", container="supervisor"} |= "OCSF" |= "DENIED"' --data-urlencode limit=10 | python3 -c 'import sys,json; [print(s["stream"]["pod"], v[1][:150]) for s in json.load(sys.stdin)["data"]["result"] for v in s["values"]]'
 ```
 
 Each line carries the supervisor pod, so you know which sandbox it was. (The gateway also exports its OCSF events to Loki over OTLP, with the sandbox id as an attribute.)
@@ -75,7 +76,7 @@ Each line carries the supervisor pod, so you know which sandbox it was. (The gat
 Open Grafana from the site's **Links** page (`<your site>/grafana`, sign in with Keycloak as `demo`), go to **Explore**, pick **Loki**, and run:
 
 ```bash-ref
-{namespace="openshell-sandboxes", container="supervisor"} |= "OCSF" |= "DENIED"
+{namespace=~"openshell-lab-.+", container="supervisor"} |= "OCSF" |= "DENIED"
 ```
 
 <LiveDiagram id="audit" layer={4} />
@@ -101,3 +102,14 @@ The supervisor also relays the agent's own **OpenTelemetry** spans: every sandbo
 <Callout type="nv" title="Why OCSF">
 OCSF is a vendor-neutral schema that SIEMs (Splunk, Sentinel, Security Lake, …) already understand. The agent's network behaviour lands in the same security tooling as the rest of your estate, with no custom parser.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/console" nextLabel="The OpenShell Console">
+
+- **From the CLI.** Generate denials and read them in the sandbox's log.
+- **In Loki, across every sandbox.** Query the same events for every sandbox with LogQL.
+- **In Grafana.** Explore and live-tail the denials in Grafana.
+- **Agent traces in Tempo.** Find the agent's own OpenTelemetry spans.
+
+</Learned>

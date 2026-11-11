@@ -10,15 +10,17 @@ You created `agent-0` and saw it become two pods. The agent lives in the **workl
 <Step n="1" title="List the sandbox pods">
 
 ```bash
-kubectl -n openshell-sandboxes get pods -o wide
+kubectl -n openshell-lab-default get pods -o wide
 ```
+<Output>
 <ExpectedOutput>
 {`NAME                                                 READY   STATUS    RESTARTS   AGE
-default--agent-0                                     1/1     Running   0          14m
-os-supervisor-c0a82e6f-e6c3-4d39-bc6c-8387f35e771c   1/1     Running   0          14m`}
+agent-0                                              1/1     Running   0          75s
+os-supervisor-bb5457b5-93bf-40d1-8421-7ce92d1984cf   1/1     Running   0          75s`}
 </ExpectedOutput>
+</Output>
 
-`default--agent-0` is the workload pod (`<workspace>--<sandbox>`); `os-supervisor-…` is its supervisor.
+`agent-0` is the workload pod; `os-supervisor-…` is its supervisor. Both live in `openshell-lab-default`, the namespace the gateway created for the workspace `default`.
 
 </Step>
 
@@ -62,9 +64,11 @@ These only prove anything when typed <em>inside</em> the sandbox prompt. Run fro
 ```bash
 openshell sandbox exec -n agent-0 -- id
 ```
+<Output>
 <ExpectedOutput>
 {`uid=10001 gid=10001 groups=10001`}
 </ExpectedOutput>
+</Output>
 
 An unprivileged user (`whoami` has no name for it, and that's fine).
 
@@ -77,11 +81,13 @@ Now the filesystem, enforced by **Landlock**:
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'touch /usr/x; touch /sandbox/x && echo "/sandbox is writable"; ls /root'
 ```
+<Output>
 <ExpectedOutput>
 {`touch: cannot touch '/usr/x': Permission denied
 /sandbox is writable
 ls: cannot open directory '/root': Permission denied`}
 </ExpectedOutput>
+</Output>
 
 Exactly the policy's `filesystem_policy`: `/usr`, `/etc`, `/lib` read-only, `/sandbox` and `/tmp` writable, everything else out of reach. Even `ls /` is denied.
 
@@ -98,9 +104,11 @@ The Kubernetes API is one hop away on the cluster network, but not for the agent
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -sk -m 6 -o /dev/null https://kubernetes.default.svc.cluster.local/version || echo "blocked (curl exit $?)"'
 ```
+<Output>
 <ExpectedOutput>
 {`blocked (curl exit 7)`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -111,11 +119,13 @@ And look at the environment the supervisor prepared:
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'env | grep -E "^(HOME|LITELLM_API_KEY|SSL_CERT_FILE)" | cut -c1-80'
 ```
+<Output>
 <ExpectedOutput>
 {`HOME=/sandbox
 LITELLM_API_KEY=openshell:resolve:env:v3967582269993490644_LITELLM_API_KEY
 SSL_CERT_FILE=/run/openshell-supervisor-ca/material/ca-bundle.crt`}
 </ExpectedOutput>
+</Output>
 
 `LITELLM_API_KEY` is a placeholder (next lessons). `SSL_CERT_FILE` points at a bundle that includes the supervisor's CA: that's how the supervisor can inspect HTTPS requests at L7 while the agent's TLS still validates.
 
@@ -130,15 +140,18 @@ SSL_CERT_FILE=/run/openshell-supervisor-ca/material/ca-bundle.crt`}
 The isolation between the two pods is ordinary Kubernetes:
 
 ```bash
-kubectl -n openshell-sandboxes get networkpolicy
+kubectl -n openshell-lab-default get networkpolicy
 ```
+<Output>
 <ExpectedOutput>
 {`NAME                                              POD-SELECTOR
 openshell-sandbox-ssh                             openshell.ai/managed-by=openshell
 openshell-sandbox-supervisors                     openshell.ai/boundary-role=supervisor
 openshell-sandbox-workloads                       openshell.ai/boundary-role=workload
-os-control-c0a82e6f-e6c3-4d39-bc6c-8387f35e771c   openshell.ai/boundary-pair=c0a82e6f-…`}
+os-control-593394eb-6dd0-4be8-a33c-e07a89f40f9b   openshell.ai/boundary-pair=593394eb-…
+os-control-bb5457b5-93bf-40d1-8421-7ce92d1984cf   openshell.ai/boundary-pair=bb5457b5-…`}
 </ExpectedOutput>
+</Output>
 
 Workload pods (`boundary-role=workload`) may talk only to their paired supervisor (`boundary-pair`). The supervisor is the one with network access, and it applies the policy.
 
@@ -149,3 +162,15 @@ Workload pods (`boundary-role=workload`) may talk only to their paired superviso
 <Callout type="lab" title="A sandbox is a pair of pods">
 No magic VM: a workload pod with a locked-down process, a supervisor pod that owns its network, and NetworkPolicy between them. Kubernetes gives you scheduling, lifecycle and RBAC; OpenShell adds the isolation and the policy on top.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/policy" nextLabel="The seal: egress policy">
+
+- **Confirm it's there.** Find the workload pod and its supervisor.
+- **Get a shell inside.** Explore the sandbox from an interactive shell.
+- **Or one command at a time.** Check the sandbox user and its Landlock filesystem rules.
+- **Prove the network seal.** Show the agent cannot reach the cluster API, and see what the supervisor prepared.
+- **The Kubernetes side of the seal.** See the NetworkPolicy that pairs each workload with its supervisor.
+
+</Learned>

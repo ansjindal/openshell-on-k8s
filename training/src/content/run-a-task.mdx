@@ -74,7 +74,7 @@ The output and the agent's reasoning show up in its logs:
 That's the same as reading the pod's logs directly, if you prefer the raw view:
 
 ```bash
-kubectl -n openshell-sandboxes logs deploy/agent-0
+kubectl -n openshell-lab-default logs agent-0
 ```
 
 </Step>
@@ -100,3 +100,15 @@ Each task ran inside its own sandbox, reached the model without ever holding the
 </Callout>
 
 Keep the fleet up — it's what the rest of the course (the console, [Part III](/learn/what-youll-build)) drives too. `./scripts/fleet down` is for when you're done with the whole launchable, not this lesson.
+
+## What you learned
+
+<Learned next="/learn/m2-check" nextLabel="Summary & knowledge check">
+
+- **Make sure you have agents.** Have at least one agent running.
+- **Hand the fleet a task.** Fan one prompt out to every agent.
+- **Target a single agent.** Send a task to just one agent.
+- **Read the logs.** See the output and the agent's reasoning.
+- **Watch the whole fleet work.** Get the bird's-eye view while agents run.
+
+</Learned>

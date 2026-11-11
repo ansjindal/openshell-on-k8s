@@ -57,12 +57,13 @@ Lint it, then import it into the gateway:
 ```bash
 openshell profile lint -f manifests/demo-echo/echo-api.profile.yaml && openshell profile import -f manifests/demo-echo/echo-api.profile.yaml
 ```
+<Output>
+<LiveDiagram id="providers" layer={2} />
 <ExpectedOutput>
 {`Provider profile lint passed.
 Imported 1 provider profile.`}
 </ExpectedOutput>
-
-<LiveDiagram id="providers" layer={2} />
+</Output>
 
 </Step>
 
@@ -77,11 +78,12 @@ A **provider** is an instance of a profile holding a real credential. Pass the v
 ```bash
 ECHO_TOKEN=lab-secret-123 openshell provider create --name echo --type echo-api --credential ECHO_TOKEN
 ```
+<Output>
+<LiveDiagram id="providers" layer={3} />
 <ExpectedOutput>
 {`✓ Created provider echo`}
 </ExpectedOutput>
-
-<LiveDiagram id="providers" layer={3} />
+</Output>
 
 </Step>
 
@@ -94,15 +96,16 @@ ECHO_TOKEN=lab-secret-123 openshell provider create --name echo --type echo-api 
 ```bash
 openshell sandbox provider attach agent-0 echo --wait
 ```
+<Output>
+<LiveDiagram id="providers" layer={4} />
 <ExpectedOutput>
 {`agent-0 / echo: ready (unspecified)
   Installed: credentials=true, policy=true, future process environment=true
   Wait: complete`}
 </ExpectedOutput>
+</Output>
 
 No restart: the sandbox applied the new credential and the profile's policy.
-
-<LiveDiagram id="providers" layer={4} />
 
 </Step>
 
@@ -113,11 +116,12 @@ New processes see the variable:
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
 ```
+<Output>
+<LiveDiagram id="providers" layer={5} />
 <ExpectedOutput>
 {`openshell:resolve:env:v2062283290838615716_ECHO_TOKEN`}
 </ExpectedOutput>
-
-<LiveDiagram id="providers" layer={5} />
+</Output>
 
 </Step>
 
@@ -130,14 +134,15 @@ openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/whoami' | grep -E '"path"|authorization'
 ```
+<Output>
+<LiveDiagram id="providers" layer={6} />
 <ExpectedOutput>
 {`  "path": "/api/whoami",
     "authorization": "Bearer lab-secret-123"`}
 </ExpectedOutput>
+</Output>
 
 The agent sent the placeholder; the echo service received `lab-secret-123`. The supervisor swapped it on the way, because the request matched the profile's endpoint and rule.
-
-<LiveDiagram id="providers" layer={6} />
 
 </Step>
 
@@ -148,11 +153,12 @@ A `POST` doesn't match, so it never leaves:
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -o /dev/null -w "HTTP %{http_code}\n" -X POST -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/x'
 ```
+<Output>
+<LiveDiagram id="providers" layer={7} />
 <ExpectedOutput>
 {`HTTP 403`}
 </ExpectedOutput>
-
-<LiveDiagram id="providers" layer={7} />
+</Output>
 
 </Step>
 
@@ -177,13 +183,14 @@ ECHO_TOKEN=lab-secret-456 openshell provider update echo --credential ECHO_TOKEN
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/whoami' | grep authorization
 ```
+<Output>
+<LiveDiagram id="providers" layer={9} />
 <ExpectedOutput>
 {`    "authorization": "Bearer lab-secret-456"`}
 </ExpectedOutput>
+</Output>
 
 The agent's placeholder didn't change; only the value behind it did.
-
-<LiveDiagram id="providers" layer={9} />
 
 </Step>
 
@@ -208,3 +215,17 @@ openshell sandbox provider detach agent-0 echo --wait
 <Callout type="nv" title="Why this matters">
 An agent with a token in its environment can send it anywhere: in a URL, a log line, a prompt-injected request to an attacker. With a provider, the token is only ever materialised by the supervisor, on requests that match the profile's endpoint and rules, and the agent can't read it back. Rotation and revocation are one command, for every sandbox at once.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/workspace" nextLabel="Give it a soul: workspace files">
+
+- **Deploy the echo API.** Run a service that shows what it receives.
+- **Write the profile.** Define where the token may go and for which requests.
+- **Create the provider.** Give the real token to the gateway, not the sandbox.
+- **Attach it to a running sandbox.** Add the credential and its policy to agent-0 live.
+- **Call the API.** See what actually arrives at the service.
+- **Rotate the token.** Change the credential without touching the sandbox.
+- **Detach it.** Revoke the credential and its policy.
+
+</Learned>

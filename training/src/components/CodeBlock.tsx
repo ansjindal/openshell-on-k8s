@@ -8,8 +8,9 @@ import "highlight.js/styles/github-dark.css";
 import { useContext } from "react";
 import { ChevronDown, ChevronUp, Copy, Loader2, Play, Terminal as TerminalIcon, Trash2 } from "lucide-react";
 import { runInShell, runApiCheckStream } from "@/lib/labBus";
-import { setStepDone } from "@/lib/progress";
+import { setStepDone, setStepOutput } from "@/lib/progress";
 import { StepContext } from "@/components/course/Structure";
+import { RunContext } from "@/components/course/Run";
 
 hljs.registerLanguage("bash", bash);
 hljs.registerLanguage("yaml", yaml);
@@ -67,6 +68,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   const code = extractText(children).replace(/\n$/, "");
   const lang = getLang(children);
   const step = useContext(StepContext);
+  const group = useContext(RunContext);
   const [copied, setCopied] = useState(false);
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<{ stdout: string; stderr: string; exitCode: number | null } | null>(null);
@@ -82,11 +84,16 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
     return () => window.removeEventListener("osk8s:clear-outputs", clear);
   }, []);
 
+  const outRef = useRef("");
   async function runInline() {
+    outRef.current = "";
+    step.setLive({ text: "", exit: null });
     setRunning(true);
     setCollapsed(false);
     setOutput({ stdout: "", stderr: "", exitCode: null });
     const { exitCode } = await runApiCheckStream(code, (stream, chunk) => {
+      outRef.current += chunk;
+      step.setLive({ text: outRef.current, exit: null });
       setOutput((prev) => {
         const base = prev ?? { stdout: "", stderr: "", exitCode: null };
         return stream === "stdout" ? { ...base, stdout: base.stdout + chunk } : { ...base, stderr: base.stderr + chunk };
@@ -94,7 +101,11 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
     });
     setOutput((prev) => ({ stdout: prev?.stdout ?? "", stderr: prev?.stderr ?? "", exitCode }));
     setRunning(false);
-    if (exitCode === 0 && step.id) setStepDone(step.id, true);
+    step.setLive({ text: outRef.current, exit: exitCode });
+    if (exitCode === 0 && step.id) {
+      setStepOutput(step.id, String(code.length) + code.slice(0, 24), outRef.current);
+      setStepDone(step.id, true);
+    }
   }
 
   const isRef = REF_LANGS.includes(lang);
@@ -118,6 +129,12 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
         : <code className="text-[var(--color-code-fg)]">{code}</code>}
     </pre>
   );
+
+  // Inside <Run>: just the command; the group has the Run button.
+  useEffect(() => {
+    if (group && !REF_LANGS.includes(lang)) return group.register(code);
+  }, [group, code, lang]);
+  if (group) return <div className="not-prose">{codeView}</div>;
 
   // Display-only blocks: YAML, JSON, reference commands, diagrams in text.
   if (!runnableShell) {
@@ -166,7 +183,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
         </div>
       </div>
 
-      {output && (
+      {output && !step.hasOutput && (
         <div className="overflow-hidden rounded-lg border border-[var(--color-out-line)] bg-[var(--color-out-bg)]">
           <div className="flex items-center gap-3 border-b border-[var(--color-out-line)] px-4 py-2">
             <span className="rounded bg-[var(--color-info)] px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white">OUTPUT</span>

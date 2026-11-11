@@ -26,6 +26,8 @@ The **effective** policy includes what attached providers added. Under `network_
 ```bash
 openshell policy get agent-0 --full
 ```
+<Output>
+<LiveDiagram id="policy" layer={2} />
 <ExpectedOutput>
 {`network_policies:
   _provider_litellm:
@@ -41,8 +43,7 @@ openshell policy get agent-0 --full
     binaries:
       - path: /**`}
 </ExpectedOutput>
-
-<LiveDiagram id="policy" layer={2} />
+</Output>
 
 </Step>
 
@@ -55,13 +56,14 @@ openshell policy get agent-0 --full
 ```bash
 openshell sandbox exec -n agent-0 -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/zen
 ```
+<Output>
+<LiveDiagram id="policy" layer={3} />
 <ExpectedOutput>
 {`HTTP 000`}
 </ExpectedOutput>
+</Output>
 
 `000` means no HTTP response at all: the supervisor refused the connection. No cluster API, no internet, nothing you didn't grant.
-
-<LiveDiagram id="policy" layer={3} />
 
 </Step>
 
@@ -76,18 +78,19 @@ The endpoint format is `host:port[:access[:protocol[:enforcement]]]`, and the ru
 ```bash
 openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --wait
 ```
+<Output>
+<LiveDiagram id="policy" layer={4} />
 <ExpectedOutput>
 {`✓ Policy version 2 submitted (hash: ae09c7816c51)
 ✓ Policy version 2 loaded (active version: 2)`}
 </ExpectedOutput>
+</Output>
 
 The new revision loaded into the **running** sandbox, with no restart. The parts of the rule:
 
 - `read-only`: an access preset: `GET`, `HEAD` and `OPTIONS` only.
 - `rest`: inspect requests at **L7** (method and path), even inside TLS.
 - `enforce`: block what breaks the rule. The default is `audit`, which only logs.
-
-<LiveDiagram id="policy" layer={4} />
 
 </Step>
 
@@ -96,11 +99,12 @@ The new revision loaded into the **running** sandbox, with no restart. The parts
 ```bash
 openshell sandbox exec -n agent-0 -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
 ```
+<Output>
+<LiveDiagram id="policy" layer={5} />
 <ExpectedOutput>
 {`Responsive is better than fast. HTTP 200`}
 </ExpectedOutput>
-
-<LiveDiagram id="policy" layer={5} />
+</Output>
 
 </Step>
 
@@ -111,12 +115,13 @@ A `POST` to the same host is refused by the supervisor, with the reason:
 ```bash
 openshell sandbox exec -n agent-0 -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{http_code}\n' https://api.github.com/markdown
 ```
+<Output>
+<LiveDiagram id="policy" layer={6} />
 <ExpectedOutput>
 {`{"error":"policy_denied","policy":"allow_api_github_com_443","rule":"POST /markdown","detail":"POST /markdown not permitted by policy","layer":"l7",...}
 HTTP 403`}
 </ExpectedOutput>
-
-<LiveDiagram id="policy" layer={6} />
+</Output>
 
 </Step>
 
@@ -129,19 +134,20 @@ HTTP 403`}
 ```bash
 openshell policy list agent-0
 ```
+<Output>
+<LiveDiagram id="policy" layer={7} />
 <ExpectedOutput>
 {`VERSION  HASH           STATUS       CREATED                  ERROR
 2        ae09c7816c51   Loaded       1794324512476
 1        76a21cf40933   Superseded   1794324384281`}
 </ExpectedOutput>
+</Output>
 
 `openshell policy get agent-0 --rev 1 --full` shows an older one. To write a whole policy at once, keep it in a YAML file and apply it with `openshell policy set agent-0 --policy <file> --wait`; the [Skills](/learn/skills) lesson does that.
 
 <Callout type="note" title="Only the network part is live">
 Network rules are <strong>dynamic</strong>: they change on a running sandbox. The filesystem and process sections are <strong>static</strong>: fixed at creation, because Landlock and the sandbox user are applied before the agent starts.
 </Callout>
-
-<LiveDiagram id="policy" layer={7} />
 
 </Step>
 
@@ -150,3 +156,14 @@ Network rules are <strong>dynamic</strong>: they change on a running sandbox. Th
 <Callout type="rh" title="The policy is the contract">
 The policy says <em>what the agent may reach</em>, down to the method and path, and every decision is on the audit log. That's what makes a sandbox something you can hand untrusted agent code and <em>prove</em> what it can and cannot do.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/tcp-egress" nextLabel="Beyond REST: TCP egress">
+
+- **What the sandbox may reach today.** Read the effective policy, including what providers added.
+- **Deny by default, in practice.** Prove the internet is closed to the agent.
+- **Grant one endpoint, live.** Open GitHub's API for GET only, while the sandbox runs.
+- **Revisions.** See every change as a numbered revision.
+
+</Learned>

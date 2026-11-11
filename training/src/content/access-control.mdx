@@ -58,9 +58,11 @@ A **workspace** is a tenant: its own sandboxes, providers and members. Create on
 ```bash
 openshell workspace create --name team-a
 ```
+<Output>
 <ExpectedOutput>
 {`✓ Created workspace team-a`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -71,11 +73,13 @@ Members are identified by their OIDC **subject** (the token's `sub`, Keycloak's 
 ```bash
 SUB=$(./scripts/keycloak-user-id.sh learner) && openshell workspace member add --workspace team-a --subject "$SUB" --role user && openshell workspace member list --workspace team-a
 ```
+<Output>
 <ExpectedOutput>
 {`✓ Added fadec839-948e-4ab0-913c-0c64ca8f3f12 to workspace team-a as user
 SUBJECT                               ROLE
 fadec839-948e-4ab0-913c-0c64ca8f3f12  user`}
 </ExpectedOutput>
+</Output>
 
 (In the console, `demo` can do the same: **Workspaces → Create workspace**, then **Members → Add member**. A signed-in user finds their own subject under **Copy my subject ID** in the user menu.)
 
@@ -92,9 +96,11 @@ Providers belong to a workspace. `team-a` needs its own `litellm` provider (the 
 ```bash
 LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)" openshell --workspace team-a provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY
 ```
+<Output>
 <ExpectedOutput>
 {`✓ Created provider litellm`}
 </ExpectedOutput>
+</Output>
 
 </Step>
 
@@ -109,22 +115,34 @@ Refresh the console as `learner`: **team-a** is there. Create a sandbox in it fr
 ```bash
 openshell --workspace team-a sandbox create --name lab-a --provider litellm --policy manifests/policies/baseline.yaml --no-tty --detach -- sleep infinity && openshell --workspace team-a sandbox list
 ```
+<Output>
 <ExpectedOutput>
 {`NAME   CREATED              PHASE
 lab-a  2026-11-10 16:00:18  Ready`}
 </ExpectedOutput>
+</Output>
 
 `learner` sees `lab-a`, its policy revision and its providers, and can open its logs and terminal. They still can't see `agent-0`: it's in `default`.
 
 </Step>
 
-<Step n="2" title="See the workspace in the pod names">
+<Step n="2" title="One namespace per workspace">
 
 ```bash
-openshell sandbox list && kubectl -n openshell-sandboxes get pods | grep -- '--'
+kubectl get namespaces -l openshell.ai/managed-by=openshell -L openshell.ai/sandbox-workspace && kubectl -n openshell-lab-team-a get pods
 ```
+<Output>
+<ExpectedOutput>
+{`NAME                    STATUS   AGE   SANDBOX-WORKSPACE
+openshell-lab-default   Active   75s   default
+openshell-lab-team-a    Active   50s   team-a
+NAME                                                 READY   STATUS    RESTARTS   AGE
+lab-a                                                1/1     Running   0          50s
+os-supervisor-33815dba-169c-42a7-bdac-8dcb3e5ad92b   1/1     Running   0          50s`}
+</ExpectedOutput>
+</Output>
 
-The workspace is part of every pod name (`default--agent-0`, `team-a--lab-a`): the lab runs all workspaces in one namespace (`workspaceMode: shared`). For hard tenant separation the gateway can give each workspace its own namespace; see [Next Steps](/learn/next-steps).
+Each workspace has its own namespace, created by the gateway when its first sandbox needed one (`workspaceMode: managed`): `openshell-<gateway id>-<workspace>`, with its own ServiceAccount and NetworkPolicies. Deleting the workspace deletes the namespace.
 
 </Step>
 
@@ -145,3 +163,16 @@ openshell --workspace team-a sandbox delete lab-a && openshell --workspace team-
 <Callout type="nv" title="Same rules for every door">
 The CLI, the console and the SDKs all call the same gateway, and the gateway checks every call against the caller's identity, role and workspace membership. The console holds no privileges of its own: it forwards the signed-in user's token.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/m3-check" nextLabel="Summary & knowledge check">
+
+- **Two people, two roles.** Meet the two Keycloak users and their roles.
+- **Sign in as learner.** See that a user with no workspace sees nothing.
+- **Create a workspace and add learner.** Create team-a and make learner a member.
+- **Give the workspace model access.** Create team-a's own litellm provider.
+- **learner works in team-a.** Give learner a sandbox and see the tenant boundary.
+- **Clean up.** Remove the sandbox, provider and workspace.
+
+</Learned>
