@@ -11,12 +11,12 @@ const L = (slug: string, title: string, blurb: string, minutes: number, kind: Le
 export const CURRICULUM: Part[] = [
   {
     id: "m0", n: 0, title: "Orientation", accent: "nv",
-    subtitle: "What you have been handed: one VM running Kubernetes, the OpenShell control plane, sign-in and observability, and why agents need all of it.",
+    subtitle: "What an agent is and why it needs a sandbox, how OpenShell provides one on your Kubernetes VM, and how it works under the hood.",
     lessons: [
       L("welcome", "Overview", "What you'll learn, how the labs work, and the one command that builds the stack.", 5),
-      L("big-picture", "The big picture", "k3s → agent-sandbox → OpenShell gateway → sandboxes → LiteLLM, with the console on top.", 8),
-      L("openshell", "OpenShell: the agent runtime", "Gateway, compute driver, supervisor, providers and workspaces.", 8),
-      L("security", "Security: layers and the policy file", "Landlock, seccomp, a supervisor that owns the network, placeholder credentials, an audit trail, and the policy YAML that drives them, animated.", 15),
+      L("openshell", "Agents and OpenShell", "What an agent is, what it can reach, one poisoned page, and how OpenShell sandboxes it; then its pieces.", 12),
+      L("big-picture", "The big picture: OpenShell on Kubernetes", "k3s → agent-sandbox → OpenShell gateway → sandboxes → LiteLLM, with the console on top.", 8),
+      L("security", "Under the hood: security layers and the policy file", "Landlock, seccomp, a supervisor that owns the network, placeholder credentials, an audit trail, and the policy YAML that drives them, animated.", 15),
       L("sentry", "NVIDIA Sentry: beyond the host", "When the host itself is compromised: the same policy, enforced on BlueField-4.", 6),
     ],
   },

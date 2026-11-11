@@ -8,7 +8,7 @@ import { Output } from "@/components/course/Output";
 import { Run } from "@/components/course/Run";
 import { Quiz, Q } from "@/components/course/Quiz";
 import { LiveDiagram } from "@/components/course/LiveDiagram";
-import { Fig } from "@/components/course/Fig";
+import { Fig, FigTour } from "@/components/course/Fig";
 import { Scene } from "@/components/course/Scene";
 import { ScrollBuild } from "@/components/course/ScrollBuild";
 import { ModuleLessons } from "@/components/course/ModuleLessons";
@@ -36,6 +36,7 @@ const components: MDXComponents = {
   ScrollBuild,
   Scene,
   Fig,
+  FigTour,
   ModuleLessons,
   Q,
   PolicyExplorer,

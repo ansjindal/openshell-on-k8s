@@ -11,8 +11,8 @@ S.text(24, 64, "OpenShell on Kubernetes training lab: everything below runs on a
 S.box(24, 100, 160, 52, "Browser", icon="i-browser")
 S.box(230, 96, 330, 60, "Brev Secure Link", [("https://openshell-<id>.<domain>", "m")], icon="i-lock", tsize=14.5, gap=20)
 S.box(600, 96, 330, 60, "Brev Secure Link", [("https://console-<id>.<domain>", "m")], icon="i-lock", tsize=14.5, gap=20)
-S.arrow("M184 126 H228")
-S.arrow("M104 100 V84 H765 V94")
+S.arrow("M184 126 H228", flow="1")
+S.arrow("M104 100 V84 H765 V94", flow="1")
 
 # ---- VM
 S.rect(20, 180, 1560, 818, fill=BG, stroke="#9aa3ad", sw=1.5, rx=10)
@@ -20,10 +20,10 @@ S.icon("i-cloud", 34, 188, 22, GREY)
 S.text(62, 205, "Brev VM · Ubuntu 22.04", 16, True)
 S.text(268, 205, "(host processes)", 13.5, False, SUB)
 
-S.arrow("M380 156 V226")
-S.label(388, 197, "host :3001", anchor="start")
-S.arrow("M640 156 V226")
-S.label(648, 197, "host :3002", anchor="start")
+S.arrow("M380 156 V226", flow="1")
+S.label(388, 197, "host :3001", anchor="start", flow="1")
+S.arrow("M640 156 V226", flow="1")
+S.label(648, 197, "host :3002", anchor="start", flow="1")
 
 S.box(40, 228, 190, 58, "openshell CLI", ["operator client cert"], icon="i-term")
 S.box(250, 228, 430, 58, "socat", ["host ports 3001 / 3002 → Envoy Gateway"], icon="i-route")
@@ -37,7 +37,7 @@ S.text(74, 331, "k3s v1.37 · single node", 15, True)
 # Row 1 ------------------------------------------------------------
 S.box(72, 372, 348, 110, "Envoy Gateway", ["Gateway API · Gateway fleet-gw",
       ("openshell-<id>: /  /auth  /grafana", "m"), ("console-<id>:   Console", "m")], icon="i-route")
-S.arrow("M380 286 V370")  # socat -> envoy
+S.arrow("M380 286 V370", flow="1")  # socat -> envoy
 
 S.ns(472, 372, 318, 110, "keycloak", color="keycloak")
 S.box(486, 400, 290, 72, "Keycloak", ["realm openshell", "users: demo (admin), learner"], icon="i-people", gap=18)
@@ -50,25 +50,25 @@ for x, w, t, sub, ic in mon:
     S.box(x, 400, w, 70, t, [sub], icon=ic, tsize=14.5)
 
 # envoy routes
-S.arrow("M420 396 H440 V342 H895 V288")
-S.label(560, 346, "/ → host :3000")
-S.arrow("M420 420 H452 V356 H1175 V398")
-S.label(800, 360, "/grafana")
-S.arrow("M420 455 H484")
-S.label(452, 449, "/auth", size=12.5)
+S.arrow("M420 396 H440 V342 H895 V288", flow="1")
+S.label(560, 346, "/ → host :3000", flow="1")
+S.arrow("M420 420 H452 V356 H1175 V398", flow="1")
+S.label(800, 360, "/grafana", flow="1")
+S.arrow("M420 455 H484", flow="1")
+S.label(452, 449, "/auth", size=12.5, flow="1")
 
 # Row 2 ------------------------------------------------------------
 S.ns(72, 510, 348, 320, "openshell", green=True)
 S.box(88, 548, 316, 64, "OpenShell Console", ["oauth2-proxy + Go BFF"], icon="i-portal", kind="green")
-S.arrow("M300 482 V546")
-S.label(308, 500, "console-<id>", anchor="start")
+S.arrow("M300 482 V546", flow="1")
+S.label(308, 500, "console-<id>", anchor="start", flow="1")
 S.box(88, 660, 316, 140, "OpenShell gateway 0.1.7", ["StatefulSet · SQLite", "OIDC + mTLS",
       "NodePort 30808 (VM CLI)"], icon="i-server", kind="green")
-S.arrow("M340 612 V658", GREEN_D)
-S.label(332, 641, "user's Keycloak token", GREEN_D, anchor="end")
+S.arrow("M340 612 V658", GREEN_D, flow="2")
+S.label(332, 641, "user's Keycloak token", GREEN_D, anchor="end", flow="2")
 # CLI -> gateway
-S.arrow("M54 286 V735 H86", GREEN_D)
-S.label(62, 300, "mTLS · OU=operator = platform admin → NodePort 30808", GREEN_D, anchor="start", size=13, mono=False)
+S.arrow("M54 286 V735 H86", GREEN_D, flow="1 2")
+S.label(62, 300, "mTLS · OU=operator = platform admin → NodePort 30808", GREEN_D, anchor="start", size=13, mono=False, flow="1 2")
 
 # ---- workspaces: managed mode gives each workspace its own namespace
 S.ns(472, 510, 660, 236, "openshell-lab-default", green=True, sub="· workspace default")
@@ -110,8 +110,8 @@ S.box(688, 598, 190, 128, "workload pod", ["OpenClaw agent", "Landlock + seccomp
       ("NetPol: supervisor only", "k")], icon="i-bot", kind="grey", tsize=14.5, lsize=13, gap=18)
 S.box(924, 598, 180, 128, "supervisor pod", ["policy L4 / L7", "credential injection", "OCSF audit",
       "trace relay"], icon="i-shield", kind="green", tsize=14.5, lsize=13, gap=18)
-S.arrow("M880 676 H922", GREEN_D, both=True)
-S.label(901, 664, "port", GREEN_D, size=12.5)
+S.arrow("M880 676 H922", GREEN_D, both=True, flow="3")
+S.label(901, 664, "port", GREEN_D, size=12.5, flow="3")
 
 S.ns(472, 758, 660, 72, "openshell-lab-team-a", green=True, sub="· workspace team-a")
 S.raw('<g class="dg-node" data-node="lab-a">')
@@ -123,45 +123,45 @@ S.raw('</g>')
 pair(958, 774)
 
 # gateway -> workspaces (creates namespaces, sandboxes, policy)
-S.arrow("M404 710 H458 V552 H1010 V596", GREEN_D)
-S.label(760, 556, "creates sandboxes · policy", GREEN_D)
-S.arrow("M458 710 V794 H470", GREEN_D)
+S.arrow("M404 710 H458 V552 H1010 V596", GREEN_D, flow="2")
+S.label(760, 556, "creates sandboxes · policy", GREEN_D, flow="2")
+S.arrow("M458 710 V794 H470", GREEN_D, flow="2")
 # gateway -> tempo
-S.arrow("M404 690 H446 V496 H836 V472", MID, dash="6 4")
-S.label(640, 500, "traces", MID)
+S.arrow("M404 690 H446 V496 H836 V472", MID, dash="6 4", flow="4")
+S.label(640, 500, "traces", MID, flow="4")
 # supervisor -> tempo / loki
-S.arrow("M944 596 V472", MID, dash="6 4")
-S.label(938, 500, "agent traces", MID, anchor="end", size=12.5)
-S.arrow("M1060 596 V472", MID, dash="6 4")
-S.label(1066, 500, "OCSF audit", MID, anchor="start", size=12.5)
+S.arrow("M944 596 V472", MID, dash="6 4", flow="4")
+S.label(938, 500, "agent traces", MID, anchor="end", size=12.5, flow="4")
+S.arrow("M1060 596 V472", MID, dash="6 4", flow="4")
+S.label(1066, 500, "OCSF audit", MID, anchor="start", size=12.5, flow="4")
 
 S.ns(1190, 510, 350, 320, "litellm", color="litellm")
 S.box(1210, 640, 310, 96, "LiteLLM", ["OpenAI-compatible API", ("litellm.litellm.svc:4000", "m")], icon="i-chip")
-S.arrow("M1104 676 H1208", GREEN_D)
-S.label(1156, 668, "LLM calls", GREEN_D, size=12.5)
-S.label(1156, 694, "key injected", GREEN_D, size=12.5)
+S.arrow("M1104 676 H1208", GREEN_D, flow="3")
+S.label(1156, 668, "LLM calls", GREEN_D, size=12.5, flow="3")
+S.label(1156, 694, "key injected", GREEN_D, size=12.5, flow="3")
 
 # Row 3 ------------------------------------------------------------
 S.ns(72, 860, 348, 104, "cert-manager", color="certs")
 S.box(88, 890, 316, 60, "cert-manager", ["gateway TLS · operator cert · lab CA"], icon="i-cert")
-S.arrow("M360 888 V802", MID, dash="3 3")
-S.label(352, 849, "issues certs", MID, anchor="end", size=12.5)
+S.arrow("M360 888 V802", MID, dash="3 3", flow="2")
+S.label(352, 849, "issues certs", MID, anchor="end", size=12.5, flow="2")
 
 S.ns(472, 860, 318, 104, "agent-sandbox-system", color="controller")
 S.box(486, 890, 290, 60, "agent-sandbox controller", ["Sandbox CR → workload pod"], icon="i-gear")
-S.arrow("M404 790 H440 V920 H484", GREEN_D)
-S.label(440, 849, "Sandbox CR", GREEN_D, size=12.5)
-S.arrow("M752 888 V832", GREY)
-S.label(744, 849, "workload pods", GREY, anchor="end", size=12.5)
+S.arrow("M404 790 H440 V920 H484", GREEN_D, flow="2")
+S.label(440, 849, "Sandbox CR", GREEN_D, size=12.5, flow="2")
+S.arrow("M752 888 V832", GREY, flow="2")
+S.label(744, 849, "workload pods", GREY, anchor="end", size=12.5, flow="2")
 
 S.ns(810, 860, 322, 104, "kyverno", color="kyverno")
 S.box(826, 890, 290, 60, "Kyverno", ["guardrails on sandbox pods"], icon="i-shield")
-S.arrow("M990 888 V832", MID, dash="3 3")
-S.label(998, 849, "admission", MID, anchor="start", size=12.5)
+S.arrow("M990 888 V832", MID, dash="3 3", flow="2")
+S.label(998, 849, "admission", MID, anchor="start", size=12.5, flow="2")
 
 # LiteLLM -> upstream
-S.arrow("M1365 736 V1012", GREY)
-S.label(1373, 880, "HTTPS", anchor="start")
+S.arrow("M1365 736 V1012", GREY, flow="3")
+S.label(1373, 880, "HTTPS", anchor="start", flow="3")
 S.box(1210, 1014, 320, 58, "Upstream model API", ["e.g. build.nvidia.com"], icon="i-globe")
 
 # legend

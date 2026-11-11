@@ -28,25 +28,61 @@ export default function Home() {
         </section>
 
         <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> What you will build</h2>
-        <p className="mt-4 text-[1.05rem] leading-relaxed text-[var(--color-fg-dim)]">
-          A governed agent platform on one VM, and on top of it an SRE copilot: five sealed agents that each
-          read exactly one telemetry backend, find the root cause of a real outage together, and recommend a
-          fix that a human approves.
+        <p className="mt-4 text-[16px] leading-[25.6px] text-[var(--color-fg-dim)]">
+          This course assumes you have never used OpenShell. You start with an ordinary AI agent, see what it can
+          do when nothing stops it, and then put <strong className="text-[var(--color-fg)]">NVIDIA OpenShell</strong> around it, one layer at a time.
+          By the end you run a small team of agents on a real outage, each one boxed in, and every move it makes on record.
         </p>
-        <div className="mt-6 grid gap-3 sm:grid-cols-5">
+
+        <h3 className="mt-8 text-[17px] font-bold text-[var(--color-fg)]">Why an agent needs a boundary</h3>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
           {[
-            ["Seal", "Deny-by-default sandbox"],
-            ["Grant", "One host, one method, one path"],
-            ["Inject", "Credentials as placeholders"],
-            ["Audit", "Every allow and deny"],
-            ["Operate", "A fleet that finds root cause"],
+            ["It acts on its own", "A model only answers. An agent is a model plus a harness that runs tools for it (a shell, a browser, an API client) in a loop, toward a goal, for minutes or hours."],
+            ["It works with real access", "To be useful it gets real credentials and a network. Without a boundary it can reach anything its machine can, and read every key it was given."],
+            ["It can be talked into things", "Agents act on what they read and can't always tell data from instructions. One hidden line on a web page can turn a helpful agent against you."],
           ].map(([t, d]) => (
             <div key={t} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-4 py-3">
-              <div className="text-sm font-bold text-[var(--color-nv-bright)]">{t}</div>
-              <div className="mt-1 text-sm text-[var(--color-fg-dim)]">{d}</div>
+              <div className="text-[14px] font-bold text-[var(--color-fg)]">{t}</div>
+              <p className="mt-1 text-[13.5px] leading-[21px] text-[var(--color-fg-dim)]">{d}</p>
             </div>
           ))}
         </div>
+
+        <h3 className="mt-8 text-[17px] font-bold text-[var(--color-fg)]">What OpenShell does about it</h3>
+        <p className="mt-2 text-[16px] leading-[25.6px] text-[var(--color-fg-dim)]">
+          OpenShell is open-source software that runs each agent in its own <strong className="text-[var(--color-fg)]">sandbox</strong>.
+          The agent is locked in (files, processes, no direct network), and a trusted <strong className="text-[var(--color-fg)]">supervisor</strong> next
+          to it decides every connection against a short <strong className="text-[var(--color-fg)]">policy</strong>{" "}file: anything the policy doesn&apos;t
+          allow is denied. API keys stay outside the sandbox and are added only to the requests the policy allows, and every
+          decision is written to an <strong className="text-[var(--color-fg)]">audit</strong> log. The boundary sits outside the model and the agent, so it works
+          with any of them. It runs on any Linux host; in this course, on Kubernetes.
+        </p>
+
+        <h3 className="mt-8 text-[17px] font-bold text-[var(--color-fg)]">What you&apos;ll do here, step by step</h3>
+        <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-stretch">
+          {[
+            ["Seal", "m1-overview", "Module 1", "Build an agent, then put it in a sandbox: nothing gets out by default, and you test that from inside."],
+            ["Grant", "m1-overview", "Module 1", "Open exactly one door while it runs: one host, one HTTP method, one path, one program."],
+            ["Inject", "m2-overview", "Module 2", "Give it a model and an API key it never actually holds: the sandbox only sees a placeholder."],
+            ["Audit", "m3-overview", "Module 3", "Follow every allow and deny in Grafana, use the web console, and give people their own roles and workspaces."],
+            ["Operate", "m4-overview", "Module 4", "Run five sealed agents that each read one telemetry source, find a real outage's root cause, and propose a fix you approve."],
+          ].map(([t, slug, mod, d], i, all) => (
+            <div key={t} className="flex flex-1 items-stretch gap-2">
+              <Link href={`/learn/${slug}`} className="group flex flex-1 flex-col rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-3.5 py-3 transition hover:border-[var(--color-nv-dim)]">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-nv)] text-[11px] font-extrabold text-[#0b0f05]">{i + 1}</span>
+                  <span className="text-[14px] font-bold text-[var(--color-nv-bright)]">{t}</span>
+                  <span className="ml-auto text-[11px] text-[var(--color-fg-mut)]">{mod}</span>
+                </div>
+                <p className="mt-1.5 flex-1 text-[13px] leading-[19.5px] text-[var(--color-fg-dim)] group-hover:text-[var(--color-fg)]">{d}</p>
+              </Link>
+              {i < all.length - 1 && <span className="hidden items-center text-[var(--color-fg-mut)] lg:flex">→</span>}
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[13px] text-[var(--color-fg-mut)]">
+          Everything runs on one VM that is already set up for you. Each lab step has a Run button that runs it there, and the Cluster shell at the bottom of the page is a real shell on it.
+        </p>
 
         <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> Your roadmap</h2>
         <p className="mt-4 text-[1.05rem] leading-relaxed text-[var(--color-fg-dim)]">

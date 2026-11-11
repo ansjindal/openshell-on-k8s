@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CURRICULUM } from "@/lib/curriculum";
 
 export const ROADMAP: Record<string, { doing: string; output: string }> = {
-  m0: { doing: "Tour the stack and the reasons behind each layer.", output: "A mental model: gateway, supervisor, provider, policy." },
+  m0: { doing: "See what an agent can do unchecked, how OpenShell sandboxes it, and how that fits on Kubernetes.", output: "A mental model: agent, sandbox, supervisor, policy." },
   m1: { doing: "Verify the cluster, create a sandbox, test its seal, open egress rule by rule.", output: "agent-1 running with a read-only GitHub rule and an L4 rule." },
   m2: { doing: "Attach a model and your own provider, rotate a key, add a persona and skills, run a task.", output: "An agent that calls a model with a key it cannot read." },
   m3: { doing: "Follow decisions into Loki and Grafana, use the Console, add people and a workspace.", output: "A learner user in their own workspace namespace." },

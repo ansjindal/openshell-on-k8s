@@ -139,24 +139,34 @@ class Svg:
         if sub:
             self.text(x + 12 + lw + lw2 + 8, y + 20, sub, 13, False, col)
 
-    def label(self, x, y, s, color=GREY, anchor="middle", size=13, mono=True, bold=False, bg=LBG):
+    def label(self, x, y, s, color=GREY, anchor="middle", size=13, mono=True, bold=False, bg=LBG, flow=None):
+        if flow:
+            self.body.append(f'<g data-flow="{flow}">')
         size = max(size, 13)
         w = tw(s, size, mono, bold)
         x0 = x if anchor == "start" else (x - w / 2 if anchor == "middle" else x - w)
         self.rect(x0 - 4, y - size * 0.85 - 2, w + 8, size + 5, fill=bg, stroke="none", sw=0, rx=3)
         self.text(x, y, s, size, bold, color, anchor, mono)
+        if flow:
+            self.body.append('</g>')
 
     def badge(self, x, y, n, color=GREEN_D, r=11):
         self.body.append(f'<circle cx="{x:g}" cy="{y:g}" r="{r}" fill="{color}"/>')
         self.text(x, y + 4.6, str(n), 13, True, "#fff", "middle", check=False)
 
-    def arrow(self, d, color=GREY, sw=1.6, dash=None, both=False, end=True):
+    def arrow(self, d, color=GREY, sw=1.6, dash=None, both=False, end=True, flow=None):
+        """flow: the numbered path(s) this arrow belongs to, e.g. "2" or "1 2";
+        the training site highlights a path's arrows during its figure tour."""
+        if flow:
+            self.body.append(f'<g data-flow="{flow}">')
         self.colors.add(color)
         cid = color.lstrip("#")
         ds = f' stroke-dasharray="{dash}"' if dash else ''
         me = f' marker-end="url(#a{cid})"' if end else ''
         ms = f' marker-start="url(#a{cid})"' if both else ''
         self.body.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="{sw}"{ds}{me}{ms} stroke-linejoin="round" stroke-linecap="round"/>')
+        if flow:
+            self.body.append('</g>')
 
     # ---------- output
     def check_overlaps(self):

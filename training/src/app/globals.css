@@ -172,3 +172,11 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 
 /* <Scene>: a box that changes at this step settles in */
 @keyframes swapIn { from { opacity: 0; transform: translateY(6px); } }
+
+/* <FigTour>: one path lit, the rest dimmed; lit arrows march along the flow */
+.dg-svg.dg-touring > :not(defs) { opacity: 0.2; transition: opacity 0.35s; }
+.dg-svg.dg-touring > .dg-hl { opacity: 1; }
+.dg-svg.dg-touring > g[data-flow].dg-hl path { stroke-width: 2.6; stroke-dasharray: 9 6; animation: dgflow 0.9s linear infinite; }
+@keyframes dgflow { to { stroke-dashoffset: -30; } }
+.dg-ping { transform-box: fill-box; transform-origin: center; animation: dgping 1.4s ease-out infinite; }
+@keyframes dgping { from { opacity: 0.9; transform: scale(0.7); } to { opacity: 0; transform: scale(1.5); } }
