@@ -1,6 +1,12 @@
-Before the cluster and its components, start with the problem. Press **Next** to step through it: what an agent is, what it can reach when nothing stops it, how one poisoned page turns it against you, and what changes inside OpenShell.
+The last module ended with a requirement: a boundary outside the agent's process, which it can't see into, argue with or switch off. **NVIDIA OpenShell** is an open-source runtime that builds exactly that. It puts the whole agent process in a sandbox governed by a YAML policy: you declare what the agent may touch, and OpenShell enforces it from outside.
 
-<Scene id="agents" />
+<DeckScene src="openshell" only="intro" title="Enter NVIDIA OpenShell" />
+
+## Same agent, inside OpenShell
+
+The same agent, the same poisoned issue. The model is still misled, but every harmful step now stops at the boundary, while the real work still flows. **OpenShell doesn't make the agent smarter. It makes its mistakes harmless.**
+
+<DeckScene src="openshell" only="contained" title="Same agent, inside OpenShell" />
 
 ## How OpenShell is built
 
@@ -44,3 +50,13 @@ openshell sandbox list
 <Callout type="tip" title="Two front doors, one cluster">
 Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; each workspace's sandboxes live in a namespace the gateway creates for it, such as <code>openshell-lab-default</code>. You can always drop to <code>kubectl -n openshell-lab-default get sandboxes,pods</code> to see what the gateway did.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/os-architecture" nextLabel="Gateway and supervisor">
+
+- **The boundary sits outside the agent.** OpenShell sandboxes the whole agent process; the agent can only ask.
+- **Same poison, harmless outcome.** The model is still misled, but every harmful step stops at the boundary while the real work flows.
+- **A gateway plus guardrails.** A control plane for sandboxes, policies and keys, and a supervisor per sandbox that decides every connection.
+
+</Learned>

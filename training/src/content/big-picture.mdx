@@ -41,12 +41,22 @@ The same platform with every component. It is dense, so read it one path at a ti
 
 ## The flow, end to end
 
-Press **Next** to follow one sandbox from your request to the model: boxes appear as the flow reaches them, and the log says what each step did.
+Press **Next** to build one sandbox on Kubernetes in deployment order: LiteLLM, observability, Keycloak, the OpenShell chart, a workspace, then the sandbox. The agent reaches its model only through the supervisor and LiteLLM.
 
-<Scene id="flow" />
+<DeckScene src="openshell" only="k8s" title="One sandbox on Kubernetes" />
 
 You ask the gateway for a sandbox. It writes a `Sandbox` resource and starts a supervisor pod; the controller turns the resource into the workload pod running OpenClaw. The workload pod can only talk to its supervisor. When the agent calls LiteLLM, the supervisor checks the request against the sandbox's policy, swaps the placeholder in `Authorization` for the real key, and forwards it.
 
 <Callout type="note" title="The mental model">
 A sandbox is a pair of pods plus a policy. Creating an agent means creating a sandbox; deleting it tears both pods down. Everything else, isolation, policy, credentials and audit, hangs off that.
 </Callout>
+
+## What you learned
+
+<Learned next="/learn/sentry" nextLabel="NVIDIA Sentry: beyond the host">
+
+- **One VM, one Kubernetes node**, with OpenShell, LiteLLM, Keycloak, the Console and monitoring on it.
+- **Each workspace is a namespace** the gateway creates; each sandbox in it is a workload pod plus its supervisor.
+- **Four paths** to remember: how you reach the lab, how a sandbox is made, how a request flows, where the evidence goes.
+
+</Learned>

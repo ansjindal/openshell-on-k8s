@@ -190,7 +190,7 @@ and you can read the whole skill (it's ~40 lines) in `manifests/openclaw/skills/
 <Callout type="note" title="Two kinds of 'skill' — don't confuse them">
 The <strong>cluster-telemetry</strong> skill above is staged into every agent automatically (it's
 <em>how</em> they read a backend). The <code>skill</code> column in <code>fleet.txt</code> is a
-<em>separate, optional</em> hook: a first-class tool installed from your private registry (Part V),
+<em>separate, optional</em> hook: a first-class tool installed from your private registry ([Skills](/learn/skills)),
 e.g. <code>@workshop/promql</code> giving a typed <code>promql(query)</code> tool. It's <code>-</code>
 by default — the agents work fine with just cluster-telemetry + their SOUL.
 </Callout>

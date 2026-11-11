@@ -55,7 +55,7 @@ export const FIGURE_TOURS: Record<string, TourPath[]> = {
         { x: 1404, y: 400, title: "Alloy", text: "Collects the pods' logs across the cluster…" },
         { x: 978, y: 400, title: "Loki", text: "…and stores them in Loki, queryable by sandbox, namespace and verdict." },
         { x: 826, y: 400, title: "Tempo", text: "The agent's own traces, relayed by its supervisor, and the gateway's spans." },
-        { x: 1110, y: 400, title: "Grafana", text: "Reads Loki, Tempo and Prometheus. You'll query the audit trail there in Module 3." },
+        { x: 1110, y: 400, title: "Grafana", text: "Reads Loki, Tempo and Prometheus. You'll query the audit trail there in Module 4." },
       ],
     },
   ],

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { spawn } from "node:child_process";
 
-// Part III capstone — the fleet at a glance. For each agent: is it Ready, and exactly which
+// Module 5 capstone — the fleet at a glance. For each agent: is it Ready, and exactly which
 // egress its policy allows (proof that each agent's policy is specific to its tool).
 
 const HOME = process.env.HOME ?? "/home/ubuntu";

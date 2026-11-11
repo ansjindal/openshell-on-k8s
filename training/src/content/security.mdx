@@ -44,7 +44,11 @@ Every decision the supervisor and the gateway make, allowed or denied, is an **O
 
 Every layer above is configured by one short YAML file per sandbox: its **policy**. You'll edit policies in almost every lab, so here it is line by line. Press **Next** to step through it: the lines that matter light up on the left, and on the right you see what they let through and what they stop.
 
-<Scene id="policy" />
+<DeckScene src="openshell" only="policy" title="One YAML file, two lifetimes" />
+
+The sections that lock at startup (`filesystem_policy`, `landlock`, `process`) are enforced by the kernel. Here is how:
+
+<DeckScene src="openshell" only="kernel" title="Two kernel filters" />
 
 | Part | Controls | Enforced by | Changes on a running sandbox? |
 |---|---|---|---|
@@ -67,7 +71,7 @@ No single layer is the answer. Landlock and seccomp bound the process, the super
 
 ## What you learned
 
-<Learned next="/learn/sentry" nextLabel="NVIDIA Sentry: beyond the host">
+<Learned next="/learn/request-flow" nextLabel="One request, end to end">
 
 - **Layers, not a wall.** The kernel bounds the process, the supervisor bounds the network, providers bound the secrets, identities bound the control plane, and the audit trail records it all.
 - **One policy file per sandbox.** Filesystem, process and network, in a few lines of YAML.

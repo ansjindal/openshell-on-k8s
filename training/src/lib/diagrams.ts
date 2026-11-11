@@ -288,7 +288,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
   // ---- module overviews (ScrollBuild): one layer per lesson, 600 wide so the
   // diagram fills the sticky panel beside the cards.
   m1: {
-    title: "Module 1: from a cluster to a sealed sandbox",
+    title: "Module 2: from a cluster to a sealed sandbox",
     w: 600, h: 465,
     layers: [{ n: 0, name: "You" }, { n: 1, name: "Verify the cluster" }, { n: 2, name: "Build an agent" }, { n: 3, name: "Create a sandbox" }, { n: 4, name: "Into the sandbox" }, { n: 5, name: "Egress policy" }, { n: 6, name: "TCP egress" }],
     nodes: [
@@ -315,7 +315,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
   m2: {
-    title: "Module 2: a model, keys it never sees, skills, a task",
+    title: "Module 3: a model, keys it never sees, skills, a task",
     w: 600, h: 370,
     layers: [{ n: 0, name: "The sandbox" }, { n: 1, name: "Models through a provider" }, { n: 2, name: "Your own provider" }, { n: 3, name: "Workspace files" }, { n: 4, name: "Skills" }, { n: 5, name: "Run a task" }],
     nodes: [
@@ -337,7 +337,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
   m3: {
-    title: "Module 3: who did what, and who may",
+    title: "Module 4: who did what, and who may",
     w: 600, h: 370,
     layers: [{ n: 0, name: "The gateway" }, { n: 1, name: "The audit trail" }, { n: 2, name: "The Console" }, { n: 3, name: "Users, roles & workspaces" }],
     nodes: [
@@ -358,7 +358,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
   m4: {
-    title: "Module 4: a fleet of sealed specialists",
+    title: "Module 5: a fleet of sealed specialists",
     w: 600, h: 390,
     layers: [{ n: 0, name: "You, the SRE" }, { n: 1, name: "The challenge" }, { n: 2, name: "Spin up the fleet" }, { n: 3, name: "Fleet status" }, { n: 4, name: "Investigate" }, { n: 5, name: "Under the hood" }, { n: 6, name: "Build your own" }],
     nodes: [

@@ -1,0 +1,39 @@
+A boundary you can't observe is a boundary you can't trust. OpenShell emits three signals, all joined on one sandbox ID, and records every security decision as an **OCSF** event.
+
+<BeforeYouStart
+  learn="the three signals (traces, metrics, OCSF events), how they join on openshell.sandbox.id, and how to read an OCSF line."
+  prereq="1.4 One request, end to end."
+  time="about seven minutes. You'll query these yourself in Module 4."
+/>
+
+<Section n="1" title="Three signals, one sandbox ID">
+
+<DeckScene src="openshell" only="obs" title="Three signals, one sandbox ID" />
+
+**Traces** show where time goes, **gateway metrics** show saturation, and **OCSF events** record every security decision. Supervisors export directly; the agent's own spans go to a relay the supervisor provides, with no egress rule needed. Join everything on `openshell.sandbox.id`.
+
+</Section>
+
+<Section n="2" title="Reading an OCSF event">
+
+<DeckScene src="openshell" only="ocsf" title="Reading an OCSF event" />
+
+A shorthand line such as
+
+```text
+OCSF NET:OPEN [MED] DENIED /usr/bin/curl(64) -> httpbin.org:443 [policy:- engine:opa] [reason:no matching policy]
+```
+
+reads left to right: the event class (`NET:OPEN`, network activity), the severity, the action, the process and destination, which engine and rule decided, and why. The same event is also a JSONL record and an OTLP log record, so any SIEM that speaks OCSF can read it.
+
+</Section>
+
+## What you learned
+
+<Learned next="/learn/big-picture" nextLabel="OpenShell on Kubernetes: this lab">
+
+- **Three signals**: traces, metrics, OCSF events, joined on the sandbox ID.
+- **Every decision is an event**: allowed or denied, with the process, the destination and the rule.
+- **Vendor-neutral**: OCSF lands in the security tooling you already run.
+
+</Learned>

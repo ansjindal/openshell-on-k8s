@@ -2,13 +2,13 @@ OpenShell puts a boundary around every agent: a supervisor beside it decides eve
 
 <BeforeYouStart
   learn="why a boundary on the agent's own host can't survive root on that host, and how NVIDIA Sentry enforces the same OpenShell policy on BlueField-4."
-  prereq="0.4 Under the hood: security layers and the policy file."
+  prereq="1.2 Gateway and supervisor and 1.3 The policy file and the kernel."
   start="the animation below. Nothing runs on your VM in this lesson; the lab itself uses OpenShell only."
 />
 
 <Section n="1" title="Beyond the host, step by step">
 
-<Scene id="sentry" />
+<DeckScene src="sentry" only="pwn,sentry" title="Beyond the host" />
 
 </Section>
 
@@ -35,7 +35,7 @@ Together the two are the **NVIDIA Open Agent Safety Platform**. You deploy the l
 
 ## What you learned
 
-<Learned next="/learn/m1-overview" nextLabel="Module 1: Sandboxes & Policy">
+<Learned next="/learn/m1-overview" nextLabel="Module 2: Sandboxes & Policy">
 
 - **A boundary is only as strong as where it runs.** OpenShell's supervisor shares the agent's host; root on that host can stop it.
 - **Sentry moves the decision off the host.** DOCA Tower and DOCA Argus on BlueField-4 enforce the same policy, out of the host's reach.

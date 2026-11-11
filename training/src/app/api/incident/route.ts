@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { spawn } from "node:child_process";
 
-// Part III capstone — the Incident Lab. The demo is an instrumented app (shop-app) driven by a
+// Module 5 capstone — the Incident Lab. The demo is an instrumented app (shop-app) driven by a
 // continuous loadgen, so logs/metrics/traces are always live. The incident is an APPLICATION
 // fault you inject at runtime (the payment path starts returning 503s) — visible in the app's
 // own telemetry. The agents only DIAGNOSE (read-only); the human approves the remediation

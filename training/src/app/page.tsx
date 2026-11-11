@@ -61,11 +61,11 @@ export default function Home() {
         <h3 className="mt-8 text-[17px] font-bold text-[var(--color-fg)]">What you&apos;ll do here, step by step</h3>
         <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-stretch">
           {[
-            ["Seal", "m1-overview", "Module 1", "Build an agent, then put it in a sandbox: nothing gets out by default, and you test that from inside."],
-            ["Grant", "m1-overview", "Module 1", "Open exactly one door while it runs: one host, one HTTP method, one path, one program."],
-            ["Inject", "m2-overview", "Module 2", "Give it a model and an API key it never actually holds: the sandbox only sees a placeholder."],
-            ["Audit", "m3-overview", "Module 3", "Follow every allow and deny in Grafana, use the web console, and give people their own roles and workspaces."],
-            ["Operate", "m4-overview", "Module 4", "Run five sealed agents that each read one telemetry source, find a real outage's root cause, and propose a fix you approve."],
+            ["Seal", "m1-overview", "Module 2", "Build an agent, then put it in a sandbox: nothing gets out by default, and you test that from inside."],
+            ["Grant", "m1-overview", "Module 2", "Open exactly one door while it runs: one host, one HTTP method, one path, one program."],
+            ["Inject", "m2-overview", "Module 3", "Give it a model and an API key it never actually holds: the sandbox only sees a placeholder."],
+            ["Audit", "m3-overview", "Module 4", "Follow every allow and deny in Grafana, use the web console, and give people their own roles and workspaces."],
+            ["Operate", "m4-overview", "Module 5", "Run five sealed agents that each read one telemetry source, find a real outage's root cause, and propose a fix you approve."],
           ].map(([t, slug, mod, d], i, all) => (
             <div key={t} className="flex flex-1 items-stretch gap-2">
               <Link href={`/learn/${slug}`} className="group flex flex-1 flex-col rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-3.5 py-3 transition hover:border-[var(--color-nv-dim)]">
@@ -121,7 +121,7 @@ export default function Home() {
 
         <section className="mt-12 rounded-2xl border border-[var(--color-nv-dim)] bg-[var(--color-run-bg)] p-8 text-center">
           <h2 className="text-2xl font-bold">Ready?</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-[var(--color-fg-dim)]">Module 0 takes about half an hour and needs no commands. The first lab starts in Module 1.</p>
+          <p className="mx-auto mt-3 max-w-2xl text-[var(--color-fg-dim)]">Module 0 takes about half an hour and needs no commands. The first lab starts in Module 2.</p>
           <Link href={`/learn/${FIRST_SLUG}`} className="mt-6 inline-block rounded-lg bg-[var(--color-nv)] px-5 py-2.5 text-sm font-bold text-[#0a0d07] hover:bg-[var(--color-nv-bright)]">
             Start with Module 0 →
           </Link>

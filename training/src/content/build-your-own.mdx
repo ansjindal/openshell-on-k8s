@@ -38,7 +38,7 @@ Wire it as another action in [`/api/incident`](/learn/incident-lab) next to `bre
 ## A first-class skill instead of curl
 
 Right now each agent runs a `curl`-based probe. Promote it to a **real tool** published to your
-private registry (Part V): a `@workshop/promql` skill exposing `promql(query)`, or `@workshop/logql`.
+private registry ([Skills](/learn/skills)): a `@workshop/promql` skill exposing `promql(query)`, or `@workshop/logql`.
 Put `@workshop/promql` in the `skill` column of `fleet.txt` and the metrics agent calls a typed
 tool instead of hand-rolled HTTP — same governance, nicer ergonomics.
 

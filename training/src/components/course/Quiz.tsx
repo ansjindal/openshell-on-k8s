@@ -1,6 +1,6 @@
 "use client";
 // Knowledge check: multiple-choice questions, answers kept in this browser.
-//   <Quiz title="Test your knowledge: Module 1">
+//   <Quiz title="Test your knowledge: Module 2">
 //     <Q q="…" options={["a", "b", "c", "d"]} answer={1} why="…" />
 //   </Quiz>
 import { Children, isValidElement, type ReactNode } from "react";

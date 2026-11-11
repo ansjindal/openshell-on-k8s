@@ -11,7 +11,7 @@ Check what you took away from the first labs before moving on.
 
 ## Check your understanding
 
-<Quiz title="Test your knowledge: Module 1">
+<Quiz title="Test your knowledge: Module 2">
 <Q q="You add an endpoint to agent-0 with openshell policy update … --wait. What happens to the sandbox?" options={["It restarts with the new policy", "The new revision loads into the running sandbox, with no restart", "Nothing until you delete and re-create it", "You must kubectl apply the new policy to the workload pod"]} answer={1} why="Network rules are dynamic: the new revision loads into the running sandbox without a restart." />
 <Q q="Before any grant, curl to https://api.github.com/zen from agent-0 prints HTTP 000. What does that mean?" options={["The supervisor refused the connection, so there was no HTTP response", "GitHub's API is down", "The request reached GitHub and was rate-limited", "curl is not installed in the sandbox"]} answer={0} why="000 means no HTTP response at all: the supervisor refused the connection." />
 <Q q="In the endpoint 'api.github.com:443:read-only:rest:enforce', what does read-only allow?" options={["Every method except DELETE", "GET and POST only", "Any method, but only logged", "GET, HEAD and OPTIONS only"]} answer={3} why="read-only is an access preset: GET, HEAD and OPTIONS only. A POST to the same host is refused at L7 with 403." />

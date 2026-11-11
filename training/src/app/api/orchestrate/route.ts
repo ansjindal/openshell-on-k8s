@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-// Part III capstone, in the website: an orchestrator that gives each sealed specialist agent
+// Module 5 capstone, in the website: an orchestrator that gives each sealed specialist agent
 // an investigation step (in parallel, via `openclaw agent --local`), then a writer agent
 // synthesizes their findings. The website never calls a model directly: each agent reaches
 // LiteLLM through its attached `litellm` provider (the supervisor injects the key), so the

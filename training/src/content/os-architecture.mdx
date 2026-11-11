@@ -1,0 +1,43 @@
+OpenShell splits the work in two. A **gateway** governs: it stores sandboxes, policies and credentials, and decides who may do what. A **supervisor**, one per sandbox, decides every connection the agent makes. Press **Next** to build the picture.
+
+<BeforeYouStart
+  learn="the control plane and the data plane, what runs inside the agent's pod and what runs beside it, and how the two halves talk."
+  prereq="1.1 Enter OpenShell."
+  time="about nine minutes. No commands in this lesson."
+/>
+
+<Section n="1" title="The big picture">
+
+<DeckScene src="openshell" only="arch" title="The big picture" />
+
+The CLI, the SDKs and the console all talk to the **gateway**. When you create a sandbox, the gateway asks Kubernetes for pods, a Service and a NetworkPolicy: an untrusted **workload pod** that runs the agent, and a trusted **supervisor pod** beside it. **The gateway never decides a packet; the supervisor decides every one.**
+
+</Section>
+
+<Section n="2" title="The boundary up close">
+
+<DeckScene src="openshell" only="halves" title="The boundary up close" />
+
+- **`openshell-sandbox`** lives inside, with the agent. It owns the process tree, can name the binary behind every connection, and holds nothing worth stealing.
+- **`openshell-supervisor`** lives outside. It holds the policy, the credentials and DNS, and opens every real connection.
+- Between them: **one mTLS HTTP/2 connection**, one stream per TCP connection. If the supervisor isn't there, nothing gets out: it **fails closed**.
+
+</Section>
+
+<Optional title="Why the supervisor moved out (0.0.x to 0.1)">
+
+<DeckScene src="openshell" only="versions" title="The supervisor moved out" />
+
+In 0.0.x the supervisor ran inside the agent's container, as its parent, with the privilege to build the boundary right next to the agent. 0.1.0 split it: a capability-free runtime inside, the supervisor outside, and a contract between them. 0.0.x sandboxes can't be upgraded in place; recreate them.
+
+</Optional>
+
+## What you learned
+
+<Learned next="/learn/security" nextLabel="The policy file and the kernel">
+
+- **Two planes.** The gateway governs; a supervisor per sandbox decides every connection.
+- **Two halves of a sandbox.** An untrusted workload with nothing worth stealing, a trusted supervisor with the policy and the keys.
+- **Fail closed.** No supervisor, no network.
+
+</Learned>

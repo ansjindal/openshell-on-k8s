@@ -1,0 +1,33 @@
+Follow one ordinary request, the agent's `gh` call to read issue #142, through every checkpoint between the agent and GitHub. Then see where the secret it needs actually lives.
+
+<BeforeYouStart
+  learn="the checkpoints a request passes, where the real credential is added, and what happens to a request the policy doesn't allow."
+  prereq="1.3 The policy file and the kernel."
+  time="about eight minutes. No commands in this lesson."
+/>
+
+<Section n="1" title="One request, end to end">
+
+<DeckScene src="openshell" only="request" title="One request, end to end" />
+
+The connection is **paused** at `connect()` inside the sandbox and handed to the supervisor. The supervisor checks the **connection** (which host, which port, which binary), then the **request** itself (method and path, for REST endpoints), and only then **adds the secret** and opens the real connection. The secret is added last, outside the agent, and only for the right host.
+
+</Section>
+
+<Section n="2" title="The agent never holds the key">
+
+<DeckScene src="openshell" only="creds" title="The agent never holds the key" />
+
+**Providers** keep credentials in the gateway. Inside the sandbox the agent sees only placeholders such as `openshell:resolve:env:GITHUB_TOKEN`. The supervisor swaps in the real value only for the endpoints the provider allows; a request to the wrong host gets no secret. Steal the environment and you get placeholders. Rotate a key once in the gateway, with no restart.
+
+</Section>
+
+## What you learned
+
+<Learned next="/learn/audit-signals" nextLabel="Signals and audit events">
+
+- **Every request passes checkpoints**: the connection, then the request, then the secret.
+- **The secret is added last**, by the supervisor, only for allowed endpoints.
+- **Placeholders inside, keys outside.** There is no real key in the sandbox to leak.
+
+</Learned>

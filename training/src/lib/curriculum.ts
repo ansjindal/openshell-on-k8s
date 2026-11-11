@@ -10,18 +10,29 @@ const L = (slug: string, title: string, blurb: string, minutes: number, kind: Le
 
 export const CURRICULUM: Part[] = [
   {
-    id: "m0", n: 0, title: "Orientation", accent: "nv",
-    subtitle: "What an agent is and why it needs a sandbox, how OpenShell provides one on your Kubernetes VM, and how it works under the hood.",
+    id: "m0", n: 0, title: "Agents", accent: "nv",
+    subtitle: "What an AI agent is, the harness that runs it, and why the guardrail has to sit outside it.",
     lessons: [
       L("welcome", "Overview", "What you'll learn, how the labs work, and the one command that builds the stack.", 5),
-      L("openshell", "Agents and OpenShell", "What an agent is, what it can reach, one poisoned page, and how OpenShell sandboxes it; then its pieces.", 12),
-      L("big-picture", "The big picture: OpenShell on Kubernetes", "k3s → agent-sandbox → OpenShell gateway → sandboxes → LiteLLM, with the console on top.", 8),
-      L("security", "Under the hood: security layers and the policy file", "Landlock, seccomp, a supervisor that owns the network, placeholder credentials, an audit trail, and the policy YAML that drives them, animated.", 15),
+      L("what-is-an-agent", "What is an agent?", "A model in a ReAct loop, plus the knowledge it reads, the tools it calls, the skills it loads and the harness that runs it all.", 8),
+      L("agent-misled", "When an agent is misled", "One poisoned issue, what it touches, and where the guardrail should live.", 8),
+    ],
+  },
+  {
+    id: "os", n: 1, title: "OpenShell", accent: "nv",
+    subtitle: "The runtime that puts the boundary outside the agent: gateway, supervisor, policy, keys, kernel filters and audit, and how it all runs on Kubernetes.",
+    lessons: [
+      L("openshell", "Enter OpenShell", "The same agent and the same poisoned issue, inside a sandbox: every harmful step stops at the boundary.", 10),
+      L("os-architecture", "Gateway and supervisor", "The control plane, a supervisor per sandbox, and the boundary between the agent and its supervisor.", 9),
+      L("security", "The policy file and the kernel", "One YAML file with two lifetimes, the kernel filters that hold the agent in, and the layers around it.", 12),
+      L("request-flow", "One request, end to end", "Follow one request through the supervisor, and see why the agent never holds the key.", 8),
+      L("audit-signals", "Signals and audit events", "Logs, traces and metrics tied to one sandbox ID, and how to read an OCSF event.", 7),
+      L("big-picture", "OpenShell on Kubernetes: this lab", "One sandbox on Kubernetes, then this lab's whole platform, path by path.", 10),
       L("sentry", "NVIDIA Sentry: beyond the host", "When the host itself is compromised: the same policy, enforced on BlueField-4.", 6),
     ],
   },
   {
-    id: "m1", n: 1, title: "Sandboxes & Policy", accent: "nv", role: "You are the platform operator.",
+    id: "m1", n: 2, title: "Sandboxes & Policy", accent: "nv", role: "You are the platform operator.",
     subtitle: "You are the platform operator. Verify the cluster, build an agent and seal it in a sandbox, then open the network one rule at a time.",
     lessons: [
       L("m1-overview", "Overview", "What this module builds: a sealed sandbox, opened one rule at a time.", 4),
@@ -35,7 +46,7 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m2", n: 2, title: "Models & Credentials", accent: "nv", role: "You are the agent developer.",
+    id: "m2", n: 3, title: "Models & Credentials", accent: "nv", role: "You are the agent developer.",
     subtitle: "You are the agent developer. Give agents a model and credentials they never see, shape their persona, install governed skills, and run tasks.",
     lessons: [
       L("m2-overview", "Overview", "What this module builds: a model, credentials the agent never sees, skills and a task.", 4),
@@ -48,7 +59,7 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m3", n: 3, title: "Audit, Console & Access", accent: "nv", role: "You are the security reviewer.",
+    id: "m3", n: 4, title: "Audit, Console & Access", accent: "nv", role: "You are the security reviewer.",
     subtitle: "You are the security reviewer. Read the audit trail, drive the same gateway from the web console, and give people roles and workspaces.",
     lessons: [
       L("m3-overview", "Overview", "What this module builds: an audit trail, the web console and people with roles.", 4),
@@ -59,7 +70,7 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m4", n: 4, title: "Capstone: SRE Copilot Fleet", accent: "nv", role: "You are the SRE.",
+    id: "m4", n: 5, title: "Capstone: SRE Copilot Fleet", accent: "nv", role: "You are the SRE.",
     subtitle: "You are the SRE. Bring up a fleet of sealed specialists, break a real service, let the fleet find the root cause, and approve the fix yourself.",
     lessons: [
       L("m4-overview", "Overview", "What this module builds: a fleet of sealed specialists that finds a real fault.", 4),
@@ -73,7 +84,7 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m5", n: 5, title: "Going Further",
+    id: "m5", n: 6, title: "Going Further",
     subtitle: "Where to take it next: high availability, more nodes, a namespace per team, credentials in Vault.",
     lessons: [
       L("next-steps", "Next steps & resources", "HA, multi-node, tenancy, credential drivers, other agents.", 6),

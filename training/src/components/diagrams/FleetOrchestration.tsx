@@ -1,6 +1,6 @@
 import { DIAGRAM as C } from "./palette";
 
-// Part III capstone: the in-page orchestrator runs a FIXED plan (no model call to plan) — it
+// Module 5 capstone: the in-page orchestrator runs a FIXED plan (no model call to plan) — it
 // hands each sealed telemetry SPECIALIST (logs/metrics/events — each with egress to ONE
 // backend) a prescribed probe, then a no-egress ANALYST concludes the root cause + recommended
 // fix. Theme-aware: structural colors come from site CSS vars; accent hues are translucent.
