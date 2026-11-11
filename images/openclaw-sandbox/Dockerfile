@@ -13,7 +13,7 @@
 # sandbox image (sandbox_image_tag in ansible/inventory/group_vars/all.yml) pins it.
 FROM ghcr.io/nvidia/openshell-community/sandboxes/base:fffb6b2@sha256:aeef1c63f00e2913ea002ccb3aaf925f338b5c5d70e63576f0d95c16a138044e
 
-ARG OPENCLAW_VERSION=2026.11.1
+ARG OPENCLAW_VERSION=2026.11.3
 ARG NODE_VERSION=24.22.2
 ARG NODE_SHA256=48cc0e21e048790e54c0cf5749c2725005313d652651c40b7a21feb9697aaf75
 
