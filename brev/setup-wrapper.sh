@@ -33,7 +33,7 @@ chmod +x scripts/setup.sh scripts/fleet 2>/dev/null || true
 # Capture the Launchable env-config vars into .env (only those actually set).
 echo "[brev-setup] writing .env from Launchable env-config..."
 : > .env
-for v in OPENSHELL_API_KEY OPENSHELL_BASE_URL OPENSHELL_MODEL \
+for v in MODEL_API_KEY MODEL_BASE_URL MODEL_NAME \
          ENABLE_KYVERNO ENABLE_MONITORING ENABLE_SSO ENABLE_HEADLAMP \
          PUBLIC_BASE_URL CONSOLE_URL BREV_URL_PREFIX CONSOLE_URL_PREFIX BREV_URL_DOMAIN \
          ENVOY_WEB_NODEPORT ENVOY_GRPC_NODEPORT ENVOY_HOST_PORT CONSOLE_HOST_PORT \

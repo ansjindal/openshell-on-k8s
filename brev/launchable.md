@@ -28,7 +28,7 @@ REPO="$(find "$HOME" /home /workspace . -maxdepth 5 -type d -name openshell-on-k
 cd "$REPO"
 chmod +x scripts/setup.sh scripts/fleet 2>/dev/null || true
 : > .env
-for v in OPENSHELL_API_KEY OPENSHELL_BASE_URL OPENSHELL_MODEL \
+for v in MODEL_API_KEY MODEL_BASE_URL MODEL_NAME \
          ENABLE_KYVERNO ENABLE_MONITORING ENABLE_SSO ENABLE_HEADLAMP \
          PUBLIC_BASE_URL CONSOLE_URL BREV_URL_PREFIX CONSOLE_URL_PREFIX BREV_URL_DOMAIN \
          ENVOY_WEB_NODEPORT ENVOY_GRPC_NODEPORT ENVOY_HOST_PORT CONSOLE_HOST_PORT \
@@ -47,7 +47,7 @@ Why it's shaped this way (each line earned from a real failure):
   `could not create work tree dir … : Permission denied`.
 - **Capture Step 5 vars into `.env`.** The env-config vars are present in the wrapper's
   environment but nothing reads them otherwise — the loop writes the set ones into `.env`,
-  which `setup.sh` then sources. Without this, `OPENSHELL_API_KEY` never reaches the stack.
+  which `setup.sh` then sources. Without this, `MODEL_API_KEY` never reaches the stack.
 - **`set -uo pipefail`, no `-e`.** A permission-denied `find` (scanning `/root` etc.) must
   not abort the script — that produced "0 logs" failures elsewhere.
 - **`tee` the log** to `$HOME/openshell-setup.log` for post-mortems.
@@ -68,11 +68,12 @@ port hands the traffic to the in-cluster Envoy ingress, which routes by host nam
 | `console` | `3002` | `https://console-<brevid>.<domain>` | the OpenShell Console (sign in with Keycloak) |
 | `openclaw` | `30789` | `https://openclaw-<brevid>.<domain>` | OpenClaw's own Control UI (optional, `ENABLE_OPENCLAW_UI=true`) |
 
-The names matter: `scripts/setup.sh` derives the Keycloak issuer, the console's redirect URL
-and the site's links from `https://<prefix>-<brevid>.<BREV_URL_DOMAIN>`, with prefixes
-`BREV_URL_PREFIX` (`openshell`), `CONSOLE_URL_PREFIX` (`console`) and `OPENCLAW_UI_URL_PREFIX`
-(`openclaw`). If your Brev links use a different domain (for example `gobrev.dev`), set
-`BREV_URL_DOMAIN` before the first run; or set `PUBLIC_BASE_URL` and `CONSOLE_URL` directly.
+`scripts/setup.sh` finds the URLs by itself: Brev lists the instance's links in
+`/etc/brev/environment-context.json`, so the link on port 3001 becomes the site/Keycloak URL,
+3002 the console and 30789 the OpenClaw UI, whatever their names and domain. Without those
+entries it derives `https://<prefix>-<brevid>.<domain>`, taking the domain from any other Brev
+link (prefixes `openshell`, `console`, `openclaw`). Set `BREV_URL_DOMAIN`, or `PUBLIC_BASE_URL`
+and `CONSOLE_URL`, only to override.
 
 > Brev/launchpad only forwards **low** host ports to real sockets: pointing a link at a high
 > NodePort (`30080`) returns an edge **503**, which is why `3001` and `3002` exist.
@@ -94,15 +95,15 @@ Set these as the Launchable's environment configuration (or in `.env`):
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `OPENSHELL_API_KEY` | credential for the inference endpoint (**secret**) | — (required) |
-| `OPENSHELL_BASE_URL` | OpenAI-compatible endpoint URL | `https://integrate.api.nvidia.com/v1` |
-| `OPENSHELL_MODEL` | model id served by the endpoint | `meta/llama-3.3-70b-instruct` |
+| `MODEL_API_KEY` | credential for the inference endpoint (**secret**) | — (required) |
+| `MODEL_BASE_URL` | OpenAI-compatible endpoint URL | `https://integrate.api.nvidia.com/v1` |
+| `MODEL_NAME` | model id served by the endpoint | `meta/llama-3.3-70b-instruct` |
 | `ENABLE_KYVERNO` | guardrails on sandbox pods (no host network/PID/IPC) | `true` |
 | `ENABLE_MONITORING` | Prometheus + Grafana + Loki + Alloy + Tempo, OCSF audit export, agent trace relay | `true` |
 | `ENABLE_SSO` | Keycloak + Envoy ingress + Grafana SSO + the OpenShell Console | `true` |
 | `PUBLIC_BASE_URL` | public host of the site/Keycloak/Grafana (the OIDC issuer origin); empty = derive | `""` |
 | `CONSOLE_URL` | public host of the console; empty = derive | `""` |
-| `BREV_URL_PREFIX` / `CONSOLE_URL_PREFIX` / `BREV_URL_DOMAIN` | pieces of the derived URLs | `openshell` / `console` / `brevlab.com` |
+| `BREV_URL_PREFIX` / `CONSOLE_URL_PREFIX` / `BREV_URL_DOMAIN` | pieces of the derived URLs, used only when no Brev link targets the port | `openshell` / `console` / detected |
 | `ENVOY_HOST_PORT` / `CONSOLE_HOST_PORT` | low host ports the two links map to | `3001` / `3002` |
 | `CREATE_FLEET` | create agent-0..N-1 (baseline policy + `litellm` provider) | `true` |
 | `FLEET_SIZE` | how many sandboxes | `1` |

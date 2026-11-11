@@ -7,18 +7,18 @@ An agent is only useful once it can think, so it needs a model. On this platform
 LiteLLM holds the upstream key and model for the whole cluster. On the VM, `~/openshell-on-k8s/.env`:
 
 ```bash-ref
-OPENSHELL_API_KEY=nvapi-your-key-here
-OPENSHELL_BASE_URL=https://integrate.api.nvidia.com/v1
-OPENSHELL_MODEL=meta/llama-3.3-70b-instruct
+MODEL_API_KEY=nvapi-your-key-here
+MODEL_BASE_URL=https://integrate.api.nvidia.com/v1
+MODEL_NAME=meta/llama-3.3-70b-instruct
 ```
 
-`OPENSHELL_BASE_URL` is any OpenAI-compatible endpoint, `OPENSHELL_MODEL` the model id it serves. LiteLLM also names it `default`, so agents can ask for `default` and stay unaware of which model that is. (Get a free `nvapi-…` key at [build.nvidia.com](https://build.nvidia.com).)
+`MODEL_BASE_URL` is any OpenAI-compatible endpoint, `MODEL_NAME` the model id it serves. LiteLLM also names it `default`, so agents can ask for `default` and stay unaware of which model that is. (Get a free `nvapi-…` key at [build.nvidia.com](https://build.nvidia.com).)
 
 To check the key and URL before you wire them in:
 
 ```bash
 cd ~/openshell-on-k8s && set -a && . ./.env && set +a
-curl -sS "$OPENSHELL_BASE_URL/models" -H "Authorization: Bearer $OPENSHELL_API_KEY" | grep -o '"id":"[^"]*"' | head -5
+curl -sS "$MODEL_BASE_URL/models" -H "Authorization: Bearer $MODEL_API_KEY" | grep -o '"id":"[^"]*"' | head -5
 ```
 
 A list of ids means the key and URL work; **401** is a bad key. After editing `.env`, apply it with the LiteLLM tag only (it can outrun the in-page Run button, so use the shell):
@@ -98,7 +98,7 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -X POST -H "Authorization: B
 
 ## Change the model later
 
-Everything funnels through LiteLLM, so the model is one setting: edit `OPENSHELL_MODEL` in `.env` and run `ANSIBLE_TAGS=litellm ./scripts/setup.sh`. The `default` alias follows it; sandboxes, providers and policies don't change.
+Everything funnels through LiteLLM, so the model is one setting: edit `MODEL_NAME` in `.env` and run `ANSIBLE_TAGS=litellm ./scripts/setup.sh`. The `default` alias follows it; sandboxes, providers and policies don't change.
 
 <Callout type="note" title="What changed from older OpenShell">
 Earlier releases routed every sandbox through a managed endpoint, <code>inference.local</code>. OpenShell 0.1 removed it: a sandbox reaches a model only through a provider you attach to <em>that</em> sandbox, and the agent calls the model's own API. Access is per sandbox and explicit, and the provider's L7 rules define exactly which calls are allowed.

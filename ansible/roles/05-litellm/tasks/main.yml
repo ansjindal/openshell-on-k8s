@@ -20,7 +20,7 @@
         msg: >
           upstream_api_key is empty — LiteLLM deploys with a placeholder so the full
           stack comes up. Model calls will 401 until you set a real key: put
-          OPENSHELL_API_KEY in .env and re-run ./scripts/setup.sh (this restarts
+          MODEL_API_KEY in .env and re-run ./scripts/setup.sh (this restarts
           LiteLLM), or update the litellm-secrets Secret and
           `kubectl -n {{ litellm_namespace }} rollout restart deploy/litellm`.
       when: (upstream_api_key | default('') | string | length) == 0

@@ -30,7 +30,7 @@ refused with `403 policy_denied`.
 
 ```bash
 cp .env.example .env
-$EDITOR .env            # OPENSHELL_API_KEY (+ OPENSHELL_BASE_URL / OPENSHELL_MODEL if not build.nvidia.com)
+$EDITOR .env            # MODEL_API_KEY (+ MODEL_BASE_URL / MODEL_NAME if not build.nvidia.com)
 ./scripts/setup.sh      # installs Ansible and brings up everything (~20-25 min on first boot)
 ```
 
@@ -40,8 +40,8 @@ editing `.env`, or run one layer with `ANSIBLE_TAGS=gateway ./scripts/setup.sh`.
 
 ### Reach it
 
-With sign-in on (`ENABLE_SSO=true`, the default) create two Brev **Secure Links**, named so the
-URLs match what `setup.sh` derives (`https://<name>-<brevid>.<BREV_URL_DOMAIN>`):
+With sign-in on (`ENABLE_SSO=true`, the default) create two Brev **Secure Links**. `setup.sh` reads
+them from the instance (`/etc/brev/environment-context.json`), so the URLs are picked up automatically:
 
 | Link name | Host port | What |
 |---|---|---|
@@ -98,9 +98,9 @@ openshell sandbox list
 
 Everything is driven by `.env` (see [.env.example](.env.example)):
 
-- `OPENSHELL_API_KEY` / `OPENSHELL_BASE_URL` / `OPENSHELL_MODEL`: the upstream model.
+- `MODEL_API_KEY` / `MODEL_BASE_URL` / `MODEL_NAME`: the upstream model.
 - `ENABLE_SSO`: Keycloak, Envoy ingress, Grafana SSO and the console. `ENABLE_MONITORING`, `ENABLE_KYVERNO`: toggles.
-- `BREV_URL_DOMAIN` (or `PUBLIC_BASE_URL` + `CONSOLE_URL`): the public hosts.
+- `PUBLIC_BASE_URL`, `CONSOLE_URL`, `BREV_URL_DOMAIN`: only to override the URLs detected from the Brev links.
 - `CREATE_FLEET`, `FLEET_SIZE`, `AGENT_CMD`: the initial agent fleet.
 - `ENABLE_TRAINING`: the training site (set `false` for the platform only).
 - `ENABLE_OPENCLAW_UI`: OpenClaw's Control UI on a host port.

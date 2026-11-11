@@ -39,14 +39,15 @@ if [[ -f "$ROOT/.env" ]]; then
   source "$ROOT/.env"; set +a
   log "Loaded $ROOT/.env"
 else
-  warn "No .env found — copy .env.example to .env and fill in OPENSHELL_API_KEY."
+  warn "No .env found — copy .env.example to .env and fill in MODEL_API_KEY."
   warn "Continuing with defaults (the platform comes up, but model calls fail without a key)."
 fi
 
 # ---- config (env or defaults) ----------------------------------------------
-OPENSHELL_API_KEY="${OPENSHELL_API_KEY:-}"
-OPENSHELL_BASE_URL="${OPENSHELL_BASE_URL:-https://integrate.api.nvidia.com/v1}"
-OPENSHELL_MODEL="${OPENSHELL_MODEL:-meta/llama-3.3-70b-instruct}"
+# The upstream model. The older OPENSHELL_API_KEY / _BASE_URL / _MODEL names still work.
+MODEL_API_KEY="${MODEL_API_KEY:-${OPENSHELL_API_KEY:-}}"
+MODEL_BASE_URL="${MODEL_BASE_URL:-${OPENSHELL_BASE_URL:-https://integrate.api.nvidia.com/v1}}"
+MODEL_NAME="${MODEL_NAME:-${OPENSHELL_MODEL:-meta/llama-3.3-70b-instruct}}"
 ENABLE_KYVERNO="${ENABLE_KYVERNO:-true}"
 ENABLE_MONITORING="${ENABLE_MONITORING:-true}"
 CREATE_FLEET="${CREATE_FLEET:-true}"
@@ -70,7 +71,7 @@ ENABLE_HEADLAMP="${ENABLE_HEADLAMP:-false}"
 [[ -n "${BREV_URL_DOMAIN:-}" ]] && BREV_URL_DOMAIN_EXPLICIT=1 || BREV_URL_DOMAIN_EXPLICIT=0
 PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-}"
 BREV_URL_PREFIX="${BREV_URL_PREFIX:-openshell}"
-BREV_URL_DOMAIN="${BREV_URL_DOMAIN:-brevlab.com}"
+BREV_URL_DOMAIN="${BREV_URL_DOMAIN:-}"
 CONSOLE_URL="${CONSOLE_URL:-}"
 CONSOLE_URL_PREFIX="${CONSOLE_URL_PREFIX:-console}"
 ENVOY_WEB_NODEPORT="${ENVOY_WEB_NODEPORT:-30080}"
@@ -84,13 +85,49 @@ CONSOLE_HOST_PORT="${CONSOLE_HOST_PORT:-3002}"
 
 brevid="$(hostname | sed -n 's/^brev-//p')"
 [[ -z "$brevid" ]] && brevid="${BREV_ENV_ID:-}"
+
+# Brev writes the instance's exposed ports, with their public host names, to
+# /etc/brev/environment-context.json. Use it to pick the URLs automatically:
+#   - the link on a host port gives that URL exactly (3001 site, 3002 console,
+#     OPENCLAW_UI_PORT OpenClaw UI);
+#   - otherwise any <name>-<brevid>.<domain> link gives the domain.
+# Explicit PUBLIC_BASE_URL / CONSOLE_URL / OPENCLAW_UI_URL / BREV_URL_DOMAIN win.
+BREV_CONTEXT=/etc/brev/environment-context.json
+brev_fqdn_for_port() {   # $1 = host port -> fqdn of the link that targets it
+  $SUDO test -f "$BREV_CONTEXT" || return 0
+  $SUDO cat "$BREV_CONTEXT" 2>/dev/null | python3 -c '
+import json, sys
+port = int(sys.argv[1])
+for p in json.load(sys.stdin).get("ports") or []:
+    if p.get("destination_port") == port and p.get("fqdn"):
+        print(p["fqdn"]); break' "$1" 2>/dev/null || true
+}
+brev_domain() {          # domain of any <name>-<brevid>.<domain> link
+  [[ -n "$brevid" ]] && $SUDO test -f "$BREV_CONTEXT" || return 0
+  $SUDO cat "$BREV_CONTEXT" 2>/dev/null | python3 -c '
+import json, sys
+mark = "-" + sys.argv[1] + "."
+for p in json.load(sys.stdin).get("ports") or []:
+    f = p.get("fqdn") or ""
+    if mark in f:
+        print(f.split(mark, 1)[1]); break' "$brevid" 2>/dev/null || true
+}
+if [[ -z "$BREV_URL_DOMAIN" ]]; then
+  BREV_URL_DOMAIN="$(brev_domain)"
+  [[ -n "$BREV_URL_DOMAIN" ]] && BREV_URL_DOMAIN_DETECTED=1
+  BREV_URL_DOMAIN="${BREV_URL_DOMAIN:-brevlab.com}"
+fi
+from_port() { local f; f="$(brev_fqdn_for_port "$1")"; [[ -n "$f" ]] && printf 'https://%s' "$f"; }
 derive() { [[ -n "$brevid" ]] && printf 'https://%s-%s.%s' "$1" "$brevid" "$BREV_URL_DOMAIN"; }
 if [[ "$ENABLE_SSO" == "true" ]]; then
+  [[ -n "$PUBLIC_BASE_URL" ]] || PUBLIC_BASE_URL="$(from_port "$ENVOY_HOST_PORT" || true)"
   [[ -n "$PUBLIC_BASE_URL" ]] || PUBLIC_BASE_URL="$(derive "$BREV_URL_PREFIX" || true)"
+  [[ -n "$CONSOLE_URL" ]] || CONSOLE_URL="$(from_port "$CONSOLE_HOST_PORT" || true)"
   [[ -n "$CONSOLE_URL" ]] || CONSOLE_URL="$(derive "$CONSOLE_URL_PREFIX" || true)"
 fi
 if [[ "$ENABLE_OPENCLAW_UI" == "true" && -z "$OPENCLAW_UI_URL" ]]; then
-  OPENCLAW_UI_URL="$(derive "$OPENCLAW_UI_URL_PREFIX" || true)"
+  OPENCLAW_UI_URL="$(from_port "$OPENCLAW_UI_PORT" || true)"
+  [[ -n "$OPENCLAW_UI_URL" ]] || OPENCLAW_UI_URL="$(derive "$OPENCLAW_UI_URL_PREFIX" || true)"
 fi
 
 # ---- preflight --------------------------------------------------------------
@@ -105,8 +142,8 @@ log "Host: ${cores} vCPU, ${memgb} GB RAM, arch $(uname -m)"
 [[ "$cores" =~ ^[0-9]+$ && "$cores" -lt 8 ]] && warn "Fewer than 8 vCPU — the full stack will be slow."
 [[ "$memgb" =~ ^[0-9]+$ && "$memgb" -lt 24 ]] && warn "Less than 24 GB RAM — expect pressure; 32 GB recommended."
 
-if [[ -z "$OPENSHELL_API_KEY" ]]; then
-  warn "OPENSHELL_API_KEY is empty — the platform deploys, but agents cannot call the"
+if [[ -z "$MODEL_API_KEY" ]]; then
+  warn "MODEL_API_KEY is empty — the platform deploys, but agents cannot call the"
   warn "model until you set it in .env and re-run (ANSIBLE_TAGS=litellm ./scripts/setup.sh)."
 fi
 
@@ -125,8 +162,8 @@ if [[ "$ENABLE_SSO" == "true" ]]; then
   [[ -n "$PUBLIC_BASE_URL" ]] || die "ENABLE_SSO=true but PUBLIC_BASE_URL is empty and the Brev id could not be derived. Set PUBLIC_BASE_URL (and CONSOLE_URL) in .env."
   [[ -n "$CONSOLE_URL" ]] || die "ENABLE_SSO=true but CONSOLE_URL is empty and the Brev id could not be derived. Set CONSOLE_URL in .env."
   log "SSO enabled — site: ${PUBLIC_BASE_URL}   console: ${CONSOLE_URL}"
-  if [[ "$PUBLIC_BASE_URL_EXPLICIT" == "0" && "$BREV_URL_DOMAIN_EXPLICIT" == "0" ]]; then
-    warn "Public URLs were derived with the DEFAULT domain '${BREV_URL_DOMAIN}'."
+  if [[ "$PUBLIC_BASE_URL_EXPLICIT" == "0" && "$BREV_URL_DOMAIN_EXPLICIT" == "0" && "${BREV_URL_DOMAIN_DETECTED:-0}" == "0" ]]; then
+    warn "No Brev links found in $BREV_CONTEXT; URLs use the default domain '${BREV_URL_DOMAIN}'."
     warn "If this box is served on another domain, set BREV_URL_DOMAIN (or PUBLIC_BASE_URL + CONSOLE_URL) and re-run."
   fi
   KC_ADMIN_PASSWORD="${KC_ADMIN_PASSWORD:-$(gen)}"
@@ -213,12 +250,12 @@ log "Rendering $SECRETS from .env"
 umask 077
 cat > "$SECRETS" <<EOF
 # Generated by scripts/setup.sh from .env — DO NOT COMMIT (contains the API key).
-upstream_api_key: "${OPENSHELL_API_KEY}"
-upstream_base_url: "${OPENSHELL_BASE_URL}"
+upstream_api_key: "${MODEL_API_KEY}"
+upstream_base_url: "${MODEL_BASE_URL}"
 litellm_models:
-  - name: "${OPENSHELL_MODEL}"
-    model: "${OPENSHELL_MODEL}"
-inference_model: "${OPENSHELL_MODEL}"
+  - name: "${MODEL_NAME}"
+    model: "${MODEL_NAME}"
+inference_model: "${MODEL_NAME}"
 
 # Single-VM launchable toggles (mirrors .env)
 kyverno_enabled: ${ENABLE_KYVERNO}
@@ -472,8 +509,8 @@ cat <<EOF
     ./scripts/fleet status
     ./scripts/fleet task "Write a haiku about Kubernetes pods" all
 
-  Models: agent -> LiteLLM (provider litellm, key injected by the supervisor) -> ${OPENSHELL_BASE_URL}
-          model ${OPENSHELL_MODEL} (alias "default")
+  Models: agent -> LiteLLM (provider litellm, key injected by the supervisor) -> ${MODEL_BASE_URL}
+          model ${MODEL_NAME} (alias "default")
 EOF
 if [[ "${ENABLE_OPENCLAW_UI}" == "true" ]]; then
   cat <<EOF
