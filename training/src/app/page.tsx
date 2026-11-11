@@ -62,7 +62,7 @@ export default function Home() {
         <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-stretch">
           {[
             ["Understand", "what-is-an-agent", "Module 0", "See what an agent is, what its harness does with your access, and how one poisoned issue turns it against you."],
-            ["Seal", "openshell", "Module 1", "Build an agent, then put it in an OpenShell sandbox: nothing gets out by default, and you test that from inside."],
+            ["Seal", "build-an-agent", "Module 1", "Build an agent, then put it in an OpenShell sandbox: nothing gets out by default, and you test that from inside."],
             ["Grant", "security", "Module 1", "Open exactly one door while it runs: one host, one HTTP method, one path, one program."],
             ["Inject", "m2-overview", "Module 2", "Give it a model and an API key it never actually holds: the sandbox only sees a placeholder."],
             ["Audit", "m3-overview", "Module 3", "Follow every allow and deny in Grafana, use the web console, and give people their own roles and workspaces."],

@@ -22,7 +22,8 @@ export const CURRICULUM: Part[] = [
     id: "os", n: 1, title: "OpenShell", accent: "nv", role: "You are the platform operator.",
     subtitle: "The runtime that puts the boundary outside the agent. Each chapter explains one part with the talks' scenes, then you try it on your VM.",
     lessons: [
-      L("openshell", "Enter OpenShell", "The boundary outside the agent; then build an agent with pi and run the same agent sealed in a sandbox.", 25, "lab"),
+      L("openshell", "Enter OpenShell", "The same agent and the same poisoned issue, inside a sandbox; then how OpenShell is built.", 10),
+      L("build-an-agent", "Build an agent and seal it", "Build an agent with the pi harness on the VM, then run the same agent sealed in an OpenShell sandbox.", 20, "lab"),
       L("os-architecture", "Gateway and supervisor", "The control plane and a supervisor per sandbox; then create a sandbox and find its two halves.", 20, "lab"),
       L("os-kernel", "Inside the sandbox: the kernel", "seccomp, Landlock and the sandbox user; then test the seal from inside.", 20, "lab"),
       L("security", "The policy file", "One YAML file, two lifetimes; then open the network rule by rule, REST and TCP.", 25, "lab"),

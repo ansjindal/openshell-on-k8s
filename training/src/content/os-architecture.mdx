@@ -2,7 +2,7 @@ OpenShell splits the work in two. A **gateway** governs: it stores sandboxes, po
 
 <BeforeYouStart
   learn="the control plane and the data plane, what runs inside the agent's pod and what runs beside it, and how the two halves talk."
-  prereq="1.1 Enter OpenShell."
+  prereq="1.2 Build an agent and seal it."
   time="about twenty minutes, with an exercise at the end."
 />
 
@@ -34,7 +34,7 @@ In 0.0.x the supervisor ran inside the agent's container, as its parent, with th
 
 ## Exercise: create a sandbox, find its two halves
 
-In [Enter OpenShell](/learn/openshell) you created one sandbox by hand and installed pi in it. The lab's default agent, **OpenClaw**, comes preinstalled in the sandbox image, and a small helper, `fleet`, creates as many sandboxes as you ask for with the same `openshell sandbox create`. Here you use it, read the command behind it, and look at what a sandbox is made of on the cluster.
+In [Build an agent and seal it](/learn/build-an-agent) you created one sandbox by hand and installed pi in it. The lab's default agent, **OpenClaw**, comes preinstalled in the sandbox image, and a small helper, `fleet`, creates as many sandboxes as you ask for with the same `openshell sandbox create`. Here you use it, read the command behind it, and look at what a sandbox is made of on the cluster.
 
 <Section n="3" title="The easy way: the fleet helper" goal="Create agent-1 with one helper command.">
 
