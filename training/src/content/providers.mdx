@@ -15,6 +15,8 @@ The service is a tiny **echo API** (`manifests/demo-echo/echo.yaml`): it answers
 kubectl apply -f manifests/demo-echo/echo.yaml && kubectl -n lab-demo rollout status deploy/echo --timeout=120s
 ```
 
+<LiveDiagram id="providers" layer={1} />
+
 </Step>
 
 </Section>
@@ -60,6 +62,8 @@ openshell profile lint -f manifests/demo-echo/echo-api.profile.yaml && openshell
 Imported 1 provider profile.`}
 </ExpectedOutput>
 
+<LiveDiagram id="providers" layer={2} />
+
 </Step>
 
 </Section>
@@ -76,6 +80,8 @@ ECHO_TOKEN=lab-secret-123 openshell provider create --name echo --type echo-api 
 <ExpectedOutput>
 {`✓ Created provider echo`}
 </ExpectedOutput>
+
+<LiveDiagram id="providers" layer={3} />
 
 </Step>
 
@@ -96,6 +102,8 @@ openshell sandbox provider attach agent-0 echo --wait
 
 No restart: the sandbox applied the new credential and the profile's policy.
 
+<LiveDiagram id="providers" layer={4} />
+
 </Step>
 
 <Step n="2" title="Check the variable">
@@ -108,6 +116,8 @@ openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
 <ExpectedOutput>
 {`openshell:resolve:env:v2062283290838615716_ECHO_TOKEN`}
 </ExpectedOutput>
+
+<LiveDiagram id="providers" layer={5} />
 
 </Step>
 
@@ -127,6 +137,8 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $E
 
 The agent sent the placeholder; the echo service received `lab-secret-123`. The supervisor swapped it on the way, because the request matched the profile's endpoint and rule.
 
+<LiveDiagram id="providers" layer={6} />
+
 </Step>
 
 <Step n="2" title="A POST never leaves">
@@ -139,6 +151,8 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -o /dev/null -w "HTTP %{http
 <ExpectedOutput>
 {`HTTP 403`}
 </ExpectedOutput>
+
+<LiveDiagram id="providers" layer={7} />
 
 </Step>
 
@@ -154,6 +168,8 @@ Change the credential in the gateway; every sandbox with the provider attached p
 ECHO_TOKEN=lab-secret-456 openshell provider update echo --credential ECHO_TOKEN --wait
 ```
 
+<LiveDiagram id="providers" layer={8} />
+
 </Step>
 
 <Step n="2" title="See the new value arrive">
@@ -166,6 +182,8 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $E
 </ExpectedOutput>
 
 The agent's placeholder didn't change; only the value behind it did.
+
+<LiveDiagram id="providers" layer={9} />
 
 </Step>
 
@@ -180,6 +198,8 @@ Detaching revokes both the credential and the policy entry the profile added:
 ```bash
 openshell sandbox provider detach agent-0 echo --wait
 ```
+
+<LiveDiagram id="providers" layer={10} />
 
 </Step>
 

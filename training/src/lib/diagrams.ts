@@ -1,0 +1,185 @@
+// Specs for <LiveDiagram>: boxes and arrows, each tagged with the layer (lab
+// step) that adds it. Layer 0 is always drawn. `until` hides an element once a
+// later layer replaces it (e.g. a rotated credential).
+export type DNode = {
+  id: string; x: number; y: number; w: number; h: number; label: string; sub?: string;
+  layer: number; until?: number; kind?: "group" | "ext" | "deny" | "accent";
+};
+export type DEdge = { from: string; to: string; label?: string; layer: number; until?: number; kind?: "ok" | "deny" | "dash"; dx?: number; dy?: number };
+export type Diagram = { title: string; w: number; h: number; layers: { n: number; name: string; note?: string }[]; nodes: DNode[]; edges: DEdge[] };
+
+export const DIAGRAMS: Record<string, Diagram> = {
+  deploy: {
+    title: "Your lab VM, piece by piece",
+    w: 960, h: 410,
+    layers: [
+      { n: 0, name: "You" },
+      { n: 1, name: "Node", note: "One k3s node, Ready: a full Kubernetes API on one VM." },
+      { n: 2, name: "Control plane", note: "Namespace openshell: the gateway (StatefulSet, SQLite), the Console (oauth2-proxy + backend) and the skill registry." },
+      { n: 3, name: "Gateway reachable", note: "The CLI reaches the gateway on NodePort 30808 over TLS, with a client certificate." },
+      { n: 4, name: "Your identity", note: "The certificate says OU=operator: the gateway treats this shell as a platform admin. People in the browser sign in with Keycloak instead." },
+      { n: 5, name: "Sandbox agent-0", note: "A sandbox is two pods in openshell-sandboxes: the workload (the agent) and its supervisor, which the gateway starts." },
+      { n: 6, name: "Models & sign-in", note: "LiteLLM serves the model to sandboxes through their supervisor; Keycloak signs people in." },
+    ],
+    nodes: [
+      { id: "you", x: 20, y: 160, w: 170, h: 80, label: "You", sub: "Run ▷ · Cluster shell", layer: 0 },
+      { id: "k3s", x: 215, y: 15, w: 730, h: 385, label: "k3s node · v1.37 · Ready", layer: 1, kind: "group" },
+      { id: "nsos", x: 235, y: 45, w: 255, h: 340, label: "namespace openshell", layer: 2, kind: "group" },
+      { id: "gw", x: 250, y: 80, w: 225, h: 70, label: "openshell-0", sub: "OpenShell gateway 0.1.7\nStatefulSet · SQLite", layer: 2, kind: "accent" },
+      { id: "con", x: 250, y: 175, w: 225, h: 70, label: "openshell-dashboard", sub: "the Console\noauth2-proxy + backend", layer: 2 },
+      { id: "reg", x: 250, y: 270, w: 225, h: 60, label: "registry", sub: "skill registry", layer: 2 },
+      { id: "id", x: 20, y: 275, w: 170, h: 80, label: "lab-operator", sub: "OU=operator\nplatform admin", layer: 4, kind: "accent" },
+      { id: "nssb", x: 510, y: 45, w: 205, h: 200, label: "namespace openshell-sandboxes", layer: 5, kind: "group" },
+      { id: "wl", x: 525, y: 80, w: 175, h: 60, label: "default--agent-0", sub: "workload · Ready", layer: 5 },
+      { id: "sup", x: 525, y: 165, w: 175, h: 60, label: "os-supervisor-…", sub: "supervisor", layer: 5, kind: "accent" },
+      { id: "ll", x: 735, y: 80, w: 195, h: 65, label: "LiteLLM", sub: "ns litellm · :4000", layer: 6, kind: "ext" },
+      { id: "kc", x: 735, y: 300, w: 195, h: 65, label: "Keycloak", sub: "ns keycloak · sign-in", layer: 6, kind: "ext" },
+    ],
+    edges: [
+      { from: "you", to: "gw", label: "TLS :30808", layer: 3, kind: "ok", dx: -62, dy: -42 },
+      { from: "gw", to: "sup", label: "starts", layer: 5, kind: "dash" },
+      { from: "sup", to: "ll", label: "model calls", layer: 6, kind: "ok", dx: 70, dy: 42 },
+    ],
+  },
+
+  "create-sandbox": {
+    title: "What one `sandbox create` does",
+    w: 960, h: 410,
+    layers: [
+      { n: 0, name: "Before" },
+      { n: 1, name: "agent-1 created", note: "The gateway stored agent-1 and its policy (revision 1), started a supervisor pod, and the workload pod came up Ready in about fifteen seconds." },
+      { n: 2, name: "Sandbox resource", note: "Behind the workload pod is a Sandbox custom resource. The agent-sandbox controller reconciles it into the pod, like a Deployment does for ReplicaSets." },
+      { n: 3, name: "The boundary", note: "Labels pair each workload with its supervisor; a NetworkPolicy lets the workload talk to its supervisor and nothing else." },
+    ],
+    nodes: [
+      { id: "you", x: 15, y: 150, w: 150, h: 75, label: "You", sub: "fleet / openshell", layer: 0 },
+      { id: "gw", x: 230, y: 150, w: 195, h: 75, label: "OpenShell gateway", sub: "ns openshell", layer: 0, kind: "accent" },
+      { id: "ns", x: 470, y: 15, w: 475, h: 385, label: "namespace openshell-sandboxes", layer: 0, kind: "group" },
+      { id: "a0", x: 490, y: 325, w: 210, h: 55, label: "default--agent-0", sub: "+ its supervisor (already there)", layer: 0 },
+      { id: "store", x: 230, y: 275, w: 195, h: 80, label: "agent-1 · policy v1", sub: "stored by the gateway\nprovider: litellm", layer: 1 },
+      { id: "sup1", x: 490, y: 55, w: 210, h: 75, label: "os-supervisor-6db4…", sub: "supervisor pod\npolicy · credentials", layer: 1, kind: "accent" },
+      { id: "wl1", x: 740, y: 55, w: 190, h: 75, label: "default--agent-1", sub: "workload pod · Ready", layer: 1 },
+      { id: "cr", x: 490, y: 195, w: 210, h: 75, label: "Sandbox CR", sub: "default--agent-1\nagents.x-k8s.io", layer: 2 },
+      { id: "ctrl", x: 740, y: 195, w: 190, h: 75, label: "agent-sandbox", sub: "controller\nreconciles CR → pod", layer: 2 },
+    ],
+    edges: [
+      { from: "you", to: "gw", label: "create", layer: 1, kind: "ok" },
+      { from: "gw", to: "store", label: "stores", layer: 1, kind: "dash" },
+      { from: "gw", to: "sup1", label: "starts", layer: 1, kind: "ok" },
+      { from: "gw", to: "cr", label: "writes", layer: 2, kind: "ok" },
+      { from: "cr", to: "ctrl", layer: 2, kind: "dash" },
+      { from: "ctrl", to: "wl1", label: "creates", layer: 2, kind: "ok" },
+      { from: "sup1", to: "wl1", label: "only peer · NetworkPolicy", layer: 3, kind: "ok", dy: 52 },
+    ],
+  },
+
+  policy: {
+    title: "agent-0's network, rule by rule",
+    w: 960, h: 400,
+    layers: [
+      { n: 0, name: "The sandbox" },
+      { n: 1, name: "Policy v1", note: "Every sandbox has a policy with a version and a hash; the supervisor enforces the loaded revision." },
+      { n: 2, name: "Provider rule", note: "The litellm provider added _provider_litellm: one endpoint, six L7 rules (model calls only)." },
+      { n: 3, name: "Denied", note: "api.github.com has no rule, so the supervisor refused the connection: HTTP 000." },
+      { n: 4, name: "Policy v2", note: "policy update added allow_api_github_com_443 (read-only, rest, enforce) and loaded it into the running sandbox." },
+      { n: 5, name: "GET allowed", note: "GET /zen matches the read-only preset: 200." },
+      { n: 6, name: "POST refused", note: "POST /markdown is not GET/HEAD/OPTIONS: refused at L7 with 403 policy_denied, before it leaves the sandbox." },
+      { n: 7, name: "Revisions", note: "Every change is a numbered revision: v2 Loaded, v1 Superseded." },
+    ],
+    nodes: [
+      { id: "wl", x: 20, y: 150, w: 180, h: 75, label: "workload pod", sub: "agent-0 · user sandbox", layer: 0 },
+      { id: "sup", x: 280, y: 150, w: 195, h: 75, label: "supervisor pod", sub: "checks every request", layer: 0, kind: "accent" },
+      { id: "pol", x: 280, y: 285, w: 195, h: 80, label: "policy v1", sub: "deny by default\nLoaded", layer: 1, until: 4 },
+      { id: "pol2", x: 280, y: 285, w: 195, h: 80, label: "policy v2", sub: "+ allow_api_github_com_443\nread-only · rest · enforce", layer: 4 },
+      { id: "ll", x: 640, y: 30, w: 290, h: 70, label: "LiteLLM :4000", sub: "_provider_litellm · 6 L7 rules", layer: 2, kind: "ext" },
+      { id: "gh", x: 640, y: 150, w: 290, h: 75, label: "api.github.com:443", sub: "no rule", layer: 3, until: 4 },
+      { id: "gh2", x: 640, y: 150, w: 290, h: 75, label: "api.github.com:443", sub: "allow_api_github_com_443", layer: 4, kind: "ext" },
+      { id: "deny", x: 640, y: 285, w: 290, h: 65, label: "403 policy_denied", sub: "layer l7 · rule POST /markdown", layer: 6, kind: "deny" },
+      { id: "rev", x: 20, y: 285, w: 180, h: 80, label: "revisions", sub: "v2 Loaded\nv1 Superseded", layer: 7 },
+    ],
+    edges: [
+      { from: "wl", to: "sup", label: "all traffic", layer: 0, kind: "dash" },
+      { from: "pol", to: "sup", label: "enforces", layer: 1, until: 4, kind: "dash", dx: 40 },
+      { from: "pol2", to: "sup", label: "enforces", layer: 4, kind: "dash", dx: 40 },
+      { from: "sup", to: "ll", label: "POST /v1/chat/completions", layer: 2, kind: "ok" },
+      { from: "sup", to: "gh", label: "HTTP 000", layer: 3, until: 4, kind: "deny" },
+      { from: "sup", to: "gh2", label: "GET /zen → 200", layer: 5, kind: "ok" },
+      { from: "sup", to: "deny", label: "POST /markdown", layer: 6, kind: "deny" },
+      { from: "rev", to: "pol2", layer: 7, kind: "dash" },
+    ],
+  },
+
+  providers: {
+    title: "A credential the agent never holds",
+    w: 960, h: 400,
+    layers: [
+      { n: 0, name: "Sandbox + gateway" },
+      { n: 1, name: "Echo API", note: "An in-cluster service that echoes the headers it receives: it shows what really leaves the sandbox." },
+      { n: 2, name: "Profile", note: "The profile echo-api: which variable (ECHO_TOKEN), how it is sent (bearer) and where it may go (GET /api/** on echo:8080)." },
+      { n: 3, name: "Provider", note: "The provider echo holds the real token, lab-secret-123, in the gateway." },
+      { n: 4, name: "Attached", note: "Attached to agent-0 live: the supervisor receives the credential and the profile's policy entry. No restart." },
+      { n: 5, name: "Placeholder", note: "New processes in the sandbox see ECHO_TOKEN=openshell:resolve:env:… — a placeholder, never the token." },
+      { n: 6, name: "GET carries the token", note: "The agent sent the placeholder; the supervisor swapped in lab-secret-123 because the request matched the profile." },
+      { n: 7, name: "POST refused", note: "POST is not in the profile's rules: 403, and the token never leaves." },
+      { n: 8, name: "Rotated", note: "provider update replaced the value in the gateway; every attached sandbox picks it up, still without a restart." },
+      { n: 9, name: "New value", note: "The next request carries lab-secret-456. The agent's placeholder did not change." },
+      { n: 10, name: "Detached", note: "Detaching removes the credential and the policy entry from the sandbox." },
+    ],
+    nodes: [
+      { id: "wl", x: 20, y: 40, w: 200, h: 75, label: "workload · agent-0", sub: "the agent", layer: 0 },
+      { id: "sup", x: 340, y: 40, w: 190, h: 75, label: "supervisor", sub: "agent-0", layer: 0, kind: "accent" },
+      { id: "gw", x: 340, y: 265, w: 190, h: 100, label: "OpenShell gateway", sub: "profiles · providers", layer: 0, kind: "accent" },
+      { id: "echo", x: 680, y: 40, w: 255, h: 75, label: "echo API", sub: "lab-demo · :8080", layer: 1, kind: "ext" },
+      { id: "prof", x: 20, y: 265, w: 210, h: 100, label: "profile echo-api", sub: "ECHO_TOKEN · bearer\nGET /api/** only", layer: 2 },
+      { id: "cred", x: 680, y: 265, w: 255, h: 100, label: "provider echo", sub: "ECHO_TOKEN=lab-secret-123\nkept in the gateway", layer: 3, until: 8 },
+      { id: "cred2", x: 680, y: 265, w: 255, h: 100, label: "provider echo", sub: "ECHO_TOKEN=lab-secret-456\nrotated, no restart", layer: 8 },
+      { id: "ph", x: 20, y: 145, w: 200, h: 60, label: "$ECHO_TOKEN", sub: "openshell:resolve:env:…", layer: 5, until: 10, kind: "accent" },
+      { id: "deny", x: 680, y: 150, w: 255, h: 65, label: "POST /api/x", sub: "403 · not in the profile", layer: 7, kind: "deny" },
+    ],
+    edges: [
+      { from: "wl", to: "sup", label: "all traffic", layer: 0, until: 6, kind: "dash" },
+      { from: "prof", to: "gw", label: "import", layer: 2, kind: "ok" },
+      { from: "gw", to: "cred", label: "stores", layer: 3, until: 8, kind: "dash" },
+      { from: "gw", to: "cred2", label: "stores", layer: 8, kind: "dash" },
+      { from: "gw", to: "sup", label: "credential + rule", layer: 4, until: 10, kind: "ok", dx: 60 },
+      { from: "wl", to: "sup", label: "placeholder", layer: 6, kind: "ok" },
+      { from: "sup", to: "echo", label: "Bearer lab-secret-123", layer: 6, until: 9, kind: "ok" },
+      { from: "sup", to: "echo", label: "Bearer lab-secret-456", layer: 9, kind: "ok" },
+      { from: "sup", to: "deny", label: "POST", layer: 7, kind: "deny" },
+    ],
+  },
+
+  audit: {
+    title: "Where every decision goes",
+    w: 960, h: 430,
+    layers: [
+      { n: 0, name: "The sandbox" },
+      { n: 1, name: "Denied traffic", note: "Two refusals: example.org (no rule, not even resolved) and LiteLLM's admin API (L7)." },
+      { n: 2, name: "OCSF in the CLI", note: "The supervisor writes one OCSF event per decision: class, ALLOWED/DENIED, binary, target, policy and reason." },
+      { n: 3, name: "Loki", note: "Alloy ships the supervisor's log to Loki: the same events for every sandbox, queryable with LogQL." },
+      { n: 4, name: "Grafana", note: "Grafana Explore on Loki: {namespace=\"openshell-sandboxes\", container=\"supervisor\"} |= \"DENIED\"." },
+      { n: 5, name: "Live", note: "In Live mode a new denial shows up within seconds." },
+    ],
+    nodes: [
+      { id: "wl", x: 20, y: 60, w: 180, h: 70, label: "workload · agent-0", sub: "curl", layer: 0 },
+      { id: "sup", x: 270, y: 60, w: 195, h: 70, label: "supervisor", sub: "decides, then logs", layer: 0, kind: "accent" },
+      { id: "org", x: 600, y: 15, w: 220, h: 60, label: "example.org", sub: "DENIED · no rule", layer: 1, kind: "deny" },
+      { id: "adm", x: 600, y: 100, w: 220, h: 60, label: "LiteLLM /key/generate", sub: "DENIED · L7", layer: 1, kind: "deny" },
+      { id: "cli", x: 270, y: 225, w: 195, h: 85, label: "openshell logs", sub: "OCSF NET:… HTTP:…\nALLOWED / DENIED", layer: 2 },
+      { id: "alloy", x: 520, y: 225, w: 160, h: 70, label: "Alloy", sub: "ships pod logs", layer: 3 },
+      { id: "loki", x: 740, y: 225, w: 195, h: 70, label: "Loki", sub: "container=supervisor", layer: 3, kind: "ext" },
+      { id: "graf", x: 740, y: 345, w: 195, h: 70, label: "Grafana Explore", sub: "|= \"DENIED\"", layer: 4, kind: "ext" },
+      { id: "live", x: 520, y: 345, w: 160, h: 70, label: "Live", sub: "seconds later", layer: 5, kind: "accent" },
+    ],
+    edges: [
+      { from: "wl", to: "sup", layer: 0, kind: "dash" },
+      { from: "sup", to: "org", layer: 1, kind: "deny" },
+      { from: "sup", to: "adm", layer: 1, kind: "deny" },
+      { from: "sup", to: "cli", label: "OCSF events", layer: 2, kind: "ok" },
+      { from: "sup", to: "alloy", label: "pod log", layer: 3, kind: "ok" },
+      { from: "alloy", to: "loki", layer: 3, kind: "ok" },
+      { from: "loki", to: "graf", label: "LogQL", layer: 4, kind: "ok" },
+      { from: "graf", to: "live", layer: 5, kind: "dash" },
+    ],
+  },
+};

@@ -15,6 +15,8 @@ Ask the gateway for `agent-0`'s policy: its version, hash and status.
 openshell policy get agent-0
 ```
 
+<LiveDiagram id="policy" layer={1} />
+
 </Step>
 
 <Step n="2" title="The full effective policy">
@@ -40,6 +42,8 @@ openshell policy get agent-0 --full
       - path: /**`}
 </ExpectedOutput>
 
+<LiveDiagram id="policy" layer={2} />
+
 </Step>
 
 </Section>
@@ -56,6 +60,8 @@ openshell sandbox exec -n agent-0 -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_c
 </ExpectedOutput>
 
 `000` means no HTTP response at all: the supervisor refused the connection. No cluster API, no internet, nothing you didn't grant.
+
+<LiveDiagram id="policy" layer={3} />
 
 </Step>
 
@@ -81,6 +87,8 @@ The new revision loaded into the **running** sandbox, with no restart. The parts
 - `rest`: inspect requests at **L7** (method and path), even inside TLS.
 - `enforce`: block what breaks the rule. The default is `audit`, which only logs.
 
+<LiveDiagram id="policy" layer={4} />
+
 </Step>
 
 <Step n="2" title="GET now works">
@@ -91,6 +99,8 @@ openshell sandbox exec -n agent-0 -- curl -s -m 10 -w ' HTTP %{http_code}\n' htt
 <ExpectedOutput>
 {`Responsive is better than fast. HTTP 200`}
 </ExpectedOutput>
+
+<LiveDiagram id="policy" layer={5} />
 
 </Step>
 
@@ -105,6 +115,8 @@ openshell sandbox exec -n agent-0 -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{
 {`{"error":"policy_denied","policy":"allow_api_github_com_443","rule":"POST /markdown","detail":"POST /markdown not permitted by policy","layer":"l7",...}
 HTTP 403`}
 </ExpectedOutput>
+
+<LiveDiagram id="policy" layer={6} />
 
 </Step>
 
@@ -128,6 +140,8 @@ openshell policy list agent-0
 <Callout type="note" title="Only the network part is live">
 Network rules are <strong>dynamic</strong>: they change on a running sandbox. The filesystem and process sections are <strong>static</strong>: fixed at creation, because Landlock and the sandbox user are applied before the agent starts.
 </Callout>
+
+<LiveDiagram id="policy" layer={7} />
 
 </Step>
 

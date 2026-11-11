@@ -52,6 +52,8 @@ Fleet ready: 2/2`}
 
 A new sandbox is `Ready` in about fifteen seconds.
 
+<LiveDiagram id="create-sandbox" layer={1} />
+
 </Step>
 
 </Section>
@@ -103,6 +105,8 @@ default--agent-0   True    DependenciesReady   27m
 default--agent-1   True    DependenciesReady   14s`}
 </ExpectedOutput>
 
+<LiveDiagram id="create-sandbox" layer={2} />
+
 </Step>
 
 <Step n="2" title="See each pod's role and pair">
@@ -114,6 +118,8 @@ kubectl -n openshell-sandboxes get pods -L openshell.ai/boundary-role,openshell.
 ```
 
 `openshell sandbox get agent-1` shows the same sandbox from the gateway's side: its id, image, phase and attached providers.
+
+<LiveDiagram id="create-sandbox" layer={3} />
 
 </Step>
 

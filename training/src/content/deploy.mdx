@@ -21,6 +21,8 @@ brev-abc123xyz   Ready    control-plane   40m   v1.37.2+k3s1`}
 
 One node, `Ready`: k3s, a full Kubernetes API.
 
+<LiveDiagram id="deploy" layer={1} />
+
 </Step>
 
 </Section>
@@ -42,6 +44,8 @@ registry-6968dc66b4-t6jbm              1/1     Running   0          10m`}
 - `openshell-0`: the **gateway** (a StatefulSet with an SQLite database).
 - `openshell-dashboard`: the **OpenShell Console**, two containers: oauth2-proxy (sign-in) and the console's backend.
 - `registry`: the in-cluster skill registry, used in [Skills](/learn/skills).
+
+<LiveDiagram id="deploy" layer={2} />
 
 </Step>
 
@@ -66,6 +70,8 @@ openshell status
   Version: 0.1.7`}
 </ExpectedOutput>
 
+<LiveDiagram id="deploy" layer={3} />
+
 </Step>
 
 <Step n="2" title="Ask who you are">
@@ -86,6 +92,8 @@ openshell whoami
 
 This shell presents a client certificate with `OU=operator`, which cert-manager issued for the VM. An operator is a platform admin across every workspace. People in the browser sign in with Keycloak instead; you'll meet them in [Users, Roles & Workspaces](/learn/access-control).
 
+<LiveDiagram id="deploy" layer={4} />
+
 </Step>
 
 </Section>
@@ -103,6 +111,8 @@ agent-0  2026-11-10 15:26:24  Ready`}
 </ExpectedOutput>
 
 `CREATE_FLEET=true` (the default) created `agent-0` at provisioning time. The next lesson shows what it is.
+
+<LiveDiagram id="deploy" layer={5} />
 
 </Step>
 
@@ -123,6 +133,8 @@ keycloak-7cb4785cc5-s6x8x   1/1     Running   0          20m`}
 </ExpectedOutput>
 
 LiteLLM is the OpenAI-compatible endpoint agents reach through the `litellm` provider; Keycloak is where people sign in.
+
+<LiveDiagram id="deploy" layer={6} />
 
 </Step>
 

@@ -6,6 +6,7 @@ import { ExpectedOutput } from "@/components/ExpectedOutput";
 import { Figure } from "@/components/Figure";
 import { BeforeYouStart, Section, Step } from "@/components/course/Structure";
 import { Quiz, Q } from "@/components/course/Quiz";
+import { LiveDiagram } from "@/components/course/LiveDiagram";
 import { PolicyExplorer } from "@/components/diagrams/PolicyExplorer";
 import { SkillSupplyChain } from "@/components/diagrams/SkillSupplyChain";
 import { FleetOrchestration } from "@/components/diagrams/FleetOrchestration";
@@ -23,6 +24,7 @@ const components: MDXComponents = {
   Section,
   Step,
   Quiz,
+  LiveDiagram,
   Q,
   PolicyExplorer,
   SkillSupplyChain,
