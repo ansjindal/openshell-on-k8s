@@ -160,3 +160,6 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 
 /* inside a step, text is full-strength 15px (the page intro is 16px, dimmed) */
 .step-body > p, .step-body > ul, .step-body > ol { font-size: 15px; line-height: 25.5px; color: var(--color-fg); }
+
+/* <Scene>: a box that changes at this step settles in */
+@keyframes swapIn { from { opacity: 0; transform: translateY(6px); } }

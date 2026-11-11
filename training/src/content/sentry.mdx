@@ -1,0 +1,44 @@
+OpenShell puts a boundary around every agent: a supervisor beside it decides every connection. But that supervisor runs **on the same host** as the agent. What if the host itself is compromised? This page shows where that boundary ends, and how **NVIDIA Sentry** carries the same policy past it. Press **Next** to step through.
+
+<BeforeYouStart
+  learn="why a boundary on the agent's own host can't survive root on that host, and how NVIDIA Sentry enforces the same OpenShell policy on BlueField-4."
+  prereq="0.4 The policy file and 0.5 Security: layers, not a wall."
+  start="the animation below. Nothing runs on your VM in this lesson; the lab itself uses OpenShell only."
+/>
+
+<Section n="1" title="Beyond the host, step by step">
+
+<Scene id="sentry" />
+
+</Section>
+
+<Section n="2" title="Two layers, one policy">
+
+**NVIDIA OpenShell** is open-source software: the secure runtime boundary around every agent. It sits outside the model and the harness, so it works with open and closed models, and it runs on any Linux host (x86 or Arm), on bare metal, Docker or Kubernetes. This course is all OpenShell.
+
+**NVIDIA Sentry** is a reference system design on **NVIDIA BlueField-4**. It moves the network decision off the host, onto a processor with its own CPU and operating system:
+
+- **DOCA Tower** enforces the same OpenShell policy file.
+- **DOCA Argus** tells it which program on the host sent each request.
+- Root on the host can't rewrite either, and can't wipe what they record.
+
+Together the two are the **NVIDIA Open Agent Safety Platform**. You deploy the layers your risk calls for:
+
+| Outcome | No boundary | OpenShell | OpenShell + Sentry |
+|---|---|---|---|
+| Agent stays on approved sites and APIs | ✕ | ✓ | ✓ |
+| Every request checked against your policy | ✕ | ✓ | ✓ |
+| Survives a compromised host | ✕ | ✕ | ✓ |
+| Enforced in hardware, outside the host | ✕ | ✕ | ✓ |
+
+</Section>
+
+## What you learned
+
+<Learned next="/learn/m1-overview" nextLabel="Module 1: Sandboxes & Policy">
+
+- **A boundary is only as strong as where it runs.** OpenShell's supervisor shares the agent's host; root on that host can stop it.
+- **Sentry moves the decision off the host.** DOCA Tower and DOCA Argus on BlueField-4 enforce the same policy, out of the host's reach.
+- **Same policy file, more places to enforce it.** Start with OpenShell; add Sentry when the host itself is in scope.
+
+</Learned>

@@ -22,11 +22,21 @@ Scroll through the cards, or click one: the picture gains each layer as it is ex
 
 ## Everything in one picture
 
-The same platform with every component: the Brev links and Envoy in front, the namespaces, both workspaces with their sandboxes, and the monitoring stack. Click a box to read what it is.
+The same platform with every component. It is dense, so read it as four paths, one after the other. Click any box for a note on what it is.
+
+**Colours and arrows.** Green boxes are OpenShell's own components; grey boxes are the platform around them. Green arrows are OpenShell API calls and agent traffic, grey arrows are web requests routed by Envoy, dashed arrows are telemetry.
 
 <Fig id="architecture" n="0.1" caption="The whole lab on one VM. Two workspaces, each its own namespace, with their sandboxes running inside." />
 
-## The stack, layer by layer
+**1 · How you reach the lab (top).** Your browser opens one of two **Brev secure links**. On the VM, **socat** forwards them to **Envoy Gateway** inside k3s, which routes `/` to this training site, `/auth` to **Keycloak** and `/grafana` to **Grafana**; the second link goes to the **OpenShell Console**. The **openshell CLI** in the Cluster shell skips all of that: it talks to the gateway directly on NodePort 30808 with a client certificate (`OU=operator`) that makes it a platform admin.
+
+**2 · How a sandbox is made (left to middle).** The CLI or the Console asks the **OpenShell gateway** (namespace `openshell`) for a sandbox. The gateway stores it, creates the workspace's namespace (`openshell-lab-default` for workspace *default*, `openshell-lab-team-a` for *team-a*), starts the **supervisor pod** there and writes a **Sandbox resource**. The **agent-sandbox controller** turns that resource into the **workload pod**, and **Kyverno** checks the pod on admission. **cert-manager** issued the certificates all of this uses. Every sandbox is a pair: agent-0, agent-1 and lab-a each have their own workload and supervisor pods.
+
+**3 · How an agent's request flows (middle to right).** The agent in the workload pod can only talk to its own supervisor (the **port** arrow). The supervisor checks each request against the sandbox's policy. A model call matches the litellm provider's rules, so the supervisor adds the real key and forwards it to **LiteLLM**, which calls the **upstream model API**. Anything the policy doesn't allow stops at the supervisor.
+
+**4 · Where the evidence goes (dashed lines).** Every decision becomes an **OCSF audit** event in the supervisor's log; **Alloy** ships it to **Loki**. The agent's own traces and the gateway's go to **Tempo**. **Grafana** reads all of it, along with **Prometheus** metrics.
+
+## Each component in a sentence
 
 - **k3s**: single-node upstream Kubernetes. Lightweight, but a real cluster: the same CRDs, RBAC, NetworkPolicy and scheduler you'd use anywhere. The kubeconfig is `/etc/rancher/k3s/k3s.yaml`.
 - **agent-sandbox controller**: [kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox). It reconciles each `Sandbox` custom resource (`agents.x-k8s.io`) into a pod, the way a Deployment controller reconciles ReplicaSets.

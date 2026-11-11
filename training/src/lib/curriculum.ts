@@ -16,8 +16,9 @@ export const CURRICULUM: Part[] = [
       L("welcome", "Overview", "What you'll learn, how the labs work, and the one command that builds the stack.", 5),
       L("big-picture", "The big picture", "k3s → agent-sandbox → OpenShell gateway → sandboxes → LiteLLM, with the console on top.", 8),
       L("openshell", "OpenShell: the agent runtime", "Gateway, compute driver, supervisor, providers and workspaces.", 8),
+      L("policy-file", "The policy file", "The sandbox policy YAML line by line, animated: files, process, network, providers, live updates.", 7),
       L("security", "Security: layers, not a wall", "Landlock, seccomp, a supervisor that owns the network, placeholder credentials, an audit trail.", 9),
-      L("m0-check", "Summary & knowledge check", "Check what you know about the stack before the labs.", 5, "check"),
+      L("sentry", "NVIDIA Sentry: beyond the host", "When the host itself is compromised: the same policy, enforced on BlueField-4.", 6),
     ],
   },
   {
