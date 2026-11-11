@@ -14,7 +14,7 @@ function xtermTheme() {
     : { background: "#0a0d07", foreground: "#d6e4c4", cursor: "#92e600", green: "#76b900", brightGreen: "#92e600", selectionBackground: "#243018" };
 }
 
-export function Terminal({ title = "lab shell", fill = false, autoStart = false }: { title?: string; fill?: boolean; autoStart?: boolean }) {
+export function Terminal({ title = "lab shell", fill = false, autoStart = false, bare = false }: { title?: string; fill?: boolean; autoStart?: boolean; bare?: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [started, setStarted] = useState(autoStart);
@@ -24,12 +24,20 @@ export function Terminal({ title = "lab shell", fill = false, autoStart = false 
   // px/vh height on its wrapper) — the terminal just fills whatever it's given.
   const h = fill ? "h-full" : "h-[400px]";
 
-  // A command block (runInShell) can ask the shell to launch via this event.
+  // A command block (runInShell) can ask the shell to launch via this event;
+  // the docked bar's ⟳ asks for a fresh session.
   useEffect(() => {
     const onStart = () => setStarted(true);
+    const onReconnect = () => { setStarted(true); setSession((n) => n + 1); };
     window.addEventListener("oclaw:start-shell", onStart);
-    return () => window.removeEventListener("oclaw:start-shell", onStart);
+    window.addEventListener("oclaw:reconnect-shell", onReconnect);
+    return () => {
+      window.removeEventListener("oclaw:start-shell", onStart);
+      window.removeEventListener("oclaw:reconnect-shell", onReconnect);
+    };
   }, []);
+  // Let the dock show the connection state in its own bar.
+  useEffect(() => { window.dispatchEvent(new CustomEvent("oclaw:shell-status", { detail: status })); }, [status]);
 
   useEffect(() => {
     if (!started || !hostRef.current) return;
@@ -126,8 +134,8 @@ export function Terminal({ title = "lab shell", fill = false, autoStart = false 
   };
 
   return (
-    <div className={`flex flex-col overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-term-bg)] ${h}`}>
-      <div className="flex items-center gap-2 border-b border-[var(--color-line)] px-3 py-2">
+    <div className={`flex flex-col overflow-hidden bg-[var(--color-term-bg)] ${bare ? "" : "rounded-lg border border-[var(--color-line)]"} ${h}`}>
+      <div className={`flex items-center gap-2 border-b border-[var(--color-line)] px-3 py-2 ${bare ? "hidden" : ""}`}>
         <span className="font-mono text-[11px] tracking-wide text-[var(--color-fg-dim)]">{title}</span>
         <span className="ml-auto inline-flex items-center gap-1.5 text-[10px] font-medium text-[var(--color-fg-mut)]">
           <span className={status === "live" ? "animate-pulse" : ""} style={{ width: 6, height: 6, borderRadius: 6, background: dot, display: "inline-block" }} />

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { TerminalSquare } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
 type Links = { console: string | null; openclawUi: string | null; grafana: string | null };
@@ -42,13 +41,6 @@ export function SiteHeader() {
         {links.grafana && <a href={links.grafana} target="_blank" rel="noreferrer" className={ext}>Grafana ↗</a>}
         {links.openclawUi && <a href={links.openclawUi} target="_blank" rel="noreferrer" className={ext}>OpenClaw UI ↗</a>}
         <Link href="/links" className={ext}>Links</Link>
-        <button
-          onClick={() => window.dispatchEvent(new Event("oclaw:start-shell"))}
-          className={`${pill} inline-flex items-center gap-1.5 border-[var(--color-nv-dim)] text-[var(--color-nv-bright)] hover:bg-[var(--color-run-bg)]`}
-          title="Open a bash shell on your lab VM"
-        >
-          <TerminalSquare size={13} /> Cluster shell
-        </button>
         <ThemeToggle />
       </nav>
     </header>
