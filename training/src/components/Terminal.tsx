@@ -61,7 +61,8 @@ export function Terminal({ title = "lab shell", fill = false, autoStart = false 
 
         term = new XTerm({
           // match the gb200 lab terminal: JetBrains Mono, 13px, tight default spacing, block cursor
-          fontFamily: "var(--font-mono), 'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', monospace",
+          // xterm draws on a canvas: it needs real font names, not a CSS variable.
+          fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
           fontSize: 13,
           fontWeight: 400,
           fontWeightBold: 600,
@@ -71,6 +72,9 @@ export function Terminal({ title = "lab shell", fill = false, autoStart = false 
         });
         fit = new FitAddon();
         term.loadAddon(fit);
+        // Measure glyphs only after the bundled font has loaded, or the cell
+        // width is computed from a fallback font and the text looks spaced out.
+        try { await document.fonts.load("13px 'JetBrains Mono'"); } catch { /* fallback font */ }
         term.open(hostRef.current!);
         fit.fit();
         // follow light/dark toggles live. Patching term.options.theme in place
