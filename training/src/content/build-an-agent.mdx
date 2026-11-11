@@ -1,5 +1,7 @@
 An **agent** is a model plus a **harness**: the program that sends your prompt to the model, runs the tools the model asks for (read a file, run a command), and feeds the results back until the model answers. In this lab you build one with **pi**, a small open-source harness, connect it to your model, and watch what it can do on the VM. Then you put the same agent in an OpenShell sandbox and see what changes.
 
+**Concept:** [Topic 2 in the Overview: the same agent, inside OpenShell](/learn/openshell#t-2).
+
 <BeforeYouStart
   will="install the pi harness, connect it to your model, run it with and without tools, then run it inside a sandbox with a policy you apply live."
   time="about fifteen minutes. The sandbox you create here, pi-agent, is deleted at the end."
@@ -313,7 +315,7 @@ openshell sandbox delete pi-agent
 
 ## What you learned
 
-<Learned next="/learn/os-architecture" nextLabel="Gateway and supervisor">
+<Learned next="/learn/create-sandbox" nextLabel="Create a sandbox">
 
 - **An agent is a model plus a harness.** pi sends prompts to the model, runs the tools it asks for, and feeds the results back.
 - **Unsandboxed, an agent can do anything you can.** On the VM it reached example.com and held the real key.

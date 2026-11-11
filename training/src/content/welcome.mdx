@@ -14,7 +14,7 @@ Everything runs on one VM that's already provisioned: **k3s** (single-node upstr
 ## How the course works
 
 - **Module 0 is concepts**: what an agent is and how one poisoned input turns it against you. It uses animated scenes from the OpenShell talks: press **Next** in a scene (or click inside it and use →) to play each step, **Replay** to start again, **Full screen** for a bigger view.
-- **Module 1 opens up OpenShell, chapter by chapter.** Each chapter explains one part with the scenes, then ends with an **exercise** you run on your VM: build and seal an agent, find a sandbox's two halves, test the seal from inside, open the network rule by rule, see a key the agent never holds, read its audit events, and verify the whole cluster.
+- **Module 1 is OpenShell.** Its **Overview** explains it one topic at a time, with the scenes. Then come the **labs**, one by one, on your VM: check your environment (Kubernetes, then OpenShell), build an agent with pi and connect it to your model, run the same agent in a sandbox and connect it again, then test the seal, open the network rule by rule, see a key the agent never holds and read the audit events.
 - **Modules 2 to 4 are hands-on**, each played from one role: agent developer, security reviewer, SRE. Each opens with an **Overview** whose diagram builds as you scroll. Module 5 is where to go next.
 - Lessons marked **LAB** are split into numbered **sections** (with a goal) and **steps**. A step's **RUN** panel shows the command; **Run ▷** executes it on your lab VM and the **OUTPUT** panel switches from the output recorded on a VM like yours to yours. Names, ages and ids differ; the shape is what to compare. A successful run ticks the step off.
 - The **Cluster shell**, docked at the bottom of every page, is a real bash shell on the VM with `kubectl` and an `openshell` CLI already signed in as the lab operator. Drag its top edge to resize it, ▁ to minimize it. Blocks marked **SHELL** open there.
@@ -29,5 +29,5 @@ If you're standing this up yourself, Ansible provisions everything behind one sc
 ```
 
 <Callout type="tip" title="Want to get hands-on fast?">
-Play the scenes in Module 0, then start Module 1: every chapter there ends with an exercise on your VM.
+Play the scenes in Module 0, read the Module 1 Overview, then start the labs with <strong>Verify your cluster</strong>.
 </Callout>

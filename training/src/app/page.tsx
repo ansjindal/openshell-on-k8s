@@ -63,7 +63,7 @@ export default function Home() {
           {[
             ["Understand", "what-is-an-agent", "Module 0", "See what an agent is, what its harness does with your access, and how one poisoned issue turns it against you."],
             ["Seal", "build-an-agent", "Module 1", "Build an agent, then put it in an OpenShell sandbox: nothing gets out by default, and you test that from inside."],
-            ["Grant", "security", "Module 1", "Open exactly one door while it runs: one host, one HTTP method, one path, one program."],
+            ["Grant", "policy", "Module 1", "Open exactly one door while it runs: one host, one HTTP method, one path, one program."],
             ["Inject", "m2-overview", "Module 2", "Give it a model and an API key it never actually holds: the sandbox only sees a placeholder."],
             ["Audit", "m3-overview", "Module 3", "Follow every allow and deny in Grafana, use the web console, and give people their own roles and workspaces."],
             ["Operate", "m4-overview", "Module 4", "Run five sealed agents that each read one telemetry source, find a real outage's root cause, and propose a fix you approve."],
@@ -122,7 +122,7 @@ export default function Home() {
 
         <section className="mt-12 rounded-2xl border border-[var(--color-nv-dim)] bg-[var(--color-run-bg)] p-8 text-center">
           <h2 className="text-2xl font-bold">Ready?</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-[var(--color-fg-dim)]">Module 0 takes about twenty minutes and needs no commands: you play animated scenes. From Module 1 on, every chapter ends with an exercise on your VM.</p>
+          <p className="mx-auto mt-3 max-w-2xl text-[var(--color-fg-dim)]">Module 0 takes about twenty minutes and needs no commands: you play animated scenes. Module 1 opens with an overview of OpenShell, then the labs, one by one, on your VM.</p>
           <Link href={`/learn/${FIRST_SLUG}`} className="mt-6 inline-block rounded-lg bg-[var(--color-nv)] px-5 py-2.5 text-sm font-bold text-[#0a0d07] hover:bg-[var(--color-nv-bright)]">
             Start with Module 0 →
           </Link>

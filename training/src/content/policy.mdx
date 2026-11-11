@@ -1,0 +1,164 @@
+A sandbox's network is governed by its **policy**. Every connection the agent opens goes to its **supervisor**, which allows it only if a `network_policies` entry says so: deny by default, with a short allow-list you control.
+
+**Concept:** [Topic 7 in the Overview: the policy file](/learn/openshell#t-7).
+
+<BeforeYouStart
+  will="read agent-0's policy, prove it is sealed, open one endpoint while it runs, and watch an L7 rule refuse a POST."
+  time="about ten minutes. Each step has a Run button that runs its command on your lab VM; nothing outside agent-0 changes."
+/>
+
+<Section n="1" title="What the sandbox may reach today" goal="Read the effective policy, including what providers added.">
+
+<Step n="1" title="The policy and its version">
+
+Ask the gateway for `agent-0`'s policy: its version, hash and status.
+
+```bash
+openshell policy get agent-0
+```
+
+
+</Step>
+
+<Step n="2" title="The full effective policy">
+
+The **effective** policy includes what attached providers added. Under `network_policies` you'll find `_provider_litellm`, merged in from the `litellm` provider's profile: its endpoint, its L7 rules and the binaries allowed to use them. Anything not listed is denied, and every decision is audited.
+
+```bash
+openshell policy get agent-0 --full
+```
+<Output>
+<ExpectedOutput>
+{`network_policies:
+  _provider_litellm:
+    endpoints:
+      - host: litellm.litellm.svc.cluster.local
+        port: 4000
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: {method: GET, path: /v1/models}
+          - allow: {method: POST, path: /v1/chat/completions}
+          ...
+    binaries:
+      - path: /**`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="2" title="Deny by default, in practice" goal="Prove the internet is closed to the agent.">
+
+<Step n="1" title="Try GitHub from inside the sandbox">
+
+```bash
+openshell sandbox exec -n agent-0 -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/zen
+```
+<Output>
+<ExpectedOutput>
+{`HTTP 000`}
+</ExpectedOutput>
+</Output>
+
+`000` means no HTTP response at all: the supervisor refused the connection. No cluster API, no internet, nothing you didn't grant.
+
+</Step>
+
+</Section>
+
+<Section n="3" title="Grant one endpoint, live" goal="Open GitHub's API for GET only, while the sandbox runs.">
+
+<Step n="1" title="Add a read-only endpoint">
+
+The endpoint format is `host:port[:access[:protocol[:enforcement]]]`, and the rule applies only to the binaries you name with `--binary`:
+
+```bash
+openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --wait
+```
+<Output>
+<ExpectedOutput>
+{`✓ Policy version 2 submitted (hash: ae09c7816c51)
+✓ Policy version 2 loaded (active version: 2)`}
+</ExpectedOutput>
+</Output>
+
+The new revision loaded into the **running** sandbox, with no restart. The parts of the rule:
+
+- `read-only`: an access preset: `GET`, `HEAD` and `OPTIONS` only.
+- `rest`: inspect requests at **L7** (method and path), even inside TLS.
+- `enforce`: block what breaks the rule. The default is `audit`, which only logs.
+
+</Step>
+
+<Step n="2" title="GET now works">
+
+```bash
+openshell sandbox exec -n agent-0 -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
+```
+<Output>
+<ExpectedOutput>
+{`Responsive is better than fast. HTTP 200`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="POST is refused at L7">
+
+A `POST` to the same host is refused by the supervisor, with the reason:
+
+```bash
+openshell sandbox exec -n agent-0 -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{http_code}\n' https://api.github.com/markdown
+```
+<Output>
+<ExpectedOutput>
+{`{"error":"policy_denied","policy":"allow_api_github_com_443","rule":"POST /markdown","detail":"POST /markdown not permitted by policy","layer":"l7",...}
+HTTP 403`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="4" title="Revisions" goal="See every change as a numbered revision.">
+
+<Step n="1" title="List the policy history">
+
+```bash
+openshell policy list agent-0
+```
+<Output>
+<ExpectedOutput>
+{`VERSION  HASH           STATUS       CREATED                  ERROR
+2        ae09c7816c51   Loaded       1794324512476
+1        76a21cf40933   Superseded   1794324384281`}
+</ExpectedOutput>
+</Output>
+
+`openshell policy get agent-0 --rev 1 --full` shows an older one. To write a whole policy at once, keep it in a YAML file and apply it with `openshell policy set agent-0 --policy <file> --wait`; the [Skills](/learn/skills) lesson does that.
+
+<Callout type="note" title="Only the network part is live">
+Network rules are <strong>dynamic</strong>: they change on a running sandbox. The filesystem and process sections are <strong>static</strong>: fixed at creation, because Landlock and the sandbox user are applied before the agent starts.
+</Callout>
+
+</Step>
+
+</Section>
+
+<Callout type="rh" title="The policy is the contract">
+The policy says <em>what the agent may reach</em>, down to the method and path, and every decision is on the audit log. That's what makes a sandbox something you can hand untrusted agent code and <em>prove</em> what it can and cannot do.
+</Callout>
+
+## What you learned
+
+<Learned next="/learn/tcp-egress" nextLabel="TCP egress">
+
+- **What the sandbox may reach today.** Read the effective policy, including what providers added.
+- **Deny by default, in practice.** Prove the internet is closed to the agent.
+- **Grant one endpoint, live.** Open GitHub's API for GET only, while the sandbox runs.
+- **Revisions.** See every change as a numbered revision.
+
+</Learned>
