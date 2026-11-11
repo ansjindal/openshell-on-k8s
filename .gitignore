@@ -15,3 +15,4 @@ training/.next
 *.retry
 training/tsconfig.tsbuildinfo
 training/public/diagrams/
+__pycache__/
