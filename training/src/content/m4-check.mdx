@@ -1,0 +1,19 @@
+Check what you took away from Module 4, the SRE copilot fleet.
+
+## Summary
+
+- The fleet is four read-only specialists (logs, metrics, traces, events), each with egress to exactly one backend, plus an analyst with no egress at all.
+- `fleet.txt` describes the whole fleet, one agent per whitespace-separated line, and `scripts/fleet.sh up` creates each sandbox, scopes its policy and stages its persona.
+- Sealed agents read their in-cluster backend through the `cluster-telemetry` skill, which shells out to `curl` under the agent's egress policy, because `web_fetch` refuses internal addresses.
+- The orchestrator runs a fixed plan with one prescribed probe per specialist, then hands all findings to the analyst for a root cause and a recommended fix.
+- In the incident lab you take `payments` down for real; the fleet diagnoses it from live telemetry and a human approves the fix.
+- Extending the fleet is always the same three moves: add an egress line, add a persona, add a probe.
+
+<Quiz title="Test your knowledge: Module 4">
+<Q q="How are the columns in fleet.txt separated?" options={["By colons", "By commas", "By tabs only", "By whitespace, because the backend itself contains a colon"]} answer={3} why="The backend is a host:port, so fleet.sh splits columns on whitespace and reads the first three fields." />
+<Q q="What can the analyst agent reach?" options={["Loki only", "Nothing: it has no egress and no tools", "Every backend the other agents can reach", "Only the Kubernetes API"]} answer={1} why="The analyst gets no telemetry rule at all; it only reasons over the others' findings." />
+<Q q={"Why do fleet agents use the cluster-telemetry skill instead of OpenClaw's web_fetch?"} options={["web_fetch refuses private/internal/cluster addresses (an SSRF guard)", "web_fetch cannot parse JSON", "web_fetch bypasses the egress policy", "web_fetch is not installed in the sandbox image"]} answer={0} why="Loki, Prometheus and Tempo live on *.svc.cluster.local, which web_fetch refuses; the skill uses curl, still bounded by the agent's policy." />
+<Q q="What does Inject fault do in the incident lab?" options={["Sets a flag that makes shop-app return 503", "Deletes the shop-app deployment", "Runs kubectl scale deploy/payments --replicas=0, taking a real dependency down", "Blocks the payments host in shop-app's policy"]} answer={2} why="It genuinely takes payments offline; checkout calls then fail with connection refused and return 503." />
+<Q q="How does the orchestrator decide which queries to run?" options={["A model call plans the investigation first", "It uses a fixed plan: one prescribed probe per specialist", "Each agent explores freely until it finds the cause", "The analyst picks the queries"]} answer={1} why="The plan is fixed, with no model call to plan; the intelligence is in each agent interpreting its probe and in the analyst's synthesis." />
+<Q q="To add an alerts specialist, which backend would its fleet.txt line point at?" options={["Loki on port 3100", "Tempo on port 3200", "Prometheus on port 9090", "Alertmanager on port 9093"]} answer={3} why="The alerts agent reads Alertmanager, part of the kube-prometheus stack, at port 9093." />
+</Quiz>

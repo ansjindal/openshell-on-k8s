@@ -1,6 +1,13 @@
 So far you've been the **operator**: this shell's client certificate makes you a platform admin. Real people sign in with **Keycloak**, and what they can do comes from two things: their **role** in the token, and the **workspaces** they're members of.
 
-## Two people, two roles
+<BeforeYouStart
+  will="sign in as a standard user who sees nothing, create a workspace, add that user to it, give it model access and a sandbox, then clean up."
+  time="about fifteen minutes."
+/>
+
+<Section n="1" title="Two people, two roles" goal="Meet the two Keycloak users and their roles.">
+
+<Step n="1" title="Get the passwords">
 
 The realm `openshell` has two users. Their passwords were generated at provisioning:
 
@@ -15,7 +22,13 @@ grep -E 'KC_(DEMO|LEARNER)_PASSWORD' .sso-secrets.env
 
 The gateway reads the roles from the token's `realm_access.roles` claim.
 
-## 1 · Sign in as `learner`
+</Step>
+
+</Section>
+
+<Section n="2" title="Sign in as learner" goal="See that a user with no workspace sees nothing.">
+
+<Step n="1" title="Open the console as learner">
 
 Open the **OpenShell Console** (header link, or `https://console-<brevid>.<domain>`) in a private window and sign in as `learner`. You'll see:
 
@@ -24,9 +37,21 @@ Role: Standard user
 Workspaces: No workspaces. Ask a platform admin to add you to a workspace.
 ```
 
-`learner` can sign in but sees nothing: there is no workspace they belong to. Try opening `…/workspaces/default` directly; the gateway refuses with *not a member of workspace 'default'*. The console only displays what the gateway allows.
+`learner` can sign in but sees nothing: there is no workspace they belong to.
 
-## 2 · Create a workspace and add `learner`
+</Step>
+
+<Step n="2" title="Try the default workspace">
+
+Try opening `…/workspaces/default` directly; the gateway refuses with *not a member of workspace 'default'*. The console only displays what the gateway allows.
+
+</Step>
+
+</Section>
+
+<Section n="3" title="Create a workspace and add learner" goal="Create team-a and make learner a member.">
+
+<Step n="1" title="Create the workspace">
 
 A **workspace** is a tenant: its own sandboxes, providers and members. Create one:
 
@@ -36,6 +61,10 @@ openshell workspace create --name team-a
 <ExpectedOutput>
 {`✓ Created workspace team-a`}
 </ExpectedOutput>
+
+</Step>
+
+<Step n="2" title="Add learner by subject">
 
 Members are identified by their OIDC **subject** (the token's `sub`, Keycloak's user id), not their name. Look it up and add `learner` as a user:
 
@@ -50,7 +79,13 @@ fadec839-948e-4ab0-913c-0c64ca8f3f12  user`}
 
 (In the console, `demo` can do the same: **Workspaces → Create workspace**, then **Members → Add member**. A signed-in user finds their own subject under **Copy my subject ID** in the user menu.)
 
-## 3 · Give the workspace model access
+</Step>
+
+</Section>
+
+<Section n="4" title="Give the workspace model access" goal="Create team-a's own litellm provider.">
+
+<Step n="1" title="Create the provider">
 
 Providers belong to a workspace. `team-a` needs its own `litellm` provider (the profile is platform-wide, so it can be reused):
 
@@ -61,7 +96,13 @@ LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.
 {`✓ Created provider litellm`}
 </ExpectedOutput>
 
-## 4 · `learner` works in `team-a`
+</Step>
+
+</Section>
+
+<Section n="5" title="learner works in team-a" goal="Give learner a sandbox and see the tenant boundary.">
+
+<Step n="1" title="Create a sandbox in team-a">
 
 Refresh the console as `learner`: **team-a** is there. Create a sandbox in it from the console (**Create sandbox**, attach provider `litellm`), or from here on their behalf:
 
@@ -75,17 +116,31 @@ lab-a  2026-11-10 16:00:18  Ready`}
 
 `learner` sees `lab-a`, its policy revision and its providers, and can open its logs and terminal. They still can't see `agent-0`: it's in `default`.
 
+</Step>
+
+<Step n="2" title="See the workspace in the pod names">
+
 ```bash
 openshell sandbox list && kubectl -n openshell-sandboxes get pods | grep -- '--'
 ```
 
 The workspace is part of every pod name (`default--agent-0`, `team-a--lab-a`): the lab runs all workspaces in one namespace (`workspaceMode: shared`). For hard tenant separation the gateway can give each workspace its own namespace; see [Next Steps](/learn/next-steps).
 
-## 5 · Clean up
+</Step>
+
+</Section>
+
+<Section n="6" title="Clean up" goal="Remove the sandbox, provider and workspace.">
+
+<Step n="1" title="Delete team-a">
 
 ```bash
 openshell --workspace team-a sandbox delete lab-a && openshell --workspace team-a provider delete litellm && openshell workspace delete team-a
 ```
+
+</Step>
+
+</Section>
 
 <Callout type="nv" title="Same rules for every door">
 The CLI, the console and the SDKs all call the same gateway, and the gateway checks every call against the caller's identity, role and workspace membership. The console holds no privileges of its own: it forwards the signed-in user's token.

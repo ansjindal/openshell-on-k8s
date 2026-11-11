@@ -10,14 +10,16 @@ Everything runs on one VM that's already provisioned: **k3s** (single-node upstr
 - How to read the **audit trail** OpenShell writes for every allow and deny.
 - How people sign in with **Keycloak** and what an admin, a user and a workspace can do.
 
-## How this works
+## How the labs work
 
-This guide is a short book of **parts and lessons**. The hands-on lessons (🧪) have a **live shell** next to them: *Run in shell* runs the command on your VM. The shell has `KUBECONFIG` set for the cluster and an `openshell` CLI that is already signed in as the lab operator.
+The course has **modules**, each played from one role: platform operator, agent developer, security reviewer, SRE. Lessons marked **LAB** are hands-on:
 
-- **Part I**: what this is, the stack, the runtime and the security model.
-- **Part II**: the labs: verify the cluster, create and seal sandboxes, models and credentials, audit, the console, users and workspaces.
-- **Part III**: the capstone, an SRE copilot fleet that investigates an incident.
-- **Part IV**: where to take it next.
+- Each lab is split into numbered **sections** (with a goal) and **steps**.
+- A step's **RUN** panel shows the command; **Run ▷** executes it on your lab VM and streams the result into an **OUTPUT** panel. A successful run ticks the step off.
+- The **EXPECTED** panel shows what the command printed when the lesson was written, on a VM like yours. Names, ages and ids differ; the shape is what to compare.
+- **Cluster shell** (top right) opens a real bash shell on the VM, with `kubectl` and an `openshell` CLI already signed in as the lab operator. Use it to edit a command or keep a session; blocks marked **SHELL** open there automatically.
+- Your progress (steps, lessons, quiz answers) is kept in this browser. **Clear outputs** in the sidebar wipes the run outputs.
+- Each module ends with a **summary and knowledge check**.
 
 ## The one-command bring-up
 

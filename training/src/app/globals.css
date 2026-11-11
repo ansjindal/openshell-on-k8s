@@ -8,12 +8,21 @@
   --color-nv-bright: #a3e635;
   --color-nv-dim: #4d7a00;
 
-  --color-bg: #0a0c10;
-  --color-bg-2: #0e1118;
-  --color-panel: #121620;
-  --color-panel-2: #161b26;
-  --color-line: #222a37;
-  --color-line-2: #2c3545;
+  --color-bg: #0b0e0a;
+  --color-bg-2: #10140e;
+  --color-panel: #121710;
+  --color-panel-2: #182015;
+  --color-line: #242c20;
+  --color-line-2: #313b2b;
+
+  /* course panels: RUN (green), OUTPUT (blue), info */
+  --color-info: #4f8fea;
+  --color-run-bg: #141d0e;
+  --color-run-line: #2e4214;
+  --color-run-btn: #1a2a0c;
+  --color-run-btn-hover: #22380f;
+  --color-out-bg: #0f1520;
+  --color-out-line: #29436d;
 
   --color-fg: #eef2f7;
   --color-fg-dim: #c2cad6;
@@ -27,7 +36,7 @@
   --color-term-accent: #92e600;  /* matches the live terminal's xterm cursor/bright-green */
 
   /* sticky site header — translucent over whatever scrolls under it */
-  --color-header-bg: rgba(10, 12, 16, 0.82);
+  --color-header-bg: rgba(11, 14, 10, 0.88);
 
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -61,7 +70,14 @@
   --color-term-bg: #f3f5f9;
   --color-term-fg: #1f2937;      /* matches the live terminal's xterm foreground */
   --color-term-accent: #4d7a00;  /* matches the live terminal's xterm cursor/bright-green */
-  --color-header-bg: rgba(255, 255, 255, 0.82);
+  --color-header-bg: rgba(255, 255, 255, 0.86);
+  --color-info: #2f6fd0;
+  --color-run-bg: #f2f8e8;
+  --color-run-line: #c5dea0;
+  --color-run-btn: #e6f2d3;
+  --color-run-btn-hover: #d8ebbb;
+  --color-out-bg: #eef3fb;
+  --color-out-line: #b9cdee;
 }
 html { transition: background-color 0.15s ease; }
 
@@ -72,6 +88,10 @@ html { transition: background-color 0.15s ease; }
 }
 
 html, body { background: var(--color-bg); color: var(--color-fg); }
+:root:not([data-theme="light"]) body {
+  background: radial-gradient(1200px 600px at 70% -10%, rgba(118, 185, 0, 0.08), transparent 60%), var(--color-bg);
+  background-attachment: fixed;
+}
 body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-height: 1.6; }
 ::selection { background: rgba(118, 185, 0, 0.28); }
 * { box-sizing: border-box; }
@@ -96,3 +116,6 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 .xterm { padding: 10px; }
 .xterm-viewport::-webkit-scrollbar { width: 8px; }
 .xterm-viewport::-webkit-scrollbar-thumb { background: var(--color-line-2); border-radius: 4px; }
+
+/* Code inside run/output panels: no inline-code chip styling. */
+.prose pre code, .not-prose pre code { border: 0 !important; background: transparent !important; padding: 0 !important; font-size: inherit !important; color: inherit; }

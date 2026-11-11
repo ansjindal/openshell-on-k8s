@@ -1,0 +1,19 @@
+A quick look back at Module 2 before you move on.
+
+## Summary
+
+- Agents reach a model through LiteLLM via the `litellm` provider: the sandbox holds only a placeholder, and the supervisor injects the real key on model calls the profile allows.
+- A provider profile is the access contract: which variable the sandbox gets, where the credential may go, and which requests are allowed there. Anything else, like LiteLLM's admin API, is refused at L7.
+- You can build your own provider, attach it to a running sandbox, rotate its token and detach it, all without a restart.
+- An agent's persona is plain Markdown in its workspace (`IDENTITY.md`, `SOUL.md`, `BOOTSTRAP.md`), re-read each session.
+- Skills are governed three ways: the registry they come from, whether they are enabled, and what they can reach.
+- `./scripts/fleet task` hands a prompt to one agent or the whole fleet, each working in its own sandbox.
+
+<Quiz title="Test your knowledge: Module 2">
+<Q q="What does a sandbox see in LITELLM_API_KEY?" options={["The real nvapi- key from .env", "A placeholder such as openshell:resolve:env:..._LITELLM_API_KEY", "Nothing: the variable is empty", "A short-lived copy of the key that expires after one call"]} answer={1} why="The sandbox only holds a placeholder; the supervisor swaps in the real key on requests that match the provider's rules, so there is no key in the sandbox to steal." />
+<Q q="What happens when agent-0 sends POST /key/generate to LiteLLM with its key?" options={["LiteLLM creates a new key", "LiteLLM answers 401 because the placeholder is not a valid key", "The supervisor refuses it with policy_denied at L7, before anything leaves the sandbox", "The connection hangs and returns HTTP 000"]} answer={2} why="The litellm profile only allows model calls. The admin API is not in its rules, so the supervisor refuses the request at L7." />
+<Q q="After openshell provider update rotates the echo token, what does agent-0 need to use the new value?" options={["Nothing: it picks it up without a restart, and its placeholder stays the same", "A restart of the sandbox", "Detaching and re-attaching the provider", "Re-importing the provider profile"]} answer={0} why="Every sandbox with the provider attached picks up the new credential without a restart; only the value behind the placeholder changes." />
+<Q q="Why does the skills lesson grant the registry with a policy YAML and openshell policy set, not policy update --add-endpoint?" options={["policy update cannot change a running sandbox", "policy set is faster to load", "--add-endpoint does not support port 4873", "Scoped npm names are fetched with an encoded slash, and allow_encoded_slash only lives in policy YAML"]} answer={3} why={"Scoped names like @workshop/x are fetched as /@workshop%2Fx, and the proxy rejects %2F unless the endpoint sets allow_encoded_slash: true, a field that only exists in policy YAML."} />
+<Q q="Which workspace file is the closest thing to an editable system prompt?" options={["IDENTITY.md", "BOOTSTRAP.md", "SOUL.md", "openclaw.json"]} answer={2} why="SOUL.md holds how the agent behaves: its values, boundaries and tone. IDENTITY.md is who it is, and BOOTSTRAP.md is what it does on first run." />
+<Q q="What does the target all do in ./scripts/fleet task?" options={["Brings up every agent before running the task", "Fans the prompt out to every agent in the fleet", "Sends the prompt to agent-0 and prints all logs", "Runs the task in every namespace of the cluster"]} answer={1} why="fleet task takes a prompt and an optional target; all fans it out to every agent, and each works on it independently in its own sandbox." />
+</Quiz>

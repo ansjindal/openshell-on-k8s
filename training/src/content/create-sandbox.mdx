@@ -1,6 +1,13 @@
 Now create an agent. A sandbox is the unit of work: one command, and the gateway puts a fully isolated agent environment on the cluster.
 
-## The easy way: the fleet helper
+<BeforeYouStart
+  will="scale the fleet to two sandboxes, read the openshell command behind it, and see what it created on the cluster."
+  time="about ten minutes. A new sandbox is Ready in about fifteen seconds."
+/>
+
+<Section n="1" title="The easy way: the fleet helper" goal="Create agent-1 with one helper command.">
+
+<Step n="1" title="Meet the fleet helper">
 
 `./scripts/fleet` is a thin wrapper around the `openshell` CLI and `kubectl` that the next lessons reach for:
 
@@ -13,7 +20,9 @@ fleet shell <agent-i>                 # interactive shell inside one sandbox
 fleet logs <agent-i>                  # OpenShell logs for one sandbox
 ```
 
-Bring the fleet to two:
+</Step>
+
+<Step n="2" title="Bring the fleet to two">
 
 ```bash
 ./scripts/fleet up 2
@@ -43,7 +52,13 @@ Fleet ready: 2/2`}
 
 A new sandbox is `Ready` in about fifteen seconds.
 
-## The direct way: the openshell CLI
+</Step>
+
+</Section>
+
+<Section n="2" title="The direct way: the openshell CLI" goal="Read the command fleet up runs for each agent.">
+
+<Step n="1" title="The create command and its flags">
 
 `fleet up` runs this for each agent:
 
@@ -65,7 +80,13 @@ openshell sandbox create --name agent-1 \
 
 Without a trailing command and `--detach`, `openshell sandbox create` opens an interactive shell in the new sandbox instead; type `exit` to leave.
 
-## What happened on the cluster
+</Step>
+
+</Section>
+
+<Section n="3" title="What happened on the cluster" goal="Trace the gateway's work down to Kubernetes objects.">
+
+<Step n="1" title="List the Sandbox resources">
 
 The CLI never touches Kubernetes. It calls the **gateway**, which:
 
@@ -82,6 +103,10 @@ default--agent-0   True    DependenciesReady   27m
 default--agent-1   True    DependenciesReady   14s`}
 </ExpectedOutput>
 
+</Step>
+
+<Step n="2" title="See each pod's role and pair">
+
 Each pod is labelled with its role and its pair:
 
 ```bash
@@ -89,6 +114,10 @@ kubectl -n openshell-sandboxes get pods -L openshell.ai/boundary-role,openshell.
 ```
 
 `openshell sandbox get agent-1` shows the same sandbox from the gateway's side: its id, image, phase and attached providers.
+
+</Step>
+
+</Section>
 
 <Callout type="note" title="Keep agent-0 around">
 The rest of the course, including the console and the Part III capstone, assumes <code>agent-0</code> is up. To scale back without tearing everything down: <code>openshell sandbox delete agent-1</code>. <code>fleet down</code> is for when you're done with the launchable.

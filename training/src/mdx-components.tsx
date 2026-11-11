@@ -4,6 +4,8 @@ import { Callout } from "@/components/Callout";
 import { CodeBlock } from "@/components/CodeBlock";
 import { ExpectedOutput } from "@/components/ExpectedOutput";
 import { Figure } from "@/components/Figure";
+import { BeforeYouStart, Section, Step } from "@/components/course/Structure";
+import { Quiz, Q } from "@/components/course/Quiz";
 import { PolicyExplorer } from "@/components/diagrams/PolicyExplorer";
 import { SkillSupplyChain } from "@/components/diagrams/SkillSupplyChain";
 import { FleetOrchestration } from "@/components/diagrams/FleetOrchestration";
@@ -17,6 +19,11 @@ const components: MDXComponents = {
   Callout,
   ExpectedOutput,
   Figure,
+  BeforeYouStart,
+  Section,
+  Step,
+  Quiz,
+  Q,
   PolicyExplorer,
   SkillSupplyChain,
   FleetOrchestration,

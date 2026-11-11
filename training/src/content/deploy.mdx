@@ -1,8 +1,15 @@
 Good news: **the VM is already provisioned.** Ansible (`./scripts/setup.sh`) installed k3s, the agent-sandbox controller, LiteLLM, cert-manager, Keycloak, the OpenShell gateway, the console and the monitoring stack when the machine came up. You don't stand anything up here; you **confirm it's healthy**.
 
-**Open the lab shell** on the right (▶). It's a real bash shell on the VM, with `KUBECONFIG` pointed at `/etc/rancher/k3s/k3s.yaml`, started in the repository folder.
+<BeforeYouStart
+  will="check the node, the control plane, the gateway, the first sandbox, LiteLLM and Keycloak."
+  time="about five minutes. Every command only reads; nothing changes."
+/>
 
-## 1 · The node is up
+**Open the Cluster shell.** It's a real bash shell on the VM, with `KUBECONFIG` pointed at `/etc/rancher/k3s/k3s.yaml`, started in the repository folder.
+
+<Section n="1" title="The node is up" goal="Confirm the single k3s node is Ready.">
+
+<Step n="1" title="List the nodes">
 
 ```bash
 kubectl get nodes
@@ -14,7 +21,13 @@ brev-abc123xyz   Ready    control-plane   40m   v1.37.2+k3s1`}
 
 One node, `Ready`: k3s, a full Kubernetes API.
 
-## 2 · The control plane is running
+</Step>
+
+</Section>
+
+<Section n="2" title="The control plane is running" goal="See the gateway, console and registry pods.">
+
+<Step n="1" title="List the openshell pods">
 
 ```bash
 kubectl -n openshell get pods
@@ -30,7 +43,13 @@ registry-6968dc66b4-t6jbm              1/1     Running   0          10m`}
 - `openshell-dashboard`: the **OpenShell Console**, two containers: oauth2-proxy (sign-in) and the console's backend.
 - `registry`: the in-cluster skill registry, used in [Skills](/learn/skills).
 
-## 3 · The gateway answers, and knows who you are
+</Step>
+
+</Section>
+
+<Section n="3" title="The gateway answers" goal="Confirm the CLI is connected, and see who you are.">
+
+<Step n="1" title="Check the gateway status">
 
 The CLI reaches the gateway on NodePort `30808`:
 
@@ -46,6 +65,10 @@ openshell status
   Authentication: Authenticated (mTLS transport)
   Version: 0.1.7`}
 </ExpectedOutput>
+
+</Step>
+
+<Step n="2" title="Ask who you are">
 
 The gateway accepts no anonymous calls. Ask it who you are:
 
@@ -63,7 +86,13 @@ openshell whoami
 
 This shell presents a client certificate with `OU=operator`, which cert-manager issued for the VM. An operator is a platform admin across every workspace. People in the browser sign in with Keycloak instead; you'll meet them in [Users, Roles & Workspaces](/learn/access-control).
 
-## 4 · A sandbox is already running
+</Step>
+
+</Section>
+
+<Section n="4" title="A sandbox is already running" goal="Find agent-0, created at provisioning time.">
+
+<Step n="1" title="List the sandboxes">
 
 ```bash
 openshell sandbox list
@@ -75,7 +104,13 @@ agent-0  2026-11-10 15:26:24  Ready`}
 
 `CREATE_FLEET=true` (the default) created `agent-0` at provisioning time. The next lesson shows what it is.
 
-## 5 · The model path and sign-in are up
+</Step>
+
+</Section>
+
+<Section n="5" title="The model path and sign-in are up" goal="Confirm LiteLLM and Keycloak are Running.">
+
+<Step n="1" title="List the LiteLLM and Keycloak pods">
 
 ```bash
 kubectl -n litellm get pods && kubectl -n keycloak get pods
@@ -88,6 +123,10 @@ keycloak-7cb4785cc5-s6x8x   1/1     Running   0          20m`}
 </ExpectedOutput>
 
 LiteLLM is the OpenAI-compatible endpoint agents reach through the `litellm` provider; Keycloak is where people sign in.
+
+</Step>
+
+</Section>
 
 <Callout type="lab" title="What 'healthy' looks like">
 One <code>Ready</code> node; <code>openshell-0</code>, the console, LiteLLM and Keycloak <code>Running</code>; <code>openshell status</code> says <em>Connected</em> and <em>Authenticated</em>; <code>agent-0</code> is <code>Ready</code>. If something is still <code>Pending</code>, give it a minute and re-run.

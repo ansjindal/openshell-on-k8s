@@ -1,6 +1,11 @@
 Now we put the fleet to work on a real incident — one you cause on purpose — and close the whole loop in this page: **break it → the fleet investigates → it recommends a fix → you review, adjust, and approve.**
 
-## The conductor
+<BeforeYouStart
+  will="deploy an instrumented shop app, take its payments dependency down, let the sealed fleet investigate from live telemetry, and approve the fix yourself."
+  time="about fifteen minutes. Everything runs from the panel on this page."
+/>
+
+<Section n="1" title="The conductor" goal="See how the in-page orchestrator combines the specialists.">
 
 A fleet of specialists isn't useful until something *combines* them. That's a small **orchestrator** built into this page — no separate app. When you hit **Investigate**, it:
 
@@ -14,20 +19,43 @@ You see **every agent's findings** *and* the analyst's concluded verdict — tra
 OpenClaw's built-in <code>web_fetch</code> tool refuses private/internal/cluster addresses (an SSRF guard), so a sealed agent can't use it to read Loki/Prometheus/Tempo on <code>*.svc.cluster.local</code>. The <strong>cluster-telemetry skill</strong> shells out to <code>curl</code> instead — so the call is still governed by the agent's single-backend egress policy, and the SSRF protection stays on everywhere else. The agent runs <em>one</em> prescribed query (free-form exploration would overflow the model's context), then interprets the result in its own words.
 </Callout>
 
-## The demo, deployed
+</Section>
+
+<Section n="2" title="The demo, deployed" goal="Know what the sample app emits and where it lands.">
 
 <DemoArchitecture />
 
 A continuous **loadgen** drives the instrumented **shop-app**, which on every checkout makes a real HTTP call to its **`payments`** dependency — and emits all three signals into the cluster's observability stack: **traces** → Tempo (OTLP), **metrics** → Prometheus (a ServiceMonitor scrapes `/metrics`), and **logs** → Loki (Grafana Alloy ships its stdout). A **kubernetes-event-exporter** feeds k8s events into Loki too. The sealed fleet reads those backends — so when `payments` goes down, it shows up across every signal at once, and the live traffic numbers (below) move in real time.
 
-## The loop — break, investigate, fix
+</Section>
+
+<Section n="3" title="The loop: break, investigate, fix" goal="Cause a real outage, let the fleet diagnose it, and approve the fix.">
 
 <IncidentLab />
 
-1. **Deploy** stands up `shop-app` (a small instrumented service) plus a **loadgen** that drives it continuously — so the **live traffic numbers** (success/s, errors/s, error rate) and the logs/metrics/traces are always real.
-2. **Inject fault** takes a **real dependency down**: `kubectl scale deploy/payments --replicas=0`. shop-app's checkout makes a real HTTP call to `payments` on every request — with payments gone, those calls genuinely fail (connection refused) and checkout returns **503**. Nothing artificial; watch the payments pod terminate and the **error rate climb to 100%**.
-3. **Investigate** runs the fleet against the live telemetry: `metrics` sees the 5xx spike, `logs` sees the `checkout failed: payment call failed…` lines, `traces` sees the failing `charge-payment` span, and **`events` sees the smoking gun** — `payments` was scaled to 0 right as the errors began. The analyst asks *"what changed?"* and pins it on the dependency outage.
-4. **Your fix** is the human-approved remediation — a **real fix**: `kubectl scale deploy/payments --replicas=1`, bringing the dependency back. Watch the error rate fall to 0. Applying it is the one step a human owns.
+<Step n="1" title="Deploy">
+
+**Deploy** stands up `shop-app` (a small instrumented service) plus a **loadgen** that drives it continuously — so the **live traffic numbers** (success/s, errors/s, error rate) and the logs/metrics/traces are always real.
+
+</Step>
+
+<Step n="2" title="Inject fault">
+
+**Inject fault** takes a **real dependency down**: `kubectl scale deploy/payments --replicas=0`. shop-app's checkout makes a real HTTP call to `payments` on every request — with payments gone, those calls genuinely fail (connection refused) and checkout returns **503**. Nothing artificial; watch the payments pod terminate and the **error rate climb to 100%**.
+
+</Step>
+
+<Step n="3" title="Investigate">
+
+**Investigate** runs the fleet against the live telemetry: `metrics` sees the 5xx spike, `logs` sees the `checkout failed: payment call failed…` lines, `traces` sees the failing `charge-payment` span, and **`events` sees the smoking gun** — `payments` was scaled to 0 right as the errors began. The analyst asks *"what changed?"* and pins it on the dependency outage.
+
+</Step>
+
+<Step n="4" title="Apply your fix">
+
+**Your fix** is the human-approved remediation — a **real fix**: `kubectl scale deploy/payments --replicas=1`, bringing the dependency back. Watch the error rate fall to 0. Applying it is the one step a human owns.
+
+</Step>
 
 <Callout type="note" title="What “Inject fault” actually does — a real dependency outage">
 No simulated flag. <strong>Inject fault</strong> runs <code>kubectl scale deploy/payments --replicas=0</code> —
@@ -41,7 +69,9 @@ the real fix: <code>kubectl scale deploy/payments --replicas=1</code>. A real pr
 from real telemetry, fixed by a real change.
 </Callout>
 
-## Agents recommend; humans decide; GitOps delivers
+</Section>
+
+<Section n="4" title="Agents recommend; humans decide" goal="See where the human gate sits, here and in production.">
 
 The agents never touch the cluster — they're sealed from the Kubernetes API and only *read* telemetry. They produce a **recommendation**; the human approves (and may change) the **actual** change. That gap between "what the fleet suggested" and "what you applied" is the human-in-the-loop, made explicit and on the record.
 
@@ -52,5 +82,7 @@ In this lab the approved remediation clears the injected fault behind a confirm.
 <Callout type="note" title="Make the incident harder">
 The payment-503 fault is the clean demo (and there's a <code>latency</code> fault too). For a harder exercise, inject something the four signals must <em>combine</em> to explain — slow spans in <code>traces</code>, an SLO breach in <code>metrics</code>, errors in <code>logs</code> — and watch the analyst reconcile all four, then recommend the remediation you approve.
 </Callout>
+
+</Section>
 
 That's the capstone: a governed, observable SRE copilot — spun up repeatably, each agent provably bounded, investigating from this page, and kept honest by a human on the only step that changes the world.

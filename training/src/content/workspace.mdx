@@ -1,6 +1,11 @@
 An agent's personality isn't a settings panel — it's **Markdown files in its workspace**. Each session the agent "wakes up," reads them, and acts accordingly: no system-prompt black box, just text you can read and edit. A fresh `agent-0` starts **blank** (no persona) — let's give it one.
 
-## The files
+<BeforeYouStart
+  will="learn which workspace files shape an agent, and write an IDENTITY.md and SOUL.md for agent-0."
+  time="about five minutes. Each step has a Run button that runs its command on your lab VM."
+/>
+
+<Section n="1" title="The files" goal="Know which files the agent reads.">
 
 The agent reads these from `/sandbox/.openclaw/workspace/`:
 
@@ -10,7 +15,11 @@ The agent reads these from `/sandbox/.openclaw/workspace/`:
 | `SOUL.md` | *How* it behaves — values, boundaries, tone (the closest thing to an editable system prompt) |
 | `BOOTSTRAP.md` | What it should do on first run / at the start of a session |
 
-## Give agent-0 a persona
+</Section>
+
+<Section n="2" title="Give agent-0 a persona" goal="Write its identity and values into the workspace.">
+
+<Step n="1" title="Write IDENTITY.md">
 
 `openshell sandbox exec` rejects multi-line arguments, so write each file from a **single line** with `printf` — the `\n` are interpreted by `printf`, not sent as real newlines. An `IDENTITY.md`:
 
@@ -18,21 +27,33 @@ The agent reads these from `/sandbox/.openclaw/workspace/`:
 openshell sandbox exec -n agent-0 -- sh -c 'mkdir -p /sandbox/.openclaw/workspace && printf "%s\n" "Name: Sandy" "Role: A k3s-native SRE sidekick — lives in a sealed sandbox, reads telemetry, fixes things." "Vibe: Sharp and pragmatic. Helps first, explains second." "Emoji: 🦾" > /sandbox/.openclaw/workspace/IDENTITY.md'
 ```
 
+</Step>
+
+<Step n="2" title="Write SOUL.md">
+
 …and a `SOUL.md` with its values and boundaries:
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'printf "%s\n" "## Core Truths" "- Be genuinely helpful, not performatively helpful." "- Have opinions; be resourceful before asking." "- You run on a real cluster — when something is cluster-shaped, lean in." "" "## Boundaries" "- Never run a destructive command without confirming first." "- Read before you write." > /sandbox/.openclaw/workspace/SOUL.md'
 ```
 
-Confirm they landed:
+</Step>
+
+<Step n="3" title="Confirm they landed">
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'ls -la /sandbox/.openclaw/workspace; echo ---; cat /sandbox/.openclaw/workspace/IDENTITY.md'
 ```
 
-## Customize it
+</Step>
+
+</Section>
+
+<Section n="3" title="Customize it" goal="Edit the persona; it applies on the next run.">
 
 These files are *yours to edit* — change the name, sharpen the boundaries, add house rules. The agent re-reads its workspace each session, so an edit takes effect on the next run (no redeploy, no config panel). The same per-agent files are how the Part III fleet gives each specialist its own personality and scope — there are ready-made `IDENTITY.md` / `SOUL.md` for the logs / metrics / traces / events / analyst roles under `manifests/openclaw/fleet-roles/` you can crib from.
+
+</Section>
 
 <Callout type="note" title="Workspace = the agent's memory">
 Because the persona is plain files in the workspace, an agent can even edit <em>its own</em> — "open your SOUL.md and add a rule: always confirm before deleting" — and it persists for the life of the sandbox. The file is the source of truth, not a hidden prompt.

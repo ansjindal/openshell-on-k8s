@@ -1,57 +1,69 @@
 import Link from "next/link";
-import { FIRST_SLUG, CURRICULUM } from "@/lib/curriculum";
+import { CURRICULUM, FIRST_SLUG } from "@/lib/curriculum";
+import { LearnShell } from "@/components/LearnShell";
+import { Figure } from "@/components/Figure";
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line-2)] px-3 py-1 text-xs text-[var(--color-fg-dim)]">
-        🦞 Sandboxed AI agents on Kubernetes
-      </div>
-      <h1 className="mt-5 text-4xl font-extrabold tracking-tight md:text-5xl">
-        Run AI agents safely on <span className="text-[var(--color-nv-bright)]">Kubernetes</span>.
-      </h1>
-      <p className="mt-5 max-w-2xl text-lg text-[var(--color-fg-dim)]">
-        A hands-on teaching site for <strong>OpenShell</strong> — a control plane that turns a
-        plain k3s cluster into a fleet of isolated agent sandboxes. Each agent (<strong>OpenClaw 🦞</strong>)
-        runs in its own sandbox, reaches only what its policy allows, uses credentials it never sees,
-        and is driven from a <strong>live shell right in this page</strong>.
-      </p>
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Link href={`/learn/${FIRST_SLUG}`} className="rounded-lg bg-[var(--color-nv)] px-5 py-2.5 font-semibold text-[#06080b] hover:bg-[var(--color-nv-bright)]">Start learning →</Link>
-        <Link href="/learn/deploy" className="rounded-lg border border-[var(--color-line-2)] px-5 py-2.5 font-semibold hover:border-[var(--color-nv)]">Jump to the hands-on labs</Link>
-        <Link href="/links" className="rounded-lg border border-[var(--color-line-2)] px-5 py-2.5 font-semibold hover:border-[var(--color-nv)]">Console, Grafana &amp; links →</Link>
-      </div>
+    <LearnShell>
+      <div className="mx-auto max-w-6xl">
+        <section className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-panel)] p-8 md:p-10">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-nv-bright)]">OpenShell on Kubernetes · Hands-on</div>
+          <h1 className="mt-3 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
+            Run AI agents safely<br />on a Kubernetes cluster
+          </h1>
+          <p className="mt-5 max-w-3xl text-lg leading-relaxed text-[var(--color-fg-dim)]">
+            Learn how NVIDIA OpenShell turns a plain cluster into isolated agent sandboxes: deny-by-default
+            network policy, credentials the agent never sees, an audit trail of every decision, and people
+            signing in with their own roles.
+          </p>
+          <p className="mt-4 max-w-3xl text-lg leading-relaxed text-[var(--color-fg-dim)]">
+            You work as the platform operator, the agent developer, the security reviewer and finally the
+            SRE. Everything is already deployed on your VM; every lab step has a <strong className="text-[var(--color-fg)]">Run</strong> button
+            that executes on it, and the <strong className="text-[var(--color-fg)]">Cluster shell</strong> is there when you want to type.
+          </p>
+          <Link href={`/learn/${FIRST_SLUG}`} className="mt-7 inline-block rounded-lg bg-[var(--color-nv)] px-5 py-2.5 text-sm font-bold text-[#0a0d07] hover:bg-[var(--color-nv-bright)]">
+            Start Module 0 →
+          </Link>
+        </section>
 
-      <div className="mt-14 grid gap-4 sm:grid-cols-3">
-        {[
-          { t: "What you'll learn", d: "How a sandbox becomes a workload pod and a supervisor pod, how its network and credentials are governed, and how to operate a fleet of them." },
-          { t: "The stack", d: "k3s · agent-sandbox · OpenShell 0.1 · LiteLLM · Keycloak · the OpenShell Console · Grafana, Loki, Tempo · OpenClaw — all on one VM." },
-          { t: "Hands-on, for real", d: "Every lab runs commands against a live cluster from the terminal embedded in the page. No slides, no mockups." },
-        ].map((c) => (
-          <div key={c.t} className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-5">
-            <div className="text-sm font-bold text-[var(--color-nv-bright)]">{c.t}</div>
-            <div className="mt-1 text-sm text-[var(--color-fg-dim)]">{c.d}</div>
-          </div>
-        ))}
-      </div>
+        <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> What you will build</h2>
+        <p className="mt-4 text-[1.05rem] leading-relaxed text-[var(--color-fg-dim)]">
+          A governed agent platform on one VM, and on top of it an SRE copilot: five sealed agents that each
+          read exactly one telemetry backend, find the root cause of a real outage together, and recommend a
+          fix that a human approves.
+        </p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-5">
+          {[
+            ["Seal", "Deny-by-default sandbox"],
+            ["Grant", "One host, one method, one path"],
+            ["Inject", "Credentials as placeholders"],
+            ["Audit", "Every allow and deny"],
+            ["Operate", "A fleet that finds root cause"],
+          ].map(([t, d]) => (
+            <div key={t} className="rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-4 py-3">
+              <div className="text-sm font-bold text-[var(--color-nv-bright)]">{t}</div>
+              <div className="mt-1 text-sm text-[var(--color-fg-dim)]">{d}</div>
+            </div>
+          ))}
+        </div>
 
-      <h2 className="mt-16 text-lg font-bold tracking-tight">The curriculum</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {CURRICULUM.map((p) => (
-          <div key={p.id} className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-5">
-            <div className={`text-sm font-bold ${p.accent === "nv" ? "text-[var(--color-nv-bright)]" : "text-[var(--color-fg)]"}`}>{p.title}</div>
-            <div className="mt-1 text-sm text-[var(--color-fg-dim)]">{p.subtitle}</div>
-            <ul className="mt-3 space-y-1 text-sm text-[var(--color-fg-mut)]">
-              {p.lessons.map((l) => (
-                <li key={l.slug}>
-                  <Link href={`/learn/${l.slug}`} className="hover:text-[var(--color-nv-bright)]">{l.title}</Link>
-                  {l.hasLab && <span className="ml-1 text-[var(--color-nv)]">🧪</span>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        <Figure src="/diagrams/architecture.svg" alt="The lab on one VM: the training site, Keycloak and Grafana; the OpenShell gateway, sandboxes (workload + supervisor pods), LiteLLM and the monitoring stack." caption="The whole lab on one VM" />
+
+        <h2 className="mt-12 flex items-center gap-2 text-2xl font-bold"><span className="text-[var(--color-nv-bright)]">›</span> How the modules fit together</h2>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          {CURRICULUM.map((m) => (
+            <Link key={m.id} href={`/learn/${m.lessons[0].slug}`} className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-5 transition hover:border-[var(--color-nv-dim)]">
+              <div className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-nv-bright)]">Module {m.n}</div>
+              <div className="mt-1 text-lg font-bold">{m.title}</div>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-fg-dim)]">{m.subtitle}</p>
+              <div className="mt-3 text-xs text-[var(--color-fg-mut)]">
+                {m.lessons.length} lessons · {m.lessons.filter((l) => l.kind === "lab").length} labs · {m.lessons.reduce((a, l) => a + l.minutes, 0)} min
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
-    </main>
+    </LearnShell>
   );
 }

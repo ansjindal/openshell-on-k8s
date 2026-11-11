@@ -1,12 +1,23 @@
 Every decision a supervisor makes, every connection opened or refused, every HTTP request allowed or denied, every policy loaded, is written down as an **OCSF** event (the Open Cybersecurity Schema Framework). It's how you answer "what did this agent try to do?" after the fact.
 
-## 1 · From the CLI
+<BeforeYouStart
+  will="make agent-0 trip two denials, read them as OCSF events from the CLI, query the same events for every sandbox in Loki and Grafana, and find agent traces in Tempo."
+  time="about ten minutes."
+/>
+
+<Section n="1" title="From the CLI" goal="Generate denials and read them in the sandbox's log.">
+
+<Step n="1" title="Make some traffic">
 
 Make some traffic first: one denied host and one denied admin call.
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -m 5 https://example.org >/dev/null; curl -s -X POST http://litellm.litellm.svc.cluster.local:4000/key/generate >/dev/null; echo done'
 ```
+
+</Step>
+
+<Step n="2" title="Read the OCSF events">
 
 Now read the sandbox's log:
 
@@ -31,7 +42,13 @@ How to read a line:
 
 Note the first line: `example.org` isn't in any rule, so the supervisor didn't even resolve it. DNS is part of the seal.
 
-## 2 · In Loki: across every sandbox
+</Step>
+
+</Section>
+
+<Section n="2" title="In Loki, across every sandbox" goal="Query the same events for every sandbox with LogQL.">
+
+<Step n="1" title="Query the denials">
 
 The supervisors' logs are shipped to **Loki** by Alloy. The same events, for every sandbox, queryable with LogQL. Find the Loki service and ask for the denials of the last 15 minutes:
 
@@ -41,7 +58,13 @@ L=$(kubectl -n monitoring get svc loki -o jsonpath='{.spec.clusterIP}'); curl -s
 
 Each line carries the supervisor pod, so you know which sandbox it was. (The gateway also exports its OCSF events to Loki over OTLP, with the sandbox id as an attribute.)
 
-## 3 · In Grafana
+</Step>
+
+</Section>
+
+<Section n="3" title="In Grafana" goal="Explore and live-tail the denials in Grafana.">
+
+<Step n="1" title="Open Explore on Loki">
 
 Open Grafana from the site's **Links** page (`<your site>/grafana`, sign in with Keycloak as `demo`), go to **Explore**, pick **Loki**, and run:
 
@@ -49,11 +72,21 @@ Open Grafana from the site's **Links** page (`<your site>/grafana`, sign in with
 {namespace="openshell-sandboxes", container="supervisor"} |= "OCSF" |= "DENIED"
 ```
 
+</Step>
+
+<Step n="2" title="Try other filters and go live">
+
 Try `|= "HTTP:"` for every inspected request, or `|= "CONFIG:PUBLISHED"` to see each policy revision being loaded. Click **Live** and run the denied `curl` again: it appears within seconds.
 
-## 4 · Agent traces in Tempo
+</Step>
+
+</Section>
+
+<Section n="4" title="Agent traces in Tempo" goal="Find the agent's own OpenTelemetry spans.">
 
 The supervisor also relays the agent's own **OpenTelemetry** spans: every sandbox process gets `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the supervisor, which tags each span with the sandbox id and forwards it to **Tempo**. An agent instrumented with OpenTelemetry (send `application/x-protobuf`) shows up in Grafana → Explore → **Tempo**, searchable by `resource.openshell.sandbox.id`. The gateway's own spans (every RPC, every sandbox create) are there too, under service `openshell-gateway`.
+
+</Section>
 
 <Callout type="nv" title="Why OCSF">
 OCSF is a vendor-neutral schema that SIEMs (Splunk, Sentinel, Security Lake, …) already understand. The agent's network behaviour lands in the same security tooling as the rest of your estate, with no custom parser.

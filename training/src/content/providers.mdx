@@ -2,13 +2,26 @@ The `litellm` provider was set up for you. Now build one yourself, for a service
 
 The service is a tiny **echo API** (`manifests/demo-echo/echo.yaml`): it answers every request with the method, path and headers it received. So you can see exactly what leaves the sandbox.
 
-## 1. Deploy the echo API
+<BeforeYouStart
+  will="deploy an echo API, write and import a provider profile, attach a provider to agent-0, watch the real token arrive, rotate it and detach it."
+  time="about fifteen minutes. Each step has a Run button that runs its command on your lab VM."
+/>
+
+<Section n="1" title="Deploy the echo API" goal="Run a service that shows what it receives.">
+
+<Step n="1" title="Apply the manifest">
 
 ```bash
 kubectl apply -f manifests/demo-echo/echo.yaml && kubectl -n lab-demo rollout status deploy/echo --timeout=120s
 ```
 
-## 2. Write the profile
+</Step>
+
+</Section>
+
+<Section n="2" title="Write the profile" goal="Define where the token may go and for which requests.">
+
+<Step n="1" title="Read the profile">
 
 A **provider profile** is the contract for one kind of credential. Read `manifests/demo-echo/echo-api.profile.yaml`:
 
@@ -33,6 +46,10 @@ endpoints:
       - allow: {method: GET, path: "/api/**"}   # and only for these requests
 ```
 
+</Step>
+
+<Step n="2" title="Lint and import it">
+
 Lint it, then import it into the gateway:
 
 ```bash
@@ -43,7 +60,13 @@ openshell profile lint -f manifests/demo-echo/echo-api.profile.yaml && openshell
 Imported 1 provider profile.`}
 </ExpectedOutput>
 
-## 3. Create the provider: the gateway keeps the token
+</Step>
+
+</Section>
+
+<Section n="3" title="Create the provider" goal="Give the real token to the gateway, not the sandbox.">
+
+<Step n="1" title="Create it from the environment">
 
 A **provider** is an instance of a profile holding a real credential. Pass the value through the environment, so it never appears in your shell history or the process list:
 
@@ -54,7 +77,13 @@ ECHO_TOKEN=lab-secret-123 openshell provider create --name echo --type echo-api 
 {`✓ Created provider echo`}
 </ExpectedOutput>
 
-## 4. Attach it to a running sandbox
+</Step>
+
+</Section>
+
+<Section n="4" title="Attach it to a running sandbox" goal="Add the credential and its policy to agent-0 live.">
+
+<Step n="1" title="Attach the provider">
 
 ```bash
 openshell sandbox provider attach agent-0 echo --wait
@@ -65,7 +94,13 @@ openshell sandbox provider attach agent-0 echo --wait
   Wait: complete`}
 </ExpectedOutput>
 
-No restart: the sandbox applied the new credential and the profile's policy. New processes see the variable:
+No restart: the sandbox applied the new credential and the profile's policy.
+
+</Step>
+
+<Step n="2" title="Check the variable">
+
+New processes see the variable:
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
@@ -74,7 +109,13 @@ openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
 {`openshell:resolve:env:v2062283290838615716_ECHO_TOKEN`}
 </ExpectedOutput>
 
-## 5. Call the API: what actually arrives
+</Step>
+
+</Section>
+
+<Section n="5" title="Call the API" goal="See what actually arrives at the service.">
+
+<Step n="1" title="A GET carries the real token">
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/whoami' | grep -E '"path"|authorization'
@@ -84,7 +125,13 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $E
     "authorization": "Bearer lab-secret-123"`}
 </ExpectedOutput>
 
-The agent sent the placeholder; the echo service received `lab-secret-123`. The supervisor swapped it on the way, because the request matched the profile's endpoint and rule. A `POST` doesn't match, so it never leaves:
+The agent sent the placeholder; the echo service received `lab-secret-123`. The supervisor swapped it on the way, because the request matched the profile's endpoint and rule.
+
+</Step>
+
+<Step n="2" title="A POST never leaves">
+
+A `POST` doesn't match, so it never leaves:
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -o /dev/null -w "HTTP %{http_code}\n" -X POST -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/x'
@@ -93,13 +140,23 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -o /dev/null -w "HTTP %{http
 {`HTTP 403`}
 </ExpectedOutput>
 
-## 6. Rotate the token
+</Step>
+
+</Section>
+
+<Section n="6" title="Rotate the token" goal="Change the credential without touching the sandbox.">
+
+<Step n="1" title="Update the provider">
 
 Change the credential in the gateway; every sandbox with the provider attached picks it up, still without a restart:
 
 ```bash
 ECHO_TOKEN=lab-secret-456 openshell provider update echo --credential ECHO_TOKEN --wait
 ```
+
+</Step>
+
+<Step n="2" title="See the new value arrive">
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/whoami' | grep authorization
@@ -110,13 +167,23 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $E
 
 The agent's placeholder didn't change; only the value behind it did.
 
-## 7. Detach it
+</Step>
+
+</Section>
+
+<Section n="7" title="Detach it" goal="Revoke the credential and its policy.">
+
+<Step n="1" title="Detach the provider">
 
 Detaching revokes both the credential and the policy entry the profile added:
 
 ```bash
 openshell sandbox provider detach agent-0 echo --wait
 ```
+
+</Step>
+
+</Section>
 
 <Callout type="nv" title="Why this matters">
 An agent with a token in its environment can send it anywhere: in a URL, a log line, a prompt-injected request to an attacker. With a provider, the token is only ever materialised by the supervisor, on requests that match the profile's endpoint and rules, and the agent can't read it back. Rotation and revocation are one command, for every sandbox at once.

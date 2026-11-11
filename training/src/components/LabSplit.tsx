@@ -71,7 +71,7 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
       {/* Reserve space at the bottom of the page so the fixed dock never covers
           the tail of the content — height matches whatever the dock is showing. */}
       <div
-        className="prose max-w-none xl:max-w-6xl"
+        className="max-w-none xl:max-w-6xl"
         style={{ paddingBottom: show ? (minimized ? BAR_H : height + BAR_H) : 0 }}
       >
         {children}
@@ -82,7 +82,7 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
           onClick={() => setShow(true)}
           className="fixed bottom-4 right-4 z-40 rounded-lg border border-[var(--color-nv-dim)] bg-[var(--color-panel)] px-4 py-2 text-sm font-semibold text-[var(--color-nv-bright)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition hover:bg-[var(--color-bg-2)]"
         >
-          <span className="inline-flex items-center gap-2"><PanelBottomOpen size={15} /> Show shell</span>
+          <span className="inline-flex items-center gap-2"><PanelBottomOpen size={15} /> Cluster shell</span>
         </button>
       )}
 
@@ -103,7 +103,7 @@ export function LabSplit({ slug, children }: { children: ReactNode; slug?: strin
           <div className="flex items-center gap-2 px-4" style={{ height: BAR_H }}>
             <TerminalSquare size={15} className="text-[var(--color-nv-bright)]" />
             <span className="truncate text-xs font-semibold text-[var(--color-fg-dim)]">
-              Live lab shell{slug ? ` · ${slug}` : ""}
+              Cluster shell · a bash shell on your lab VM (kubectl, openshell)
             </span>
             <button
               onClick={() => setMinimized((m) => !m)}
