@@ -61,7 +61,7 @@ openshell sandbox create --name agent-1 \
 | `--policy …baseline.yaml` | start from the lab baseline: deny all network, `/sandbox` and `/tmp` writable |
 | `--memory 3Gi` | the workload pod's memory request and limit (one OpenClaw turn peaks near 2 GB). `--cpu` would also become a *request*: on an 8-vCPU VM a few of those fill the node |
 | `--detach` and `-- sleep infinity` | the command after `--` is the sandbox's **main process**; the sandbox lives as long as it runs |
-| (no `--from`) | the gateway's default image, `ghcr.io/ansjindal/openclaw-sandbox`: OpenClaw on the OpenShell community base |
+| (no `--from`) | the gateway's default image, `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox`: OpenClaw on the OpenShell community base |
 
 Without a trailing command and `--detach`, `openshell sandbox create` opens an interactive shell in the new sandbox instead; type `exit` to leave.
 

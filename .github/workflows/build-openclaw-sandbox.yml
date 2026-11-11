@@ -1,14 +1,12 @@
 name: build-openclaw-sandbox
 
-# Builds the custom OpenClaw sandbox image (community base + a pinned OpenClaw version)
-# and publishes it to GHCR under this repo's owner. Run it from the Actions tab (Run
-# workflow), or it triggers when the Dockerfile/workflow changes.
-#
-# After the first run, make the resulting package PUBLIC (GitHub -> your profile ->
-# Packages -> openclaw-sandbox -> Package settings -> Change visibility -> Public) so
-# the k3s node can pull it without a pull secret. Then pin the image
-# (ansible/roles/09-openshell_gateway/files/values.yaml) to:
-#   ghcr.io/<owner>/openclaw-sandbox:<version>
+# Builds the OpenClaw sandbox image (images/openclaw-sandbox) and publishes it as
+#   ghcr.io/<owner>/<repo>/openclaw-sandbox:<version>
+# A package named under the repository is created by this workflow on the first
+# push and linked to this repo, so GITHUB_TOKEN can write to it. Packages in a
+# public repo are public, so k3s pulls without a pull secret. The gateway's
+# default image is sandbox_image_repository/_tag in ansible/inventory/group_vars/all.yml.
+# Runs on changes under images/openclaw-sandbox/, or from the Actions tab.
 
 on:
   workflow_dispatch:
@@ -45,5 +43,5 @@ jobs:
           build-args: |
             OPENCLAW_VERSION=${{ env.VERSION }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/openclaw-sandbox:${{ env.VERSION }}
-            ghcr.io/${{ github.repository_owner }}/openclaw-sandbox:latest
+            ghcr.io/${{ github.repository }}/openclaw-sandbox:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}/openclaw-sandbox:latest

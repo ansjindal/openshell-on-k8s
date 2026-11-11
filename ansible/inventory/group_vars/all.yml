@@ -105,7 +105,7 @@ inference_model: "{{ litellm_models[0].name }}"
 openshell_cli_version: "v{{ openshell_chart_version }}"
 # Default workload image for `openshell sandbox create` (no --from): OpenClaw on
 # the OpenShell community base image, built from images/openclaw-sandbox.
-sandbox_image_repository: ghcr.io/ansjindal/openclaw-sandbox
+sandbox_image_repository: ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox
 sandbox_image_tag: "2026.11.3"
 # Lab CA: cert-manager ClusterIssuer that signs in-cluster HTTPS for the public
 # host (Keycloak). The bundle ConfigMap (public roots + lab CA) is what the

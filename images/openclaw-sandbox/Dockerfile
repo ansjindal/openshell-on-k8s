@@ -9,7 +9,7 @@
 #     comes from the `litellm` provider attached to the sandbox).
 #
 # Built and published by .github/workflows/build-openclaw-sandbox.yml as
-# ghcr.io/<owner>/openclaw-sandbox:<OPENCLAW_VERSION>; the gateway's default
+# ghcr.io/<owner>/<repo>/openclaw-sandbox:<OPENCLAW_VERSION>; the gateway's default
 # sandbox image (sandbox_image_tag in ansible/inventory/group_vars/all.yml) pins it.
 FROM ghcr.io/nvidia/openshell-community/sandboxes/base:fffb6b2@sha256:aeef1c63f00e2913ea002ccb3aaf925f338b5c5d70e63576f0d95c16a138044e
 

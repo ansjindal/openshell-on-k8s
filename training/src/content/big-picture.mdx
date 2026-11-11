@@ -18,7 +18,7 @@ One VM runs the whole thing. From the bottom up, each layer hands a safer, more 
 - **LiteLLM** (namespace `litellm`): one OpenAI-compatible endpoint in front of the model. Agents reach it through the `litellm` **provider**, with a key they never see.
 - **Keycloak**, **Envoy Gateway** and the **OpenShell Console**: people sign in with Keycloak; Envoy publishes the training site, Keycloak and Grafana on one host and the console on its own.
 - **Monitoring**: Prometheus and Grafana for metrics, Loki for logs and OpenShell's audit events, Tempo for traces.
-- **OpenClaw 🦞**: the default agent, baked into the default sandbox image `ghcr.io/ansjindal/openclaw-sandbox`.
+- **OpenClaw 🦞**: the default agent, baked into the default sandbox image `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox`.
 
 ## The flow, end to end
 
