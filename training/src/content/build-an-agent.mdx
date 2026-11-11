@@ -1,0 +1,325 @@
+An **agent** is a model plus a **harness**: the program that sends your prompt to the model, runs the tools the model asks for (read a file, run a command), and feeds the results back until the model answers. In this lab you build one with **pi**, a small open-source harness, connect it to your model, and watch what it can do on the VM. Then you put the same agent in an OpenShell sandbox and see what changes.
+
+<BeforeYouStart
+  will="install the pi harness, connect it to your model, run it with and without tools, then run it inside a sandbox with a policy you apply live."
+  time="about fifteen minutes. The sandbox you create here, pi-agent, is deleted at the end."
+/>
+
+<Section n="1" title="An agent on the VM" goal="Install pi, connect it to the model API and run it.">
+
+<Step n="1" title="Install pi">
+
+pi is an npm package. Install it into your home folder, so it needs no root:
+
+```bash
+npm install -g --prefix ~/.local --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2 && ~/.local/bin/pi --version
+```
+<Output summary="123 packages, and the pi CLI prints its version.">
+<ExpectedOutput>
+{`added 123 packages in 7s
+1.5.2`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Connect it to your model">
+
+pi finds models in `~/.pi/agent/models.json`. Describe your model API there: the same `MODEL_BASE_URL` and `MODEL_NAME` the lab was set up with, and **a reference** to the key, `$MODEL_API_KEY`, which pi reads from the environment when it calls the model. The file never holds the key itself.
+
+```bash
+cd ~/openshell-on-k8s && set -a && . ./.env && set +a
+mkdir -p ~/.pi/agent && cat > ~/.pi/agent/models.json <<EOF
+{
+  "providers": {
+    "lab": {
+      "baseUrl": "$MODEL_BASE_URL",
+      "api": "openai-completions",
+      "apiKey": "\$MODEL_API_KEY",
+      "compat": { "supportsDeveloperRole": false, "supportsReasoningEffort": false },
+      "models": [{ "id": "$MODEL_NAME" }]
+    }
+  }
+}
+EOF
+PI_OFFLINE=1 ~/.local/bin/pi --list-models lab
+```
+<Output summary="pi lists one model on the provider you called lab: yours.">
+<ExpectedOutput>
+{`provider  model           context  max-out  thinking  images
+lab       <MODEL_NAME>    128K     16.4K    no        no`}
+</ExpectedOutput>
+</Output>
+
+`"api": "openai-completions"` means any OpenAI-compatible endpoint. `PI_OFFLINE=1` stops pi's own update check and install ping, so the only network calls are to your model.
+
+</Step>
+
+<Step n="3" title="Ask it something">
+
+`-p` runs one prompt and prints the answer. `--no-session` keeps no history:
+
+```bash
+cd ~/openshell-on-k8s && set -a && . ./.env && set +a
+PI_OFFLINE=1 ~/.local/bin/pi --provider lab --model "$MODEL_NAME" --no-session -p "In one sentence: what is an AI agent harness?" </dev/null
+```
+<Output summary="The model's answer, through pi.">
+<ExpectedOutput>
+{`An AI agent harness is a framework that provides an AI model with tools (like file reading, command execution, and code editing) and a controlled environment to perceive, act, and iterate on tasks such as software development.`}
+</ExpectedOutput>
+</Output>
+
+(`</dev/null` tells pi there is no piped input to wait for.)
+
+</Step>
+
+<Step n="4" title="Give it a tool">
+
+So far the model only talks. With `--tools bash`, pi lets the model run shell commands and reads it the results: now it is an agent. Ask it to reach a website:
+
+```bash
+cd ~/openshell-on-k8s && set -a && . ./.env && set +a
+PI_OFFLINE=1 ~/.local/bin/pi --provider lab --model "$MODEL_NAME" --no-session --tools bash -p "Use bash to run curl -s -m 8 -o /dev/null -w %{http_code} https://example.com and reply with one line: the HTTP status it printed." </dev/null
+```
+<Output summary="200: the agent ran curl and reached example.com.">
+<ExpectedOutput>
+{`200`}
+</ExpectedOutput>
+</Output>
+
+It worked, and that is the problem. On the VM the agent runs as you: it can reach **any** host, read **any** file you can, and its process holds your **real** model key in `MODEL_API_KEY`. Whatever a prompt talks it into, it can do.
+
+</Step>
+
+</Section>
+
+<Section n="2" title="The same agent in a sandbox" goal="Create a sandbox for pi and see the seal refuse it.">
+
+<Step n="1" title="Create the sandbox">
+
+Create a sandbox named `pi-agent` with the `litellm` provider (model access, with a placeholder key) and the lab's baseline policy (no network at all):
+
+```bash
+cd ~/openshell-on-k8s && openshell sandbox create --name pi-agent --provider litellm --policy manifests/policies/baseline.yaml --memory 2Gi --no-tty --detach -- sleep infinity
+```
+<Output summary="The gateway creates the sandbox in your workspace's namespace.">
+<ExpectedOutput>
+{`Created sandbox: pi-agent
+
+  [0.0s] Requesting compute...`}
+</ExpectedOutput>
+</Output>
+
+Check that it is `Ready` (give it a few seconds):
+
+```bash
+openshell sandbox list
+```
+<Output>
+<ExpectedOutput>
+{`NAME      CREATED              PHASE
+agent-0   2026-11-11 13:19:44  Ready
+agent-1   2026-11-11 13:20:46  Ready
+pi-agent  2026-11-11 14:15:41  Ready`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Try to install pi inside">
+
+The sandbox image has Node and npm. Ask npm for pi:
+
+```bash
+openshell sandbox exec -n pi-agent -- npm view @earendil-works/pi-coding-agent version --fetch-retries=0 --fetch-timeout=5000
+```
+<Output summary="Refused: connect EACCES. The connection never left the sandbox.">
+<ExpectedOutput>
+{`npm error code EACCES
+npm error syscall connect
+npm error errno EACCES
+npm error FetchError: request to https://registry.npmjs.org/@earendil-works%2fpi-coding-agent failed, reason: connect EACCES 198.18.0.2:443 - Local (0.0.0.0:0)
+...`}
+</ExpectedOutput>
+</Output>
+
+The supervisor wrote down why:
+
+```bash
+openshell logs pi-agent | grep OCSF | grep registry.npmjs.org | tail -1
+```
+<Output summary="One OCSF event: node tried registry.npmjs.org:443, and no policy allows it.">
+<ExpectedOutput>
+{`[1794406676.136] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/node(0) -> registry.npmjs.org:443 [reason:transparent_tcp_policy_denied]`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="Open one door">
+
+`manifests/policies/pi-agent.yaml` is the baseline plus one grant: the npm registry, **read-only** (GET, HEAD, OPTIONS), for **`/usr/bin/node` only**:
+
+```yaml
+network_policies:
+  npm_registry:
+    name: npm_registry
+    endpoints:
+      - host: registry.npmjs.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+        # scoped packages are fetched as /@scope%2Fname
+        allow_encoded_slash: true
+    binaries:
+      - path: /usr/bin/node
+```
+
+`allow_encoded_slash` is there because scoped packages such as `@earendil-works/…` are requested with an encoded `/` (`%2F`) in the path, which the L7 check refuses unless the endpoint allows it. Apply the file to the running sandbox:
+
+```bash
+cd ~/openshell-on-k8s && openshell policy set pi-agent --policy manifests/policies/pi-agent.yaml --wait
+```
+<Output summary="Revision 2 is loaded into the running sandbox: no restart.">
+<ExpectedOutput>
+{`✓ Policy version 2 submitted (hash: 6750e23ab498)
+✓ Policy version 2 loaded (active version: 2)`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="4" title="Install pi in the sandbox">
+
+```bash
+openshell sandbox exec -n pi-agent -- npm install --prefix /sandbox/pi --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2
+```
+<Output summary="The same 123 packages, now through the policy.">
+<ExpectedOutput>
+{`added 123 packages in 11s`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="3" title="Run it sealed" goal="Connect pi to the model through the provider and test the seal.">
+
+<Step n="1" title="Point pi at the provider">
+
+Inside the sandbox there is no `MODEL_API_KEY`. The `litellm` provider gave it `LITELLM_API_KEY`, and LiteLLM's in-cluster address. Write pi's config there, with the same kind of reference:
+
+```bash
+openshell sandbox exec -n pi-agent -- sh -c 'mkdir -p ~/.pi/agent && cat > ~/.pi/agent/models.json <<EOF
+{
+  "providers": {
+    "lab": {
+      "baseUrl": "http://litellm.litellm.svc.cluster.local:4000/v1",
+      "api": "openai-completions",
+      "apiKey": "\$LITELLM_API_KEY",
+      "compat": { "supportsDeveloperRole": false, "supportsReasoningEffort": false },
+      "models": [{ "id": "default" }]
+    }
+  }
+}
+EOF
+grep apiKey ~/.pi/agent/models.json'
+```
+<Output>
+<ExpectedOutput>
+{`      "apiKey": "$LITELLM_API_KEY",`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Ask it again">
+
+```bash
+openshell sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "In one sentence: what is an AI agent harness?"
+```
+<Output summary="It answers: the model call went through the supervisor, which added the real key.">
+<ExpectedOutput>
+{`An AI agent harness is a framework that equips an AI agent with tools, sandboxed execution, and APIs to inspect, modify, and run code while managing its interactions safely.`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="Give it the same tool">
+
+The same request as on the VM: reach example.com with curl.
+
+```bash
+openshell sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --tools bash -p "Use bash to run curl -s -m 8 -o /dev/null -w %{http_code} https://example.com and reply with one line: the HTTP status it printed."
+```
+<Output summary="000: curl got no response. The agent still runs its tool; the network says no.">
+<ExpectedOutput>
+{`000`}
+</ExpectedOutput>
+</Output>
+
+The log shows both decisions: the model call allowed by the provider's L7 rule, curl to example.com denied.
+
+```bash
+openshell logs pi-agent | grep OCSF | grep -E "example.com|litellm" | tail -3
+```
+<Output>
+<ExpectedOutput>
+{`[1794406741.781] [sandbox] [OCSF ] [ocsf] CONFIG:OBSERVATION [INFO] Policy DNS staged unapproved name example.com synthetic=198.18.0.5 for TCP policy review
+[1794406741.784] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/curl(0) -> example.com:443 [reason:transparent_tcp_policy_denied]
+[1794406741.794] [sandbox] [OCSF ] [ocsf] HTTP:POST [INFO] ALLOWED POST http://litellm.litellm.svc.cluster.local:4000/v1/chat/completions [policy:_provider_litellm engine:l7]`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="4" title="Ask it for its key">
+
+On the VM, an agent with a shell can read the real key. Here:
+
+```bash
+openshell sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --tools bash -p "Use bash to print the environment variable LITELLM_API_KEY and reply with only its value." | cut -c1-40
+```
+<Output summary="A placeholder. The real key only exists in the gateway and on the supervisor's outbound requests.">
+<ExpectedOutput>
+{`openshell:resolve:env:v11345618150965087`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="5" title="Clean up">
+
+```bash
+openshell sandbox delete pi-agent
+```
+
+</Step>
+
+</Section>
+
+<Optional title="The same agent, two places">
+
+| | On the VM | In the sandbox |
+|---|---|---|
+| Model key | the real `MODEL_API_KEY` in its environment | a placeholder; the supervisor adds the key on allowed calls |
+| Network | any host | only what the policy allows, per binary, method and path |
+| Audit | none | every allow and deny as an OCSF event |
+| Changing it | edit the machine | `openshell policy set` on the running sandbox |
+
+</Optional>
+
+## What you learned
+
+<Learned next="/learn/create-sandbox" nextLabel="Create a sandbox, and what it is made of">
+
+- **An agent is a model plus a harness.** pi sends prompts to the model, runs the tools it asks for, and feeds the results back.
+- **Unsandboxed, an agent can do anything you can.** On the VM it reached example.com and held the real key.
+- **Sandboxed, the network is deny by default.** npm and curl were refused, and each refusal is in the audit log.
+- **A policy opens one door at a time.** One read-only rule, for one binary, applied live.
+- **The key stays out of the sandbox.** The agent sees a placeholder; the supervisor adds the real key only on calls the provider allows.
+
+</Learned>

@@ -22,10 +22,11 @@ export const CURRICULUM: Part[] = [
   },
   {
     id: "m1", n: 1, title: "Sandboxes & Policy", accent: "nv", role: "You are the platform operator.",
-    subtitle: "You are the platform operator. Verify the cluster, create sandboxes, test the seal from the inside, and open the network one rule at a time.",
+    subtitle: "You are the platform operator. Verify the cluster, build an agent and seal it in a sandbox, then open the network one rule at a time.",
     lessons: [
       L("m1-overview", "Overview", "What this module builds: a sealed sandbox, opened one rule at a time.", 4),
       L("deploy", "Verify the cluster", "Confirm k3s, the gateway, the console and LiteLLM are healthy.", 8, "lab"),
+      L("build-an-agent", "Build an agent", "pi on the VM, connected to your model; then the same agent in a sandbox with a policy.", 15, "lab"),
       L("create-sandbox", "Create a sandbox", "openshell sandbox create → a workload pod and a supervisor pod → Ready.", 9, "lab"),
       L("into-the-sandbox", "Into the sandbox", "Exec in and test the seal: filesystem, user, network.", 8, "lab"),
       L("policy", "The seal: egress policy", "Deny by default; grant one endpoint live, then narrow it to GET with an L7 rule.", 10, "lab"),
