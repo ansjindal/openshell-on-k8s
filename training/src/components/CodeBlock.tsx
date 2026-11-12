@@ -6,7 +6,6 @@ import yaml from "highlight.js/lib/languages/yaml";
 import json from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github-dark.css";
 import { useContext } from "react";
-import { ChevronDown, ChevronUp, Copy, Loader2, Play, Terminal as TerminalIcon, Trash2 } from "lucide-react";
 import { runInShell, runApiCheckStream } from "@/lib/labBus";
 import { setStepDone, setStepOutput } from "@/lib/progress";
 import { StepContext } from "@/components/course/Structure";
@@ -72,7 +71,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   const [copied, setCopied] = useState(false);
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<{ stdout: string; stderr: string; exitCode: number | null } | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [folded, setFolded] = useState(false);
   const outputRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
@@ -89,7 +88,6 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
     outRef.current = "";
     step.setLive({ text: "", exit: null });
     setRunning(true);
-    setCollapsed(false);
     setOutput({ stdout: "", stderr: "", exitCode: null });
     const { exitCode } = await runApiCheckStream(code, (stream, chunk) => {
       outRef.current += chunk;
@@ -122,96 +120,64 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
   }, [code, grammar]);
 
   const copy = () => { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1400); };
-  const codeView = (
-    <pre className="m-0 overflow-x-auto whitespace-pre rounded-[11px] border border-[var(--color-code-bd)] bg-[var(--color-code-bg)] px-[17.6px] py-4 font-mono text-[13px] leading-[20.8px]">
-      {html
-        ? <code className={`hljs language-${grammar}`} style={{ background: "transparent", padding: 0 }} dangerouslySetInnerHTML={{ __html: html }} />
-        : <code className="text-[var(--color-code-fg)]">{code}</code>}
-    </pre>
-  );
+  const codeEl = html
+    ? <code className={`hljs language-${grammar}`} style={{ background: "transparent", padding: 0 }} dangerouslySetInnerHTML={{ __html: html }} />
+    : <code>{code}</code>;
 
+  // Tell the step which commands it runs, so its OUTPUT can show each with what it printed.
+  useEffect(() => {
+    if (runnableShell && step.addCmd) return step.addCmd(code);
+  }, [runnableShell, code]); // eslint-disable-line react-hooks/exhaustive-deps
   // Inside <Run>: just the command; the group has the Run button.
   useEffect(() => {
     if (group && !REF_LANGS.includes(lang)) return group.register(code);
   }, [group, code, lang]);
-  if (group) return <div className="not-prose">{codeView}</div>;
+  if (group) return <pre className="rl-code">{codeEl}</pre>;
 
-  // Display-only blocks: YAML, JSON, reference commands, diagrams in text.
+  // Display-only blocks: YAML, JSON, reference commands, text.
   if (!runnableShell) {
     return (
-      <div className="not-prose my-5 overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-code-bg)]">
-        <div className="flex items-center justify-between px-3 py-1.5">
-          <span className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-fg-mut)]">{isRef ? "reference" : lang || "text"}</span>
-          <button onClick={copy} className="inline-flex items-center gap-1 rounded border border-[var(--color-line-2)] px-2 py-0.5 text-[11px] text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]">
-            <Copy size={11} /> {copied ? "Copied" : "Copy"}
-          </button>
-        </div>
-        <div className="px-3 pb-3">{codeView}</div>
+      <div className="codewrap">
+        <pre>{codeEl}</pre>
+        <button onClick={copy} className="cbtn" title="Copy">{copied ? "Copied" : "Copy"}</button>
       </div>
     );
   }
 
+  const say = running ? "Running on your lab VM…" : output && output.exitCode !== null
+    ? (output.exitCode === 0 ? "Done. The output is below." : `It exited with code ${output.exitCode}. The output is below.`) : "";
   return (
-    <div className="not-prose my-5 space-y-3">
-      <div className="overflow-hidden rounded-[10px] border border-[var(--color-run-line)] bg-[var(--color-run-bg)]">
-        <div className="flex items-center gap-3 bg-[var(--color-run-head)] px-3 py-[7px] text-[13.5px]">
-          <span className={`rounded px-[7px] py-0.5 text-[10.5px] font-bold ${isInteractive ? "bg-[var(--color-info)] text-white" : "bg-[var(--color-nv)] text-[#0a0d07]"}`}>
-            {isInteractive ? "SHELL" : "RUN"}
+    <div className="rl rl-read rl-res">
+      <div className={`rl-box${folded ? " rl-folded" : ""}`}>
+        <div className="rl-boxhead rl-foldh" tabIndex={0} role="button" aria-expanded={!folded} onClick={() => setFolded(!folded)}>
+          <span className="rl-caret" />
+          <span className="rl-badge do">{isInteractive ? "Shell" : "Run"}</span>
+          <span className="rl-boxhint">{isInteractive ? "This one is interactive: it opens in the Cluster shell." : "Press Run to run this on your lab VM."}</span>
+          <span className="rl-hbtns" onClick={(e) => e.stopPropagation()}>
+            {runnableInline && <button onClick={() => runInShell(code)} title="Send to the Cluster shell instead (to edit it or keep state)">Shell</button>}
+            <button onClick={copy} title="Copy">{copied ? "Copied" : "Copy"}</button>
           </span>
-          <span className="flex-1 text-[13.5px] text-[var(--color-fg-dim)]">
-            {isInteractive ? "Interactive: this opens in the cluster shell." : "Press Run to run this on your lab VM."}
-          </span>
-          {runnableInline && (
-            <button onClick={() => runInShell(code)} title="Send to the cluster shell instead (to edit or keep state)"
-              className="inline-flex items-center gap-1 rounded border border-[var(--color-line-2)] px-2 py-0.5 text-[11px] text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]">
-              <TerminalIcon size={11} /> Shell
-            </button>
-          )}
-          <button onClick={copy} className="inline-flex items-center gap-1 rounded border border-[var(--color-line-2)] px-2 py-0.5 text-[11px] text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]">
-            <Copy size={11} /> {copied ? "Copied" : "Copy"}
-          </button>
         </div>
-        <div className="space-y-3 p-3">
-          {codeView}
-          <button
-            onClick={runnableInline ? runInline : () => runInShell(code)}
-            disabled={running}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-run-btn-line)] bg-[var(--color-run-btn)] py-3 text-[15px] font-bold text-[var(--color-nv-bright)] transition hover:bg-[var(--color-run-btn-hover)] disabled:opacity-60"
-          >
-            {running ? <><Loader2 size={15} className="animate-spin" /> Running…</> : runnableInline ? <>Run <Play size={14} /></> : <>Open in cluster shell <TerminalIcon size={14} /></>}
-          </button>
+        <div className="rl-boxbody">
+          <div className="rl-kcmdlist"><pre className="rl-code">{codeEl}</pre></div>
+          <div className="rl-ctrl">
+            <button className="rl-run" type="button" disabled={running} onClick={runnableInline ? runInline : () => runInShell(code)}>
+              {running ? "Running…" : runnableInline ? "Run ▷" : "Open in the Cluster shell ▷"}
+            </button>
+            {say && <div className={`rl-say ${running ? "wait" : output?.exitCode === 0 ? "ok" : "error"}`}>{say}</div>}
+          </div>
         </div>
       </div>
 
       {output && !step.hasOutput && (
-        <div className="overflow-hidden rounded-[10px] border border-[var(--color-out-line)] bg-[var(--color-out-bg)]">
-          <div className="flex items-center gap-3 bg-[var(--color-out-head)] px-3 py-[7px]">
-            <span className="rounded bg-[var(--color-info)] px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white">OUTPUT</span>
-            <span className="flex flex-1 items-center gap-2 text-sm text-[var(--color-fg-dim)]">
-              {output.exitCode === null ? (
-                <><Loader2 size={13} className="animate-spin text-[var(--color-nv-bright)]" /> Running on your lab VM…</>
-              ) : output.exitCode === 0 ? (
-                <><span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-nv)] text-[9px] font-bold text-[#0a0d07]">✓</span> From your lab VM · exit 0</>
-              ) : (
-                <><span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white">✕</span> From your lab VM · exit {output.exitCode}</>
-              )}
-            </span>
-            <button onClick={() => setCollapsed((c) => !c)} title={collapsed ? "Expand" : "Collapse"} className="text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]">
-              {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-            </button>
-            <button onClick={() => setOutput(null)} title="Clear output" className="text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]"><Trash2 size={13} /></button>
+        <div className="rl-box rl-ktourout">
+          <div className="rl-boxhead rl-foldh"><span className="rl-caret" /><span className="rl-badge do">Output</span>
+            <span className="rl-boxhint">{output.exitCode === null ? "Running on your lab VM…" : `From your lab VM · exit ${output.exitCode}`}</span>
+            <span className="rl-hbtns"><button onClick={() => setOutput(null)} title="Clear this output">Clear</button></span>
           </div>
-          {!collapsed && (
-            <pre ref={outputRef} className="m-0 max-h-80 overflow-auto whitespace-pre px-4 py-3 font-mono text-[12px] leading-relaxed text-[var(--color-term-fg)]">
-              {output.stdout}
-              {output.stderr && (
-                <span style={{ color: output.exitCode === null || output.exitCode === 0 ? "var(--color-term-fg)" : "var(--color-rh-bright)" }}>
-                  {output.stdout ? "\n" : ""}{output.stderr}
-                </span>
-              )}
-              {!output.stdout && !output.stderr && <span className="text-[var(--color-fg-mut)]">(no output)</span>}
-            </pre>
-          )}
+          <div className="rl-boxbody">
+            <pre ref={outputRef} className="rl-kout">{output.stdout}{output.stderr && <span className={output.exitCode ? "rl-err" : ""}>{output.stdout ? "\n" : ""}{output.stderr}</span>}{!output.stdout && !output.stderr && "(no output yet)"}</pre>
+          </div>
         </div>
       )}
     </div>

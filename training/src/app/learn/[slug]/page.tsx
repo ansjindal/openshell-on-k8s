@@ -33,22 +33,17 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
   return (
     <article className="w-full">
-      <div className="mb-8">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2 text-[12px] uppercase tracking-[0.12em] text-[var(--color-fg-mut)]">
-            <span>{current.partTitle}</span>
-            {current.kind === "lab" && <><span>·</span><span className="rounded border border-[var(--color-nv-dim)] px-[5px] py-px text-[9px] font-bold tracking-normal text-[var(--color-nv)]">LAB</span></>}
-            {current.kind === "check" && <span className="rounded border border-[var(--color-info)] px-1.5 font-mono text-[0.65rem] font-bold text-[var(--color-info)]">CHECK</span>}
-          </div>
-          {current.kind === "lab" && <CollapseAll />}
-        </div>
-        <h1 className="mt-2 text-[28px] font-bold leading-[47.6px] text-white [:root[data-theme=light]_&]:text-[var(--color-fg)]">
-          {current.slug.endsWith("-overview") ? <>Module {current.moduleN} · {current.partTitle.split(" · ").slice(1).join(" · ")}</> : current.title}
-        </h1>
+      <div className="crumb">
+        {current.partTitle}
+        {current.kind === "lab" && <> · <span className="labtag">LAB</span></>}
+        {current.kind === "check" && <> · <span className="labtag">CHECK</span></>}
+        {current.kind === "lab" && <CollapseAll />}
       </div>
-
       <LessonProvider slug={current.slug} number={current.number}>
-        <div className="prose max-w-none"><Content components={mdxComponents} /></div>
+        <div className="prose max-w-none">
+          <h1>{current.slug.endsWith("-overview") ? <>Module {current.moduleN} · {current.partTitle.split(" · ").slice(1).join(" · ")}</> : current.title}</h1>
+          <Content components={mdxComponents} />
+        </div>
       </LessonProvider>
       <MarkComplete slug={current.slug} />
 

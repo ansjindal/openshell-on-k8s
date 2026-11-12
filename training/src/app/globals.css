@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./template.css";
 
 /* ===== OpenShell on Kubernetes theme (dark shell, pastel diagram cards) ===== */
 :root {
@@ -127,42 +128,11 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 ::selection { background: rgba(118, 185, 0, 0.28); }
 * { box-sizing: border-box; }
 
-/* ---- prose (MDX content) ---- */
-.prose { color: var(--color-fg); font-size: 15px; line-height: 25.5px; }
-.prose > p, .prose > ul, .prose > ol { font-size: 16px; line-height: 25.6px; color: var(--color-fg-dim); }
-.prose > * + * { margin-top: 18px; }
-.prose h1, .prose h2, .prose h3 { color: var(--color-fg); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
-.prose h2 { font-size: 22px; line-height: 37.4px; margin-top: 40px; color: #fff; }
-.prose h3 { font-size: 17px; margin-top: 28px; }
-.prose strong { color: var(--color-fg); font-weight: 650; }
-.prose a { color: var(--color-nv-bright); border-bottom: 1px solid rgba(163, 230, 53, 0.35); }
-.prose ul, .prose ol { padding-left: 1.3em; }
-.prose li + li { margin-top: 6px; }
-.prose code { font-family: var(--font-mono); font-size: 0.8em; background: var(--color-panel-2); padding: 1.6px 6.4px; border-radius: 5.6px; color: var(--color-nv-bright); border: 1px solid var(--color-line); }
-.prose hr { border: none; border-top: 1px solid var(--color-line); margin: 32px 0; }
-.prose table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.prose th, .prose td { border: 1px solid var(--color-line); padding: 8px 12px; text-align: left; }
-.prose blockquote { border-left: 3px solid var(--color-nv); padding-left: 14px; color: var(--color-fg-mut); }
-
 /* ---- xterm tweaks ---- */
 .xterm { padding: 10px; }
 .xterm-viewport::-webkit-scrollbar { width: 8px; }
 .xterm-viewport::-webkit-scrollbar-thumb { background: var(--color-line-2); border-radius: 4px; }
 
-/* Code inside run/output panels: no inline-code chip styling. */
-.prose pre code, .not-prose pre code { border: 0 !important; background: transparent !important; padding: 0 !important; font-size: inherit !important; color: inherit; }
-
-/* Step cards joined by a short connector, like a timeline. */
-.steps > .step-card + .step-card { margin-top: 26px; position: relative; }
-.steps > .step-card + .step-card::before { content: ""; position: absolute; left: 42px; top: -27px; height: 26px; width: 1px; background: var(--color-line-2); }
-.steps > * + * { margin-top: 20px; }
-/* Run groups: captions as small text above each command. */
-.run-group > p { margin: 6px 0 4px; font-size: 13px; line-height: 22px; color: var(--color-fg-dim); }
-/* "What you learned": bold lead in white, the rest dimmed. */
-.learned ul { list-style: none; padding-left: 0; }
-.learned li { position: relative; padding-left: 22px; color: var(--color-fg-mut); }
-.learned li::before { content: "◆"; position: absolute; left: 0; color: var(--color-nv); font-size: 0.7em; top: 0.35em; }
-.learned li strong { color: var(--color-fg); }
 
 /* figures: the SVG fills its frame; boxes are clickable */
 .dg-svg { display: block; width: 100%; height: auto; }
@@ -170,8 +140,6 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 .dg-svg .dg-node:hover > rect:first-of-type, .dg-svg .dg-node.dg-sel > rect:first-of-type { stroke: var(--color-nv-bright); stroke-width: 2.4; }
 .dg-svg .dg-node.dg-sel > rect:first-of-type { filter: drop-shadow(0 0 6px rgba(146, 230, 0, 0.5)); }
 
-/* inside a step, text is full-strength 15px (the page intro is 16px, dimmed) */
-.step-body > p, .step-body > ul, .step-body > ol { font-size: 15px; line-height: 25.5px; color: var(--color-fg); }
 
 /* figure markers settle in */
 @keyframes swapIn { from { opacity: 0; transform: translateY(6px); } }
@@ -183,3 +151,26 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; line-
 @keyframes dgflow { to { stroke-dashoffset: -30; } }
 .dg-ping { transform-box: fill-box; transform-origin: center; animation: dgping 1.4s ease-out infinite; }
 @keyframes dgping { from { opacity: 0.9; transform: scale(0.7); } to { opacity: 0; transform: scale(1.5); } }
+
+/* ---- additions on top of the course template ---- */
+.sec-steps > .step:first-child { margin-top: 0.6rem; }
+.rl { margin: 1rem 0; display: flex; flex-direction: column; gap: 12px; }
+.rl-hbtns { margin-left: auto; display: inline-flex; gap: 6px; }
+.rl-hbtns button { font: 600 11px system-ui, sans-serif; color: var(--fg-mut); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; background: transparent; cursor: pointer; }
+.rl-hbtns button:hover { color: var(--fg-strong); border-color: var(--nv-dim); }
+.rl-kcmdlist > p { font-size: 13px; color: var(--fg-dim); margin: 4px 0 -2px; }
+.rl-kcmdlist .rl-code, .rl-box .rl-kcmdlist pre.rl-code { border: 1px solid var(--code-bd, var(--line)); border-radius: 8px; background: var(--code-bg); padding: 10px 14px; font-size: 13px; }
+.rl-kdot.rec { background: var(--fg-mut); }
+.rl-err { color: #e06666; }
+.codewrap { position: relative; }
+.codewrap .cbtn { position: absolute; top: 8px; right: 8px; font: 600 11px system-ui, sans-serif; color: var(--fg-mut); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; background: var(--panel); cursor: pointer; opacity: 0; transition: opacity .15s; }
+.codewrap:hover .cbtn { opacity: 1; }
+.learned ul { margin-top: 0.4rem; }
+.sitehead { position: sticky; top: 0; z-index: 40; height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 18px; background: rgba(11, 14, 10, 0.8); border-bottom: 1px solid var(--line); backdrop-filter: blur(8px); }
+html[data-theme="light"] .sitehead { background: rgba(247, 249, 243, 0.92); border-color: rgb(205, 216, 189); }
+.sitehead .spacer { flex: 1; }
+.badge.live { background: rgba(118, 185, 0, 0.12); color: var(--nv-bright); border: 1px solid var(--nv-dim); }
+@keyframes pulse { 50% { opacity: 0.35; } }
+.prose h1 { font-weight: 700; }
+.prose h2, .prose h3 { font-weight: 700; }
+.prose h3 { font-weight: 600; }

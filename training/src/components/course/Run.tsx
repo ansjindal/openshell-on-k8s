@@ -13,7 +13,6 @@
 // The fences inside register their commands here (see CodeBlock); Run executes
 // them in order on the lab VM and feeds the step's OUTPUT panel.
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Loader2, Play } from "lucide-react";
 import { runApiCheckStream } from "@/lib/labBus";
 import { setStepDone, setStepOutput } from "@/lib/progress";
 import { StepContext } from "./Structure";
@@ -53,26 +52,27 @@ export function Run({ children }: { children: ReactNode }) {
     setRunning(false);
   }
 
+  const say = running ? "Running on your lab VM…" : own && own.exit !== null ? (own.exit === 0 ? "Done. The output is below." : `Stopped: exit ${own.exit}. The output is below.`) : "";
   return (
-    <div className="not-prose my-5 space-y-3">
-      <div className="overflow-hidden rounded-[10px] border border-[var(--color-run-line)] bg-[var(--color-run-bg)]">
-        <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 bg-[var(--color-run-head)] px-3 py-[7px] text-[13.5px] text-left">
-          <ChevronDown size={14} className={`text-[var(--color-fg-mut)] transition ${open ? "" : "-rotate-90"}`} />
-          <span className="rounded bg-[var(--color-nv)] px-[7px] py-0.5 text-[10.5px] font-bold text-[#0b0f05]">RUN</span>
-          <span className="text-[13.5px] text-[var(--color-fg-dim)]">Press Run to run {count === 1 ? "this command" : `these ${count || ""} commands`} on your lab VM.</span>
-        </button>
-        {open && (
-          <div className="run-group space-y-2 p-3 text-[13px] text-[var(--color-fg-dim)]">
-            <RunContext.Provider value={{ register }}>{children}</RunContext.Provider>
-            <button onClick={runAll} disabled={running}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-run-btn-line)] bg-[var(--color-run-btn)] py-3 text-[15px] font-bold text-[var(--color-nv-bright)] transition hover:bg-[var(--color-run-btn-hover)] disabled:opacity-60">
-              {running ? <><Loader2 size={15} className="animate-spin" /> Running…</> : <>Run <Play size={14} /></>}
-            </button>
+    <div className="rl rl-read rl-res">
+      <div className={`rl-box${open ? "" : " rl-folded"}`}>
+        <div className="rl-boxhead rl-foldh" tabIndex={0} role="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <span className="rl-caret" /><span className="rl-badge do">Run</span>
+          <span className="rl-boxhint">Press Run to run {count === 1 ? "this command" : `these ${count || ""} commands`} on your lab VM.</span>
+        </div>
+        <div className="rl-boxbody">
+          <div className="rl-kcmdlist"><RunContext.Provider value={{ register }}>{children}</RunContext.Provider></div>
+          <div className="rl-ctrl">
+            <button className="rl-run" type="button" onClick={runAll} disabled={running}>{running ? "Running…" : "Run ▷"}</button>
+            {say && <div className={`rl-say ${running ? "wait" : own?.exit === 0 ? "ok" : "error"}`}>{say}</div>}
           </div>
-        )}
+        </div>
       </div>
       {own && !step.hasOutput && (
-        <pre className="m-0 max-h-80 overflow-auto whitespace-pre rounded-lg border border-[var(--color-out-line)] bg-[var(--color-out-bg)] px-4 py-3 font-mono text-[12px] text-[var(--color-term-fg)]">{own.text}</pre>
+        <div className="rl-box rl-ktourout">
+          <div className="rl-boxhead rl-foldh"><span className="rl-caret" /><span className="rl-badge do">Output</span><span className="rl-boxhint">From your lab VM</span></div>
+          <div className="rl-boxbody"><pre className="rl-kout">{own.text}</pre></div>
+        </div>
       )}
     </div>
   );

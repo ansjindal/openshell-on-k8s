@@ -3,11 +3,11 @@ from lib import *
 
 # The lab cluster as Module 0 meets it: everything except OpenShell, plus the
 # pi agent deployed as an ordinary workload (manifests/agents/pi-agent.yaml).
-S = Svg(1600, 1090, "Your cluster, before OpenShell",
-        "The lab cluster without OpenShell: a single Brev VM running k3s with Envoy Gateway, Keycloak, a monitoring stack, "
+S = Svg(1600, 1090, "Your cluster",
+        "The lab cluster: a single Brev VM running k3s with Envoy Gateway, Keycloak, a monitoring stack, "
         "LiteLLM in front of the upstream model API, cert-manager, Kyverno, a demo shop app, and the pi agent deployed as an "
         "ordinary Deployment that holds the real LiteLLM key and can reach the Kubernetes API and the internet.")
-S.text(24, 38, "Your cluster, before OpenShell", 26, True)
+S.text(24, 38, "Your cluster", 26, True)
 S.text(24, 64, "One Brev VM running Kubernetes, with the model behind LiteLLM, and an agent deployed the usual way", 15, False, SUB)
 
 # ---- outside the VM
@@ -51,7 +51,7 @@ S.arrow("M420 455 H484")
 S.label(452, 449, "/auth", size=12.5)
 
 # Row 2: the agent, deployed the usual way
-S.ns(72, 510, 560, 320, "agents", color="agents", sub="· no OpenShell")
+S.ns(72, 510, 560, 320, "agents", color="agents", sub="· the agent from 0.4")
 S.box(88, 548, 300, 150, "pi-agent pod", ["node:22 + the pi harness", "bash, curl, npm: any tool",
       ("LITELLM_API_KEY = the real key", "r"), ("ServiceAccount token mounted", "k")], icon="i-bot", kind="red", gap=20)
 S.box(88, 730, 300, 70, "Secret litellm-key", ["LiteLLM's master key, as an env var"], icon="i-key")
@@ -99,7 +99,7 @@ lx, ly = 24, 1024
 S.rect(lx, ly - 10, 30, 18, fill="#fff", stroke=GREY, sw=1.3, rx=4)
 S.text(lx + 38, ly + 4, "platform component", 13.5, False, SUB)
 S.rect(lx + 200, ly - 10, 30, 18, fill=RED_T, stroke=RED, sw=1.6, rx=4)
-S.text(lx + 238, ly + 4, "unsandboxed agent", 13.5, False, SUB)
+S.text(lx + 238, ly + 4, "the deployed agent", 13.5, False, SUB)
 S.arrow(f"M{lx+400} {ly} H{lx+440}", RED)
 S.text(lx + 450, ly + 4, "agent traffic: nothing checks it", 13.5, False, SUB)
 S.arrow(f"M{lx+660} {ly} H{lx+700}", GREY)

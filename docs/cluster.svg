@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1600 1090" width="1600" height="1090" role="img" aria-label="The lab cluster without OpenShell: a single Brev VM running k3s with Envoy Gateway, Keycloak, a monitoring stack, LiteLLM in front of the upstream model API, cert-manager, Kyverno, a demo shop app, and the pi agent deployed as an ordinary Deployment that holds the real LiteLLM key and can reach the Kubernetes API and the internet.">
-<title>Your cluster, before OpenShell</title>
-<desc>The lab cluster without OpenShell: a single Brev VM running k3s with Envoy Gateway, Keycloak, a monitoring stack, LiteLLM in front of the upstream model API, cert-manager, Kyverno, a demo shop app, and the pi agent deployed as an ordinary Deployment that holds the real LiteLLM key and can reach the Kubernetes API and the internet.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1600 1090" width="1600" height="1090" role="img" aria-label="The lab cluster: a single Brev VM running k3s with Envoy Gateway, Keycloak, a monitoring stack, LiteLLM in front of the upstream model API, cert-manager, Kyverno, a demo shop app, and the pi agent deployed as an ordinary Deployment that holds the real LiteLLM key and can reach the Kubernetes API and the internet.">
+<title>Your cluster</title>
+<desc>The lab cluster: a single Brev VM running k3s with Envoy Gateway, Keycloak, a monitoring stack, LiteLLM in front of the upstream model API, cert-manager, Kyverno, a demo shop app, and the pi agent deployed as an ordinary Deployment that holds the real LiteLLM key and can reach the Kubernetes API and the internet.</desc>
 <defs>
 <symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 17h5"/><circle cx="12" cy="3.5" r="1"/></symbol>
 <symbol id="i-browser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M2.5 8.5h19M5.5 6.3h.01M8 6.3h.01"/></symbol>
@@ -27,7 +27,7 @@
 <marker id="ad62d2d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d62d2d"/></marker>
 </defs>
 <rect width="1600" height="1090" fill="#ffffff"/>
-<text x="24" y="38" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Your cluster, before OpenShell</text>
+<text x="24" y="38" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Your cluster</text>
 <text x="24" y="64" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">One Brev VM running Kubernetes, with the model behind LiteLLM, and an agent deployed the usual way</text>
 <g class="dg-node" data-node="Browser">
 <rect x="24" y="100" width="160" height="52" rx="6" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
@@ -132,7 +132,7 @@
 <rect x="72" y="510" width="560" height="320" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1.4"/>
 <text x="84" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#b91c1c" text-anchor="start" xml:space="preserve">namespace </text>
 <text x="157.45" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#b91c1c" text-anchor="start" xml:space="preserve">agents</text>
-<text x="214.86" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#b91c1c" text-anchor="start" xml:space="preserve">· no OpenShell</text>
+<text x="214.86" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#b91c1c" text-anchor="start" xml:space="preserve">· the agent from 0.4</text>
 <g class="dg-node" data-node="pi-agent pod">
 <rect x="88" y="548" width="300" height="150" rx="6" fill="#fdf0f0" stroke="#d62d2d" stroke-width="1.6"/>
 <use href="#i-bot" xlink:href="#i-bot" x="98" y="572.25" width="22" height="22" color="#d62d2d"/>
@@ -254,7 +254,7 @@
 <rect x="24" y="1014" width="30" height="18" rx="4" fill="#fff" stroke="#3d4652" stroke-width="1.3"/>
 <text x="62" y="1028" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">platform component</text>
 <rect x="224" y="1014" width="30" height="18" rx="4" fill="#fdf0f0" stroke="#d62d2d" stroke-width="1.6"/>
-<text x="262" y="1028" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">unsandboxed agent</text>
+<text x="262" y="1028" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">the deployed agent</text>
 <path d="M424 1024 H464" fill="none" stroke="#d62d2d" stroke-width="1.6" marker-end="url(#ad62d2d)" stroke-linejoin="round" stroke-linecap="round"/>
 <text x="474" y="1028" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">agent traffic: nothing checks it</text>
 <path d="M684 1024 H724" fill="none" stroke="#3d4652" stroke-width="1.6" marker-end="url(#a3d4652)" stroke-linejoin="round" stroke-linecap="round"/>

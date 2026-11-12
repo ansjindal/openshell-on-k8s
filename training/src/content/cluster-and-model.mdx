@@ -5,9 +5,27 @@ Before you build an agent, look at what it will run on: a Kubernetes cluster on 
   time="about eight minutes. Every command only reads, except a short-lived port-forward."
 />
 
-<Fig id="cluster" n="0.1" caption="Your cluster before OpenShell: the model behind LiteLLM, and in red the pi agent you deploy in 0.4, with everything it can reach." />
+<Fig id="cluster" n="0.1" caption="Your cluster: the model behind LiteLLM, and in red the pi agent you deploy in 0.4, with everything it can reach." />
 
-The red part is where this module is going: in the next lab you'll deploy the pi agent exactly like that. For now, look at the rest.
+## The stack
+
+Everything in the figure runs on **one Brev VM**. From the bottom up:
+
+| Layer | Where | What it does |
+|---|---|---|
+| **The VM** | your Brev instance | Ubuntu, with this training site and the Cluster shell running on it. A Brev secure link brings your browser in; `socat` passes it to the cluster. |
+| **Kubernetes** | k3s, one node | A full Kubernetes API on a single machine: the same Deployments, Services, Secrets and NetworkPolicies you'd use anywhere. `kubectl` in the Cluster shell is its admin. |
+| **Envoy Gateway** | `envoy-gateway-system` | The front door for web traffic: this site at `/`, Keycloak at `/auth`, Grafana at `/grafana`. |
+| **LiteLLM** | `litellm` | The model gateway. It holds your **inference endpoint** and its key, and offers one OpenAI-compatible API inside the cluster, with your model under the alias `default`. Every agent in this course talks to the model through it. |
+| **Keycloak** | `keycloak` | Sign-in for people (used from Module 1 on). |
+| **Monitoring** | `monitoring` | Prometheus for metrics, Loki and Alloy for logs, Tempo for traces, Grafana to look at all of it. |
+| **Guardrails and plumbing** | `cert-manager`, `kyverno`, `kube-system` | TLS certificates, admission rules for pods, cluster DNS and metrics. |
+| **A demo app** | `demo` | A small shop (`shop-app` calling `payments`, with `loadgen` traffic) that the capstone breaks on purpose. |
+| **Your agent** | `agents` (red) | Not there yet: you deploy it in the next lab, the way agents are usually deployed, and see everything it can reach. |
+
+The cluster also runs OpenShell, in its own namespaces; you'll meet it in Module 1. In this module you work around it.
+
+Now look at it for real.
 
 **Open the Cluster shell** at the bottom of the page if you want to type along: it's a real bash shell on the VM, with `kubectl` pointed at the cluster.
 

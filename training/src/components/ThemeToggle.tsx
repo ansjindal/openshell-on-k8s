@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Sun, Moon } from "lucide-react";
+
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -17,9 +17,6 @@ export function ThemeToggle() {
     window.dispatchEvent(new CustomEvent("oclaw:theme", { detail: t }));
   };
   return (
-    <button onClick={toggle} title="Toggle light / dark" aria-label="Toggle theme"
-      className="rounded-full border border-[var(--color-line-2)] p-1.5 text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]">
-      {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-    </button>
+    <span onClick={toggle} title="Light / dark" aria-label="Toggle theme" role="button" className="hbtn">◐</span>
   );
 }
