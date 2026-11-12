@@ -14,7 +14,7 @@ Everything in the figure runs on **one Brev VM**. From the bottom up:
 | Layer | Where | What it does |
 |---|---|---|
 | **The VM** | your Brev instance | Ubuntu, with this training site and the Cluster shell running on it. A Brev secure link brings your browser in; `socat` passes it to the cluster. |
-| **Kubernetes** | k3s, one node | A full Kubernetes API on a single machine: the same Deployments, Services, Secrets and NetworkPolicies you'd use anywhere. `kubectl` in the Cluster shell is its admin. |
+| **Kubernetes** | k3s, one node | A full Kubernetes cluster on a single machine, in two halves. The **control plane** (kube-apiserver, the datastore, the scheduler, the controller-manager) decides what runs where; the **worker** side (kubelet and containerd) runs it. Here one node is both; larger clusters give the control plane its own nodes. `kubectl` in the Cluster shell talks to the API server as cluster admin. |
 | **Envoy Gateway** | `envoy-gateway-system` | The front door for web traffic: this site at `/`, Keycloak at `/auth`, Grafana at `/grafana`. |
 | **LiteLLM** | `litellm` | The model gateway. It holds your **inference endpoint** and its key, and offers one OpenAI-compatible API inside the cluster, with your model under the alias `default`. Every agent in this course talks to the model through it. |
 | **Keycloak** | `keycloak` | Sign-in for people (used from Module 1 on). |
