@@ -6,6 +6,7 @@
 // "new in this step". Later layers stay hidden. Specs live in lib/diagrams.ts.
 import { useContext, useEffect } from "react";
 import { DIAGRAMS, type DNode, type DEdge } from "@/lib/diagrams";
+import { ICONS } from "@/lib/icons.generated";
 import { StepContext, useLesson } from "./Structure";
 import { stepOutput, useProgress } from "@/lib/progress";
 import { OutputContext } from "./Output";
@@ -47,6 +48,12 @@ export function NodeView({ n, st }: { n: DNode; st: State | "future" }) {
   const subs = n.sub ? n.sub.split("\n") : [];
   const block = 14 + subs.length * 16;
   const y0 = n.y + (n.h - block) / 2 + 12;
+  const ic = n.icon && ICONS[n.icon];
+  const tx = n.x + 12 + (ic ? 24 : 0);
+  const icon = (x: number, y: number) => ic ? (
+    <svg x={x} y={y} width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
+      strokeLinecap="round" strokeLinejoin="round" style={{ color: stroke === C.line ? C.sub : stroke }} dangerouslySetInnerHTML={{ __html: ic }} />
+  ) : null;
   return (
     <g opacity={future ? 0.2 : ghost ? 0.55 : 1} style={{ transition: "opacity .45s" }}>
       <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={group ? 9 : 7}
@@ -54,12 +61,13 @@ export function NodeView({ n, st }: { n: DNode; st: State | "future" }) {
         strokeDasharray={ghost || n.dashed ? "6 5" : undefined}
         style={isNew ? { filter: "drop-shadow(0 0 6px rgba(146,230,0,.45))" } : undefined} />
       {group ? (
-        <text x={n.x + 12} y={n.y + 19} fontSize={12.5} fontWeight={700} fill={C.sub} fontFamily={SANS}>{n.label}</text>
+        <>{icon(n.x + 10, n.y + 6)}<text x={tx} y={n.y + 19} fontSize={12.5} fontWeight={700} fill={C.sub} fontFamily={SANS}>{n.label}</text></>
       ) : (
         <>
-          <text x={n.x + 12} y={y0} fontSize={13.5} fontWeight={700} fill={C.text} fontFamily={SANS}>{n.label}</text>
+          {icon(n.x + 10, y0 - 14)}
+          <text x={tx} y={y0} fontSize={13.5} fontWeight={700} fill={C.text} fontFamily={SANS}>{n.label}</text>
           {subs.map((line, i) => (
-            <text key={i} x={n.x + 12} y={y0 + 16 * (i + 1)} fontSize={12} fill={C.sub} fontFamily={SANS}>{line}</text>
+            <text key={i} x={tx} y={y0 + 16 * (i + 1)} fontSize={12} fill={C.sub} fontFamily={SANS}>{line}</text>
           ))}
         </>
       )}

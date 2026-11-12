@@ -12,6 +12,8 @@ export type DNode = {
   layer: number; until?: number; kind?: "group" | "ext" | "deny" | "accent";
   dyn?: (out: Out) => Partial<Pick<DNode, "label" | "sub">> | undefined;
   live?: boolean;
+  /** an icon from docs/src's set, e.g. "i-chip" */
+  icon?: string;
   /** dashed outline: something that may exist (more sandboxes, …) */
   dashed?: boolean;
   /** shown when the box is clicked in a <Fig> */
@@ -298,27 +300,27 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { n: 5, step: "3.1", name: "A call", note: "A port-forward from the VM to the Service, LiteLLM's master key, and an answer from your model." },
     ],
     nodes: [
-      { id: "you", x: 15, y: 170, w: 170, h: 80, label: "You", sub: "kubectl · Cluster shell", layer: 0 },
-      { id: "k3s", x: 205, y: 12, w: 745, h: 478, label: "k3s node · v1.37 · Ready", layer: 1, kind: "group",
+      { id: "you", icon: "i-term", x: 15, y: 170, w: 170, h: 80, label: "You", sub: "kubectl · Cluster shell", layer: 0 },
+      { id: "k3s", icon: "i-wheel", x: 205, y: 12, w: 745, h: 478, label: "k3s node · v1.37 · Ready", layer: 1, kind: "group",
         dyn: (o) => { const r = table(o(1))[0]; return r ? { label: `k3s node ${short(r.NAME, 24)} · ${r.VERSION} · ${r.STATUS}` } : undefined; } },
       { id: "cp", x: 220, y: 40, w: 715, h: 90, label: "control plane", layer: 1, kind: "group" },
-      { id: "api", x: 232, y: 66, w: 172, h: 50, label: "kube-apiserver", sub: "the cluster's API", layer: 1, kind: "accent" },
-      { id: "db", x: 414, y: 66, w: 160, h: 50, label: "datastore", sub: "SQLite (kine)", layer: 1 },
-      { id: "sch", x: 584, y: 66, w: 160, h: 50, label: "scheduler", sub: "places pods", layer: 1 },
-      { id: "cm", x: 754, y: 66, w: 170, h: 50, label: "controllers", sub: "keep it as declared", layer: 1 },
-      { id: "wk", x: 220, y: 144, w: 715, h: 332, label: "worker · kubelet + containerd run the pods", layer: 1, kind: "group" },
+      { id: "api", icon: "i-svc", x: 232, y: 66, w: 172, h: 50, label: "kube-apiserver", sub: "the cluster's API", layer: 1, kind: "accent" },
+      { id: "db", icon: "i-db", x: 414, y: 66, w: 160, h: 50, label: "datastore", sub: "SQLite (kine)", layer: 1 },
+      { id: "sch", icon: "i-gear", x: 584, y: 66, w: 160, h: 50, label: "scheduler", sub: "places pods", layer: 1 },
+      { id: "cm", icon: "i-sync", x: 754, y: 66, w: 170, h: 50, label: "controllers", sub: "keep it as declared", layer: 1 },
+      { id: "wk", icon: "i-cube", x: 220, y: 144, w: 715, h: 332, label: "worker · kubelet + containerd run the pods", layer: 1, kind: "group" },
       ...([
-        ["ll", "litellm", ["litellm"], 470, 172, "ext"],
-        ["mon", "monitoring", ["monitoring"], 232, 172, undefined],
-        ["kc", "keycloak", ["keycloak"], 705, 172, undefined],
-        ["env", "envoy-gateway-system", ["envoy-gateway-system"], 232, 226, undefined],
-        ["demo", "demo", ["demo"], 470, 226, undefined],
-        ["ks", "kube-system", ["kube-system"], 705, 226, undefined],
-        ["cm2", "cert-manager · kyverno", ["cert-manager", "kyverno"], 232, 280, undefined],
-        ["os", "openshell + sandboxes", ["openshell", "openshell-lab-default", "openshell-lab-team-a", "agent-sandbox-system"], 470, 280, undefined],
-        ["ag", "agents", ["agents"], 705, 280, undefined],
-      ] as [string, string, string[], number, number, DNode["kind"]][]).map(([id, label, names, x, y, kind]): DNode => ({
-        id, x, y, w: 218, h: 46, label, sub: id === "os" ? "Module 1" : id === "ag" ? "empty until 0.4" : "pods", layer: 2, kind,
+        ["ll", "litellm", ["litellm"], 470, 172, "ext", "i-chip"],
+        ["mon", "monitoring", ["monitoring"], 232, 172, undefined, "i-chart"],
+        ["kc", "keycloak", ["keycloak"], 705, 172, undefined, "i-people"],
+        ["env", "envoy-gateway-system", ["envoy-gateway-system"], 232, 226, undefined, "i-route"],
+        ["demo", "demo", ["demo"], 470, 226, undefined, "i-svc"],
+        ["ks", "kube-system", ["kube-system"], 705, 226, undefined, "i-gear"],
+        ["cm2", "cert-manager · kyverno", ["cert-manager", "kyverno"], 232, 280, undefined, "i-cert"],
+        ["os", "openshell + sandboxes", ["openshell", "openshell-lab-default", "openshell-lab-team-a", "agent-sandbox-system"], 470, 280, undefined, "i-shield"],
+        ["ag", "agents", ["agents"], 705, 280, undefined, "i-bot"],
+      ] as [string, string, string[], number, number, DNode["kind"], string][]).map(([id, label, names, x, y, kind, icon]): DNode => ({
+        id, x, y, w: 218, h: 46, label, icon, sub: id === "os" ? "Module 1" : id === "ag" ? "empty until 0.4" : "pods", layer: 2, kind,
         dyn: (o) => {
           const counts = Object.fromEntries(lines(o(2)).map((l) => /^\s*(\d+)\s+(\S+)/.exec(l)).filter(Boolean).map((m) => [m![2], +m![1]]));
           if (!Object.keys(counts).length) return;
@@ -326,20 +328,20 @@ export const DIAGRAMS: Record<string, Diagram> = {
           return { sub: `${n} pod${n === 1 ? "" : "s"}${id === "os" ? " · Module 1" : ""}` };
         },
       })),
-      { id: "dep", x: 232, y: 352, w: 218, h: 108, label: "deploy/litellm", sub: "svc/litellm · ClusterIP\n:4000, in-cluster only", layer: 3, kind: "ext",
+      { id: "dep", icon: "i-chip", x: 232, y: 352, w: 218, h: 108, label: "deploy/litellm", sub: "svc/litellm · ClusterIP\n:4000, in-cluster only", layer: 3, kind: "ext",
         dyn: (o) => {
           const t = o(3) ?? ""; const d = /deployment\.apps\/litellm\s+(\S+)/.exec(t); const sv = /service\/litellm\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)/.exec(t);
           return d || sv ? { sub: `${d ? d[1] + " ready" : ""}\nsvc ${sv ? sv[1] + " " + sv[2] : ""}\n${sv ? sv[3] : ""}` } : undefined;
         } },
-      { id: "cfg", x: 470, y: 352, w: 218, h: 108, label: "model_list", sub: "your model\nalias: default\nkey from a Secret", layer: 4,
+      { id: "cfg", icon: "i-doc", x: 470, y: 352, w: 218, h: 108, label: "model_list", sub: "your model\nalias: default\nkey from a Secret", layer: 4,
         dyn: (o) => { const m = /model:\s*openai\/(\S+)/.exec(o(4) ?? ""); return m ? { sub: `${short(m[1], 26)}\nalias: default\nkey from a Secret` } : undefined; } },
-      { id: "ans", x: 705, y: 352, w: 218, h: 108, label: "the answer", sub: "\"Hello, I hope\nyou're well.\"", layer: 5, kind: "accent",
+      { id: "ans", icon: "i-bot", x: 705, y: 352, w: 218, h: 108, label: "the answer", sub: "\"Hello, I hope\nyou're well.\"", layer: 5, kind: "accent",
         dyn: (o) => {
           const m = /"content":"((?:[^"\\]|\\.)*)"/.exec(o(5) ?? ""); if (!m) return;
           const a = m[1].replace(/\\n/g, " ").replace(/\\"/g, '"').trim();
           return { sub: `"${short(a, 26)}${a.length > 26 ? "" : ""}"\n${a.length > 26 ? short(a.slice(25), 26) : ""}` };
         } },
-      { id: "up", x: 15, y: 330, w: 170, h: 80, label: "model API", sub: "your inference\nendpoint", layer: 4, kind: "ext" },
+      { id: "up", icon: "i-globe", x: 15, y: 330, w: 170, h: 80, label: "model API", sub: "your inference\nendpoint", layer: 4, kind: "ext" },
     ],
     edges: [
       { from: "you", to: "api", label: "kubectl", layer: 1, kind: "ok", dy: -4 },
