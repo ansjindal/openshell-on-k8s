@@ -104,7 +104,9 @@ export function LiveDiagram({ id, layer }: { id: string; layer: number }) {
   const { slug, number } = useLesson();
   const progress = useProgress();
   if (!d) return null;
-  const done = !!(step.id && progress.steps[step.id]);
+  // In an OUTPUT the step's layer is shown drawn: before your run it is the
+  // recorded picture, after it the same picture with your values.
+  const done = !!(step.id && progress.steps[step.id]) || inOutput;
   // Output of the step behind each layer (if you ran it): diagrams draw what
   // your commands actually found, not only the textbook picture.
   const out = (n: number) => {
@@ -129,33 +131,36 @@ export function LiveDiagram({ id, layer }: { id: string; layer: number }) {
     if (s === "ghost" && resolved.some((o) => o.id !== n.id && o.x === n.x && o.y === n.y && stateOf(o.layer, o.until, layer, done) === "old")) return "hidden";
     return s;
   };
-  return (
-    <div className={inOutput ? "not-prose my-2" : "not-prose my-5 overflow-hidden rounded-lg border border-[var(--color-out-line)] bg-[var(--color-out-bg)]"}>
-      <div className={inOutput ? "flex items-center gap-3 pb-1 text-xs" : "flex items-center gap-3 border-b border-[var(--color-out-line)] px-4 py-2"}>
-        {!inOutput && <span className="rounded bg-[var(--color-info)] px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white">DIAGRAM</span>}
-        <span className={inOutput ? "font-semibold text-[var(--color-fg-dim)]" : "text-sm text-[var(--color-fg-dim)]"}>{d.title}</span>
-        <span className="ml-auto text-xs text-[var(--color-fg-mut)]">
-          {anyLive && <span className="mr-3 text-[var(--color-nv-bright)]">● values from your runs</span>}
-          {done ? "updated by this step" : "run this step to add its layer"}
+  const svg = (
+    <svg viewBox={`0 0 ${d.w} ${d.h}`} className="mx-auto block w-full" style={{ maxWidth: d.w }} role="img" aria-label={d.title}>
+      {resolved.filter((n) => n.kind === "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
+      {edges.map((e, i) => <EdgeView key={i} e={e} nodes={nodes} st={stateOf(e.layer, e.until, layer, done)} />)}
+      {resolved.filter((n) => n.kind !== "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
+    </svg>
+  );
+  const legend = (
+    <div className="rl-klegend">
+      {d.layers.filter((l) => l.n > 0).map((l) => (
+        <span key={l.n} className={`rl-klg ${l.n === layer ? "new" : l.n < layer ? "done" : "later"}`}>
+          {l.n === layer ? "+ " : l.n < layer ? "✓ " : ""}{l.name}{l.n === layer ? ": new in this step" : ""}
         </span>
+      ))}
+    </div>
+  );
+  if (inOutput) {
+    return (
+      <div className="rl-ktourbody">
+        {anyLive && <div className="rl-kcap"><span className="rl-kdot ok" /><span>Values from your runs</span></div>}
+        {svg}
+        {legend}
+        {cur?.note && <ul className="rl-khow"><li>{cur.note}</li></ul>}
       </div>
-      <div className={inOutput ? "overflow-x-auto rounded-lg border border-[var(--color-info)]/60 bg-[var(--color-out-bg)] px-3 py-3" : "overflow-x-auto px-3 py-3"}>
-        <svg viewBox={`0 0 ${d.w} ${d.h}`} className="mx-auto block w-full" style={{ maxWidth: d.w, minWidth: 640 }} role="img" aria-label={d.title}>
-          {resolved.filter((n) => n.kind === "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
-          {edges.map((e, i) => <EdgeView key={i} e={e} nodes={nodes} st={stateOf(e.layer, e.until, layer, done)} />)}
-          {resolved.filter((n) => n.kind !== "group").map((n) => <NodeView key={n.id} n={n} st={st(n)} />)}
-        </svg>
-      </div>
-      <div className={inOutput ? "flex flex-wrap gap-2 py-2.5" : "flex flex-wrap gap-2 border-t border-[var(--color-out-line)] px-4 py-2.5"}>
-        {d.layers.filter((l) => l.n > 0).map((l) => (
-          <span key={l.n} className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
-            l.n === layer ? (done ? "border-[var(--color-nv)] text-[var(--color-nv-bright)]" : "border-dashed border-[var(--color-fg-mut)] text-[var(--color-fg-mut)]")
-            : l.n < layer ? "border-[var(--color-line-2)] text-[var(--color-fg-dim)]" : "border-[var(--color-line)] text-[var(--color-fg-mut)] opacity-50"}`}>
-            {l.n === layer ? "+ " : l.n < layer ? "✓ " : ""}{l.name}{l.n === layer ? ": new in this step" : ""}
-          </span>
-        ))}
-      </div>
-      {cur?.note && <p className={inOutput ? "flex gap-2 text-sm text-[var(--color-fg-dim)]" : "border-t border-[var(--color-out-line)] px-4 py-2.5 text-sm text-[var(--color-fg-dim)]"}>{inOutput && <span className="text-[var(--color-nv-bright)]">◆</span>}<span>{cur.note}</span></p>}
+    );
+  }
+  return (
+    <div className="rl-box rl-ktourout">
+      <div className="rl-boxhead"><span className="rl-badge do">Diagram</span><span className="rl-boxhint">{d.title}</span></div>
+      <div className="rl-boxbody"><div className="rl-ktourbody">{svg}{legend}{cur?.note && <ul className="rl-khow"><li>{cur.note}</li></ul>}</div></div>
     </div>
   );
 }

@@ -28,23 +28,24 @@ export function Output({ summary, children }: { summary?: ReactNode; children?: 
         <span className="rl-caret" /><span className="rl-badge do">Output</span><span className="rl-boxhint">{hint}</span>
       </div>
       <div className="rl-boxbody">
-        {live && (
-          <details className="rl-optitem rl-kcur" open>
-            <summary>Your output</summary>
-            <div className="rl-kresult"><div className="rl-ktour">
-              <div className="rl-kcap"><span className={`rl-kdot${live.exit === 0 ? " ok" : ""}`} /><span>{running ? "Running on your lab VM…" : `From your lab VM · exit ${live.exit}`}</span></div>
-              <pre className="rl-kout">{live.text || (running ? "" : "(no output)")}</pre>
-            </div></div>
-          </details>
-        )}
-        <details className="rl-optitem rl-kcur" open={!live}>
-          <summary>Recorded output</summary>
+        <details className="rl-optitem rl-kcur" open>
+          <summary>{live ? "Your output" : "Recorded output"}</summary>
           <div className="rl-kresult"><div className="rl-ktour">
-            <div className="rl-kcap"><span className="rl-kdot rec" /><span>Recorded on a lab VM (n2d-standard-8, OpenShell 0.1.7)</span></div>
+            <div className="rl-kcap">
+              <span className={`rl-kdot${live ? (live.exit === 0 ? " ok" : "") : " rec"}`} />
+              <span>{!live ? "Recorded on a lab VM (n2d-standard-8, OpenShell 0.1.7)" : running ? "Running on your lab VM…" : `From your lab VM · exit ${live.exit}`}</span>
+            </div>
+            {summary && !live && <div className="rl-ktourbody"><div className="rl-ctext">{summary}</div></div>}
             <OutputContext.Provider value={{ inside: true, collapsePrinted: true, markDiagram, cmds }}>
-              {summary && <div className="rl-ktourbody"><div className="rl-ctext">{summary}</div></div>}
               {children}
             </OutputContext.Provider>
+            {live && (
+              <details className="rl-optitem rl-kcmds" open={!diagrams}>
+                <summary>What the command printed (your run)</summary>
+                {cmds.length === 1 && <pre className="rl-code"><code>{cmds[0]}</code></pre>}
+                <pre className="rl-kout">{live.text || (running ? "" : "(no output)")}</pre>
+              </details>
+            )}
           </div></div>
         </details>
       </div>

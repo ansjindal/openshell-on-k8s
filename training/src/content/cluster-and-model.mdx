@@ -37,6 +37,7 @@ Now look at it for real.
 kubectl get nodes -o wide
 ```
 <Output summary="One node, Ready: k3s, a full Kubernetes API on one VM.">
+<LiveDiagram id="cluster-tour" layer={1} />
 <ExpectedOutput>
 {`NAME             STATUS   ROLES           AGE   VERSION        INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION           CONTAINER-RUNTIME
 brev-abc123xyz   Ready    control-plane   22h   v1.37.2+k3s1   10.160.1.113   <none>        Ubuntu 22.04.5 LTS   6.8.0-1073-gcp (amd64)   containerd://2.3.7-k3s1`}
@@ -53,6 +54,7 @@ Count the pods in each namespace:
 kubectl get pods -A --no-headers | awk '{print $1}' | sort | uniq -c
 ```
 <Output summary="Each component lives in its own namespace.">
+<LiveDiagram id="cluster-tour" layer={2} />
 <ExpectedOutput>
 {`      1 agent-sandbox-system
       3 cert-manager
@@ -91,6 +93,7 @@ kubectl get pods -A --no-headers | awk '{print $1}' | sort | uniq -c
 kubectl -n litellm get deploy,svc
 ```
 <Output summary="One deployment, one Service: litellm.litellm.svc.cluster.local, port 4000.">
+<LiveDiagram id="cluster-tour" layer={3} />
 <ExpectedOutput>
 {`NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/litellm   1/1     1            1           22h
@@ -110,6 +113,7 @@ LiteLLM's configuration is a ConfigMap. Read the model list:
 kubectl -n litellm get configmap litellm-config -o jsonpath='{.data.config\.yaml}' | sed -n '/^model_list/,$p'
 ```
 <Output summary="Your inference endpoint, behind one model name and the alias default.">
+<LiveDiagram id="cluster-tour" layer={4} />
 <ExpectedOutput>
 {`model_list:
 - litellm_params:
@@ -149,6 +153,7 @@ curl -s localhost:4000/v1/chat/completions -H "Authorization: Bearer $KEY" -H "C
 kill $PF
 ```
 <Output summary="The alias and your model, and an answer from it.">
+<LiveDiagram id="cluster-tour" layer={5} />
 <ExpectedOutput>
 {`"id":"default"
 "id":"<MODEL_NAME>"
