@@ -5,6 +5,20 @@ An **agent** is a model plus a **harness**: the program that sends your prompt t
   time="about twelve minutes. The pod takes about half a minute to start (it installs pi from npm)."
 />
 
+## What pi is
+
+**pi** is a small, open-source **agent harness**: the program from [What is an agent?](/learn/what-is-an-agent) that runs the loop around a model. You give it a task; it sends the task to the model, the model answers with either text or a request to use a tool, pi runs that tool and sends the result back, and it goes round again until the model is done.
+
+| Part of pi | What it is | In this lab |
+|---|---|---|
+| **The `pi` command** | Installed from npm as `@earendil-works/pi-coding-agent`. Run on its own it opens an interactive terminal chat; `pi -p "…"` runs one task and prints the answer. | The pod installs it at start; you run `pi -p` with `kubectl exec`. |
+| **Models** | Any OpenAI-compatible (or Anthropic, Google) API, described in `~/.pi/agent/models.json`: a provider with a `baseUrl`, an API style, a key and the model ids. The key can be a reference such as `$LITELLM_API_KEY`, read from the environment when pi calls the model. | One provider, `lab`, pointing at LiteLLM, with the model `default`. |
+| **Tools** | What the model may ask pi to do: `read`, `write`, `edit` and `bash` by default, plus `grep`, `find` and `ls`. `--tools bash` allows only the shell; `--no-tools` none. | First none, then `--tools bash`. |
+| **Sessions** | pi keeps a history of each conversation under `~/.pi/agent/sessions/`. `--no-session` keeps nothing. | Every run is one-off. |
+| **`PI_OFFLINE=1`** | Stops pi's own update check and install telemetry, so the only network calls are to the model. | Set in the Deployment. |
+
+pi is only one harness among many (OpenClaw, Claude Code, Codex, OpenCode…); it's used here because it is small, scriptable and easy to point at any model. The point of this lab is not pi: it is what **any** harness can reach once it runs with real access.
+
 <Section n="1" title="Deploy it" goal="Run pi as an ordinary Deployment in its own namespace.">
 
 <Step n="1" title="A namespace and the key">
