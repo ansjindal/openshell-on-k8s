@@ -296,7 +296,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { n: 1, step: "1.1", name: "The node", note: "One k3s node, in two halves: the control plane (the API server and friends) decides, the worker side (kubelet, containerd) runs the pods, one namespace per component. kubectl talks to the API server." },
       { n: 2, step: "2.1", name: "LiteLLM", note: "One Deployment behind one Service, reachable only inside the cluster at litellm.litellm.svc.cluster.local:4000." },
       { n: 3, step: "2.2", name: "Its configuration", note: "LiteLLM's model list: your inference endpoint and model, under the alias default. The upstream key comes from a Secret." },
-      { n: 4, step: "3.1", name: "A call", note: "A port-forward from the VM to the Service, LiteLLM's master key, and an answer from your model." },
+      { n: 4, step: "3.1", name: "A call", note: "From your shell on the VM, through a port-forward to the Service, with LiteLLM's master key; LiteLLM asks your model and the answer comes back to your shell." },
     ],
     nodes: [
       { id: "you", icon: "i-term", x: 15, y: 170, w: 170, h: 80, label: "You", sub: "kubectl · Cluster shell", layer: 0 },
@@ -328,13 +328,13 @@ export const DIAGRAMS: Record<string, Diagram> = {
         } },
       { id: "cfg", icon: "i-doc", x: 470, y: 352, w: 218, h: 108, label: "model_list", sub: "your model\nalias: default\nkey from a Secret", layer: 3,
         dyn: (o) => { const m = /model:\s*openai\/(\S+)/.exec(o(3) ?? ""); return m ? { sub: `${short(m[1], 26)}\nalias: default\nkey from a Secret` } : undefined; } },
-      { id: "ans", icon: "i-bot", x: 705, y: 352, w: 218, h: 108, label: "the answer", sub: "\"Hello, I hope\nyou're well.\"", layer: 4, kind: "accent",
+      { id: "ans", icon: "i-term", x: 15, y: 420, w: 170, h: 66, label: "the answer", sub: "\"Hello, I hope\nyou're well.\"", layer: 4, kind: "accent",
         dyn: (o) => {
           const m = /"content":"((?:[^"\\]|\\.)*)"/.exec(o(4) ?? ""); if (!m) return;
           const a = m[1].replace(/\\n/g, " ").replace(/\\"/g, '"').trim();
-          return { sub: `"${short(a, 26)}${a.length > 26 ? "" : ""}"\n${a.length > 26 ? short(a.slice(25), 26) : ""}` };
+          return { sub: `"${short(a, 19)}\n${a.length > 18 ? short(a.slice(18), 19) : ""}` };
         } },
-      { id: "up", icon: "i-globe", x: 15, y: 330, w: 170, h: 80, label: "model API", sub: "your inference\nendpoint", layer: 3, kind: "ext" },
+      { id: "up", icon: "i-globe", x: 15, y: 300, w: 170, h: 80, label: "model API", sub: "your inference\nendpoint", layer: 3, kind: "ext" },
     ],
     edges: [
       { from: "you", to: "api", label: "kubectl", layer: 1, kind: "ok", dy: -4 },
