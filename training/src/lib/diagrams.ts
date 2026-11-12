@@ -345,7 +345,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { from: "you", to: "api", label: "kubectl", layer: 1, kind: "ok", dy: -4 },
       { from: "ll", to: "dep", layer: 3, kind: "dash" },
       { from: "dep", to: "up", label: "HTTPS", layer: 4, kind: "ok" },
-      { from: "you", to: "dep", label: "port-forward :4000", layer: 5, kind: "ok", dx: -10, dy: -10 },
+      { from: "you", to: "dep", label: "port-forward", layer: 5, kind: "ok", dx: -22, dy: -6 },
       { from: "dep", to: "ans", layer: 5, kind: "ok" },
     ],
   },
