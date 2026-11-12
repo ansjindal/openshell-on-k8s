@@ -1,30 +1,32 @@
-OpenShell is the runtime that puts the boundary **outside** the agent. This overview explains it one topic at a time: pick a topic on the left, play its scene, read the detail, then press **Next**. Topics marked with a flask have a lab later in this module, where you do it on your VM; the labs follow in order, starting with a check of your environment.
+OpenShell is the runtime that puts the boundary **outside** the agent. This overview walks through it in thirteen short parts. Read down the page: in each part the picture beside the text follows the step you are reading. Parts with a **Try it** link have a lab later in this module, where you do it on your VM; the labs follow in order, starting with a check of your environment.
 
 <BeforeYouStart
   learn="the whole of OpenShell: the sandbox around the agent, gateway and supervisor, the kernel filters, the policy file, how a request and its key travel, the audit signals, how it runs on Kubernetes, and NVIDIA Sentry for when the host itself is in scope."
   prereq="Module 0: what an agent is, and why the guardrail has to sit outside it."
-  start="topic 1, then press Next. About forty minutes for all thirteen; no commands."
+  start="part 1, and read down. About forty minutes for all thirteen; no commands."
 />
 
-<Topics>
+<div id="t-1" className="scroll-mt-20" />
 
-<Topic title="Enter OpenShell">
+## 1 · Enter OpenShell
 
 The last module ended with a requirement: a boundary outside the agent's process, which it can't see into, argue with or switch off. **NVIDIA OpenShell** is an open-source runtime that builds exactly that. It puts the whole agent process in a sandbox governed by a YAML policy: you declare what the agent may touch, and OpenShell enforces it from outside.
 
-<DeckScene src="openshell" only="intro" title="Enter NVIDIA OpenShell" />
+<ReadScene scene="intro" />
 
-</Topic>
+<div id="t-2" className="scroll-mt-20" />
 
-<Topic title="Same agent, inside OpenShell" lab="/learn/build-an-agent" labLabel="1.3 Build an agent and seal it">
+## 2 · Same agent, inside OpenShell
 
 The same agent, the same poisoned issue. The model is still misled, but every harmful step now stops at the boundary, while the real work still flows. **OpenShell doesn't make the agent smarter. It makes its mistakes harmless.**
 
-<DeckScene src="openshell" only="contained" title="Same agent, inside OpenShell" />
+<ReadScene scene="contained" />
 
-</Topic>
+**Try it:** [1.3 Build an agent and seal it](/learn/build-an-agent).
 
-<Topic title="How OpenShell is built" lab="/learn/deploy" labLabel="1.2 Verify your cluster">
+<div id="t-3" className="scroll-mt-20" />
+
+## 3 · How OpenShell is built
 
 **OpenShell** is what makes "run an autonomous agent *safely*" practical. In one line: **to be useful, agents need access; to be safe, they need zero trust**, and OpenShell is the runtime that gives you both. It is a gateway plus guardrails, built on the open-source `agent-sandbox` Kubernetes primitive.
 
@@ -67,35 +69,33 @@ openshell sandbox list
 Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; each workspace's sandboxes live in a namespace the gateway creates for it, such as <code>openshell-lab-default</code>. You can always drop to <code>kubectl -n openshell-lab-default get sandboxes,pods</code> to see what the gateway did.
 </Callout>
 
-</Topic>
+**Try it:** [1.2 Verify your cluster](/learn/deploy).
 
-<Topic title="Gateway and supervisor" lab="/learn/create-sandbox" labLabel="1.4 Create a sandbox">
+<div id="t-4" className="scroll-mt-20" />
 
-<DeckScene src="openshell" only="arch" title="The big picture" />
+## 4 · Gateway and supervisor
 
-The CLI, the SDKs and the console all talk to the **gateway**. When you create a sandbox, the gateway asks Kubernetes for pods, a Service and a NetworkPolicy: an untrusted **workload pod** that runs the agent, and a trusted **supervisor pod** beside it. **The gateway never decides a packet; the supervisor decides every one.**
+<ReadScene scene="arch" />
 
-</Topic>
+**Try it:** [1.4 Create a sandbox](/learn/create-sandbox).
 
-<Topic title="The boundary up close" lab="/learn/create-sandbox" labLabel="1.4 Create a sandbox">
+<div id="t-5" className="scroll-mt-20" />
 
-<DeckScene src="openshell" only="halves" title="The boundary up close" />
+## 5 · The boundary up close
 
-- **`openshell-sandbox`** lives inside, with the agent. It owns the process tree, can name the binary behind every connection, and holds nothing worth stealing.
-- **`openshell-supervisor`** lives outside. It holds the policy, the credentials and DNS, and opens every real connection.
-- Between them: **one mTLS HTTP/2 connection**, one stream per TCP connection. If the supervisor isn't there, nothing gets out: it **fails closed**.
+<ReadScene scene="halves" />
 
 <Optional title="Why the supervisor moved out (0.0.x to 0.1)">
 
-<DeckScene src="openshell" only="versions" title="The supervisor moved out" />
-
-In 0.0.x the supervisor ran inside the agent's container, as its parent, with the privilege to build the boundary right next to the agent. 0.1.0 split it: a capability-free runtime inside, the supervisor outside, and a contract between them. 0.0.x sandboxes can't be upgraded in place; recreate them.
+<ReadScene scene="versions" />
 
 </Optional>
 
-</Topic>
+**Try it:** [1.4 Create a sandbox](/learn/create-sandbox).
 
-<Topic title="Inside the sandbox: the kernel" lab="/learn/into-the-sandbox" labLabel="1.5 Test the seal from inside">
+<div id="t-6" className="scroll-mt-20" />
+
+## 6 · Inside the sandbox: the kernel
 
 ### The workload pod: what the agent process can touch
 
@@ -105,16 +105,18 @@ The agent runs as the unprivileged user `sandbox`. The sandbox runtime applies t
 - **seccomp** filters dangerous system calls, and the process cannot regain root.
 - These are **static**: fixed when the sandbox is created.
 
-<DeckScene src="openshell" only="kernel" title="Two kernel filters" />
+<ReadScene scene="kernel" />
 
 ### Kubernetes guardrails
 
 - **Resource admission**: a sandbox may use a cluster resource (a RuntimeClass, a PriorityClass, a volume) only if the operator labelled it `openshell.ai/sandbox-attachable=true`.
 - **Kyverno** rejects any sandbox pod that asks for the host's network, PID or IPC namespace.
 
-</Topic>
+**Try it:** [1.5 Test the seal from inside](/learn/into-the-sandbox).
 
-<Topic title="The policy file" lab="/learn/policy" labLabel="1.6 Egress policy, rule by rule">
+<div id="t-7" className="scroll-mt-20" />
+
+## 7 · The policy file
 
 ### The supervisor pod: what the agent can reach
 
@@ -129,7 +131,7 @@ The workload pod has no network of its own. A Kubernetes **NetworkPolicy** lets 
 
 Every layer of a sandbox is configured by one short YAML file: its **policy**. You'll edit policies in almost every lab, so here it is line by line. Press **Next** to step through it: the lines that matter light up on the left, and on the right you see what they let through and what they stop.
 
-<DeckScene src="openshell" only="policy" title="One YAML file, two lifetimes" />
+<ReadScene scene="policy" />
 
 | Part | Controls | Enforced by | Changes on a running sandbox? |
 |---|---|---|---|
@@ -150,53 +152,39 @@ A few details the labs rely on:
 No single layer is the answer. Landlock and seccomp bound the process, the supervisor bounds the network, providers bound the secrets, identities bound the control plane, and the audit trail tells you what happened. Together they make a compromised agent a contained problem instead of a cluster-wide one.
 </Callout>
 
-</Topic>
+**Try it:** [1.6 Egress policy, rule by rule](/learn/policy).
 
-<Topic title="One request, end to end" lab="/learn/lab-keys" labLabel="1.8 A key the agent doesn't hold">
+<div id="t-8" className="scroll-mt-20" />
 
-<DeckScene src="openshell" only="request" title="One request, end to end" />
+## 8 · One request, end to end
 
-The connection is **paused** at `connect()` inside the sandbox and handed to the supervisor. The supervisor checks the **connection** (which host, which port, which binary), then the **request** itself (method and path, for REST endpoints), and only then **adds the secret** and opens the real connection. The secret is added last, outside the agent, and only for the right host.
+<ReadScene scene="request" />
 
-</Topic>
+**Try it:** [1.8 A key the agent doesn't hold](/learn/lab-keys).
 
-<Topic title="The agent never holds the key" lab="/learn/lab-keys" labLabel="1.8 A key the agent doesn't hold">
+<div id="t-9" className="scroll-mt-20" />
 
-<DeckScene src="openshell" only="creds" title="The agent never holds the key" />
+## 9 · The agent never holds the key
 
-**Providers** keep credentials in the gateway. Inside the sandbox the agent sees only placeholders such as `openshell:resolve:env:GITHUB_TOKEN`. The supervisor swaps in the real value only for the endpoints the provider allows; a request to the wrong host gets no secret. Steal the environment and you get placeholders. Rotate a key once in the gateway, with no restart.
-
-### Credentials in one picture
-
-A **provider** stores a credential in the gateway. A sandbox with the provider attached sees only a placeholder, such as `LITELLM_API_KEY=openshell:resolve:env:…`. The supervisor swaps in the real value on requests that match the provider's endpoint and rules, and nowhere else.
+<ReadScene scene="creds" />
 
 <Fig id="credential-flow" n="1.2" caption="The key the agent never sees: the supervisor adds it only to requests its rules allow." />
 
-A fully compromised agent (prompt-injected, hijacked) cannot exfiltrate the key, because it never had it, and cannot even *use* it outside the allowed calls.
+**Try it:** [1.8 A key the agent doesn't hold](/learn/lab-keys).
 
-</Topic>
+<div id="t-10" className="scroll-mt-20" />
 
-<Topic title="Signals and audit events" lab="/learn/lab-audit" labLabel="1.9 Read the audit events">
+## 10 · Signals and audit events
 
-<DeckScene src="openshell" only="obs" title="Three signals, one sandbox ID" />
+<ReadScene scene="obs" />
 
-**Traces** show where time goes, **gateway metrics** show saturation, and **OCSF events** record every security decision. Supervisors export directly; the agent's own spans go to a relay the supervisor provides, with no egress rule needed. Join everything on `openshell.sandbox.id`.
+<ReadScene scene="ocsf" />
 
-### Reading an OCSF event
+**Try it:** [1.9 Read the audit events](/learn/lab-audit).
 
-<DeckScene src="openshell" only="ocsf" title="Reading an OCSF event" />
+<div id="t-11" className="scroll-mt-20" />
 
-A shorthand line such as
-
-```text
-OCSF NET:OPEN [MED] DENIED /usr/bin/curl(64) -> httpbin.org:443 [policy:- engine:opa] [reason:no matching policy]
-```
-
-reads left to right: the event class (`NET:OPEN`, network activity), the severity, the action, the process and destination, which engine and rule decided, and why. The same event is also a JSONL record and an OTLP log record, so any SIEM that speaks OCSF can read it.
-
-</Topic>
-
-<Topic title="OpenShell on Kubernetes" lab="/learn/deploy" labLabel="1.2 Verify your cluster">
+## 11 · OpenShell on Kubernetes
 
 One VM runs the whole thing. From the bottom up, each layer hands a safer, more managed surface to the one above, until at the top you have an AI agent that can only do what your policy allows.
 
@@ -209,7 +197,7 @@ One VM runs the whole thing. From the bottom up, each layer hands a safer, more 
 
 Press **Next** to build one sandbox on Kubernetes in deployment order: LiteLLM, observability, Keycloak, the OpenShell chart, a workspace, then the sandbox. The agent reaches its model only through the supervisor and LiteLLM.
 
-<DeckScene src="openshell" only="k8s" title="One sandbox on Kubernetes" />
+<ReadScene scene="k8s" />
 
 You ask the gateway for a sandbox. It writes a `Sandbox` resource and starts a supervisor pod; the controller turns the resource into the workload pod running OpenClaw. The workload pod can only talk to its supervisor. When the agent calls LiteLLM, the supervisor checks the request against the sandbox's policy, swaps the placeholder in `Authorization` for the real key, and forwards it.
 
@@ -217,9 +205,11 @@ You ask the gateway for a sandbox. It writes a `Sandbox` resource and starts a s
 A sandbox is a pair of pods plus a policy. Creating an agent means creating a sandbox; deleting it tears both pods down. Everything else, isolation, policy, credentials and audit, hangs off that.
 </Callout>
 
-</Topic>
+**Try it:** [1.2 Verify your cluster](/learn/deploy).
 
-<Topic title="This lab's platform" lab="/learn/deploy" labLabel="1.2 Verify your cluster">
+<div id="t-12" className="scroll-mt-20" />
+
+## 12 · This lab's platform
 
 The same platform with every component. It is dense, so read it one path at a time: pick a path above the figure, and only its boxes and arrows stay lit, with numbered markers where each step happens. The steps play in order; click a marker or a line to jump to it.
 
@@ -238,11 +228,15 @@ The same platform with every component. It is dense, so read it one path at a ti
 - **Monitoring**: Prometheus and Grafana for metrics, Loki for logs and OpenShell's audit events, Tempo for traces.
 - **OpenClaw 🦞**: the default agent, baked into the default sandbox image `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox`.
 
-</Topic>
+**Try it:** [1.2 Verify your cluster](/learn/deploy).
 
-<Topic title="NVIDIA Sentry: beyond the host">
+<div id="t-13" className="scroll-mt-20" />
 
-<DeckScene src="sentry" only="pwn,sentry" title="Beyond the host" />
+## 13 · NVIDIA Sentry: beyond the host
+
+<ReadScene scene="pwn" />
+
+<ReadScene scene="sentry" />
 
 ### Two layers, one policy
 
@@ -262,10 +256,6 @@ Together the two are the **NVIDIA Open Agent Safety Platform**. You deploy the l
 | Every request checked against your policy | ✕ | ✓ | ✓ |
 | Survives a compromised host | ✕ | ✕ | ✓ |
 | Enforced in hardware, outside the host | ✕ | ✕ | ✓ |
-
-</Topic>
-
-</Topics>
 
 ## What you learned
 

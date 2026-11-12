@@ -664,7 +664,7 @@ svg text{font-family:'Chakra Petch',sans-serif}
 const main=document.getElementById('slides');const all=[...document.querySelectorAll('section.slide')];
 all.forEach(s=>{if(!keep.includes(s.dataset.scene))s.remove();});
 keep.forEach(k=>{const s=all.find(x=>x.dataset.scene===k);if(s)main.appendChild(s);});
-if(new URLSearchParams(location.search).get('theme')==='light')try{localStorage.setItem('__lt','1')}catch(e){}})();
+if(new URLSearchParams(location.search).get('mode')==='board'){window.__BOARD=true;document.documentElement.classList.add('board');}})();
 </script>
 <script>
 (()=>{
@@ -1340,7 +1340,7 @@ const NOTES=[];
 /* ================= deck controller ================= */
 const stage=$('#stage'),slides=$$('.slide'),wipeEl=$('#wipe');
 let cur=0,beatIdx=0,world=null,t0=null;const seen=new Set();
-function fit(){const s=Math.min(innerWidth/1600,innerHeight/900);stage.style.transform=`translate(-50%,-50%) scale(${s})`;}
+function fit(){const s=(window.__BOARD?Math.min(innerWidth/1100,innerHeight/784):Math.min(innerWidth/1600,innerHeight/900));stage.style.transform=`translate(-50%,-50%) scale(${s})`;}
 addEventListener('resize',fit);fit();
 
 const pips=$('#pips');slides.forEach((s,i)=>{const b=document.createElement('button');b.className='pip';b.title=`${i+1}: ${s.dataset.name}`;b.setAttribute('aria-label',`Go to slide ${i+1}: ${s.dataset.name}`);b.addEventListener('click',()=>{b.blur();go(i);});pips.appendChild(b);});
@@ -1398,6 +1398,21 @@ addEventListener('hashchange',()=>{const i=fromHash();if(i!==cur)go(i);});
 cur=-1;go(fromHash(),{wipe:false});requestAnimationFrame(frame);
 window.__deck={go,next,get cur(){return cur;},get world(){return world;}};
 })();
+</script>
+<style>
+/* board mode (?mode=board): only the picture, steered by the lesson page */
+html.board .hud,html.board .dock,html.board #lp-bar,html.board #wipe,html.board .mission{display:none!important}
+html.board #stage{width:1100px!important;height:784px!important}
+html.board #slides{position:absolute!important;inset:0!important;margin:0!important;padding:0!important}
+html.board .slide.on{display:block!important;position:absolute!important;inset:0!important;padding:0!important}
+html.board .slide.on .board{position:absolute!important;inset:0!important;width:1100px!important;height:784px!important;margin:0!important}
+</style>
+<script>
+/* the lesson page sends {type:'osk8s-beat', n}: show the scene after n steps */
+(()=>{if(!window.__BOARD)return;let n=0;
+const sync=t=>{if(t<n){__deck.go(__deck.cur,{wipe:false});n=0;}while(n<t){__deck.next();n++;}};
+addEventListener('message',e=>{const d=e.data;if(d&&d.type==='osk8s-beat')sync(Math.max(0,d.n|0));});
+try{parent.postMessage({type:'osk8s-ready'},'*');}catch(e){}})();
 </script>
 <style>
 #notes,#map,#mapbtn,.keys,#lvl,#secprog{display:none!important}

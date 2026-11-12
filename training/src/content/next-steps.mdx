@@ -47,12 +47,12 @@ When one sandbox becomes many teams, three questions come up. Each scene answers
 
 **Dedicated or shared supervisors?** By default each sandbox gets its own supervisor pod; a shared deployment can host many, at the cost of a wider blast radius.
 
-<DeckScene src="openshell" only="topology" title="Dedicated or shared?" />
+<ReadScene scene="topology" />
 
 **A highly available control plane.** Two or more gateway replicas on PostgreSQL; each supervisor keeps one session to one replica, and the others relay to it.
 
-<DeckScene src="openshell" only="ha" title="An HA control plane" />
+<ReadScene scene="ha" />
 
 **Identities for people and workloads.** Keycloak (OIDC) for people; SPIFFE for sandboxes, so a sandbox can trade a short-lived identity for upstream tokens and carry no long-lived secret.
 
-<DeckScene src="openshell" only="connect" title="Connect Keycloak and SPIFFE" />
+<ReadScene scene="connect" />

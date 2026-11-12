@@ -1,24 +1,13 @@
-Before any sandbox, start with the thing you'll be sandboxing. Ask a **model** a question and it answers. An **agent** works toward a goal on its own, for minutes or hours: it reads, decides, runs a tool, looks at the result and decides again. Press **Next** in the scene to build one up, piece by piece.
+Before any sandbox, start with the thing you'll be sandboxing. Ask a **model** a question and it answers. An **agent** works toward a goal on its own, for minutes or hours: it reads, decides, runs a tool, looks at the result and decides again. Read down: the picture builds the agent up, piece by piece, as you go.
 
 <BeforeYouStart
   learn="the parts of an agent (model, knowledge, tools, skills, harness), the ReAct loop that drives it, and why it runs with your access."
   time="about eight minutes. No commands in this lesson."
 />
 
-<DeckScene src="openshell" only="agent" title="What is an agent?" />
+<ReadScene scene="agent" />
 
-<Section n="1" title="The parts, in plain words">
-
-- **The model (LLM)** sits behind an inference API. It only ever *suggests* the next step: "read the issue", "run the tests", "open a pull request".
-- **The ReAct loop** is how it gets there: **reason** about what to do, **act** (call a tool), **observe** the result, and repeat until the task is done.
-- **Knowledge** is what the model reads each turn, all pasted into its *context window*: the system prompt, files like `AGENTS.md`, retrieved documents, memory, and the task itself (here, issue #142).
-- **Tools** turn a thought into an action: a shell, file edits, web fetch, the GitHub API, MCP servers. Their output comes back as the next observation.
-- **Skills** are packaged instructions and scripts the agent can load when a task calls for them.
-- **The harness** is the program that runs the loop: OpenClaw, Claude Code, Codex, OpenCode, pi, or your own. It sends the prompt, runs the tools the model picks, and feeds the results back.
-
-</Section>
-
-<Section n="2" title="The model suggests, the harness acts">
+<Section n="1" title="The model suggests, the harness acts">
 
 The model never touches anything. **The harness does**, as an ordinary process on your laptop or in a pod, with **your access**: your SSH keys, your API tokens, your cloud credentials, your files and your network. Whatever the model is talked into, the harness can carry out.
 
