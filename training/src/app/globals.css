@@ -174,3 +174,9 @@ html[data-theme="light"] .sitehead { background: rgba(247, 249, 243, 0.92); bord
 .prose h1 { font-weight: 700; }
 .prose h2, .prose h3 { font-weight: 700; }
 .prose h3 { font-weight: 600; }
+/* OUTPUT: what the command printed first, then the diagram */
+.rl-korder { display: flex; flex-direction: column; }
+.rl-korder > .rl-kcap { order: -3; }
+.rl-korder > .rl-ktourbody:has(.rl-ctext) { order: -2; }
+.rl-korder > .rl-kfirst { order: -1; }
+.rl-korder > .rl-kcmds { margin-bottom: 10px; }
