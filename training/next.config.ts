@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
       ["security", "/learn/openshell#t-7"], ["policy-file", "/learn/openshell#t-7"],
       ["request-flow", "/learn/openshell#t-8"], ["audit-signals", "/learn/openshell#t-10"],
       ["big-picture", "/learn/openshell#t-12"], ["sentry", "/learn/openshell#t-13"],
-      ["m1-overview", "/learn/openshell"], ["m1-check", "/learn/os-check"], ["m0-check", "/learn/os-check"],
+      ["m1-overview", "/learn/openshell"], ["m1-check", "/learn/os-check"], ["m0-check", "/learn/os-check"], ["pi-agent", "/learn/agent-on-k8s"],
     ];
     return moved.map(([from, to]) => ({ source: `/learn/${from}`, destination: to, permanent: false }));
   },

@@ -5,6 +5,10 @@ Before you build an agent, look at what it will run on: a Kubernetes cluster on 
   time="about eight minutes. Every command only reads, except a short-lived port-forward."
 />
 
+<Fig id="cluster" n="0.1" caption="Your cluster before OpenShell: the model behind LiteLLM, and in red the pi agent you deploy in 0.4, with everything it can reach." />
+
+The red part is where this module is going: in the next lab you'll deploy the pi agent exactly like that. For now, look at the rest.
+
 **Open the Cluster shell** at the bottom of the page if you want to type along: it's a real bash shell on the VM, with `kubectl` pointed at the cluster.
 
 <Section n="1" title="The cluster" goal="See the node and what runs on it.">
@@ -134,7 +138,7 @@ kill $PF
 </ExpectedOutput>
 </Output>
 
-Any client with the master key can now call your model, from anywhere that can reach the Service. Keep that in mind for the next two labs.
+Any client with the master key can now call your model, from anywhere that can reach the Service. Keep that in mind for the next lab.
 
 </Step>
 
@@ -142,7 +146,7 @@ Any client with the master key can now call your model, from anywhere that can r
 
 ## What you learned
 
-<Learned next="/learn/pi-agent" nextLabel="Build an agent with pi">
+<Learned next="/learn/agent-on-k8s" nextLabel="Deploy an agent on Kubernetes">
 
 - **One VM, one Kubernetes node**, with each component in its own namespace.
 - **LiteLLM is the model gateway.** The inference endpoint and its key live in its configuration and Secrets; clients use LiteLLM's own key and the alias `default`.

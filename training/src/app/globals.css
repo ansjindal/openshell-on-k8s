@@ -53,6 +53,8 @@
   --dg-ns-cm-t: rgba(20, 184, 166, 0.09); --dg-ns-cm-l: #5eead4;
   --dg-ns-asb-t: rgba(6, 182, 212, 0.09); --dg-ns-asb-l: #67e8f9;
   --dg-ns-kyv-t: rgba(236, 72, 153, 0.09); --dg-ns-kyv-l: #f9a8d4;
+  --dg-ns-ag-t: rgba(239, 68, 68, 0.10); --dg-ns-ag-l: #fca5a5;
+  --dg-ns-demo-t: rgba(100, 116, 139, 0.10); --dg-ns-demo-l: #cbd5e1;
 
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -94,6 +96,7 @@
   --dg-ns-kc-t: #f6f2ff; --dg-ns-kc-l: #6d28d9; --dg-ns-mon-t: #fff8eb; --dg-ns-mon-l: #b45309;
   --dg-ns-ll-t: #eff5ff; --dg-ns-ll-l: #1d4ed8; --dg-ns-cm-t: #edfcf9; --dg-ns-cm-l: #0f766e;
   --dg-ns-asb-t: #ecfdff; --dg-ns-asb-l: #0e7490; --dg-ns-kyv-t: #fdf2f8; --dg-ns-kyv-l: #be185d;
+  --dg-ns-ag-t: #fef2f2; --dg-ns-ag-l: #b91c1c; --dg-ns-demo-t: #f5f7fa; --dg-ns-demo-l: #475569;
   --color-info: #2f6fd0;
   --color-run-bg: #f7f8fb;
   --color-run-line: #d6dbe3;

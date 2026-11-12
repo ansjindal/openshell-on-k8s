@@ -1,20 +1,21 @@
-Agents usually reach production as ordinary workloads: a container, a Deployment, a Secret with an API key. Do exactly that with your pi agent, connect it to the model through LiteLLM, and look at what it can reach from inside the cluster. There is **no OpenShell** around it yet.
+An **agent** is a model plus a **harness**: the program that sends your prompt to the model, runs the tools the model asks for, and feeds the results back until the model answers. Here you deploy one built with **pi**, a small open-source harness, the way agents usually reach production: a container, a Deployment, a Secret with an API key. Then you use it, and look at what it can reach from inside the cluster. There is **no OpenShell** around it yet.
 
 <BeforeYouStart
-  will="deploy pi as a Kubernetes Deployment with the LiteLLM key in a Secret, use it, and check what it holds and can reach."
-  time="about ten minutes. The pod takes about half a minute to start (it installs pi from npm)."
+  will="deploy the pi agent as a Kubernetes Deployment, connected to the model through LiteLLM, use it, and check what it holds and can reach."
+  time="about twelve minutes. The pod takes about half a minute to start (it installs pi from npm)."
 />
 
 <Section n="1" title="Deploy it" goal="Run pi as an ordinary Deployment in its own namespace.">
 
 <Step n="1" title="A namespace and the key">
 
-The agent needs a key for LiteLLM. Put LiteLLM's master key in a Secret in a new namespace, `agents` (it's never printed):
+The agent needs a key for LiteLLM. Put LiteLLM's master key in a Secret in a new namespace, `agents` (it's never printed). `--dry-run … | kubectl apply` creates them, or updates them if they already exist, so you can run this again safely.
 
 ```bash
-kubectl create namespace agents
+kubectl create namespace agents --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n agents create secret generic litellm-key \
-  --from-literal=LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)"
+  --from-literal=LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)" \
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 <Output>
 <ExpectedOutput>
@@ -27,7 +28,17 @@ secret/litellm-key created`}
 
 <Step n="2" title="The Deployment">
 
-`manifests/agents/pi-agent.yaml` runs the `node:22` image, installs pi at start, and writes the same kind of `models.json` you wrote on the VM, this time pointing at LiteLLM's Service:
+`manifests/agents/pi-agent.yaml` describes the agent. Part by part:
+
+- **`kind: Deployment`, namespace `agents`, one replica.** An ordinary Kubernetes workload: Kubernetes keeps one pod of it running.
+- **`image: node:22`.** A stock Node.js image, with a shell, `curl` and `npm`: everything a coding agent typically gets.
+- **The startup script** (`command` and `args`) installs pi from npm (`@earendil-works/pi-coding-agent@1.5.2`), writes pi's model configuration, then sleeps, so you can `exec` in and use the agent.
+- **pi's `models.json`** defines one provider, `lab`: `baseUrl` is LiteLLM's Service (`http://litellm.litellm.svc.cluster.local:4000/v1`), `api: openai-completions` because LiteLLM speaks the OpenAI API, `apiKey: "$LITELLM_API_KEY"` tells pi to read the key from that environment variable, and the one model is `default`, LiteLLM's alias for your model.
+- **`env`.** `LITELLM_API_KEY` comes from the Secret you just made (`secretKeyRef`), so the **real key** sits in the agent's environment. `PI_OFFLINE=1` stops pi's own update check.
+- **`readinessProbe`** waits for `/tmp/ready`, written once pi is installed, so the rollout below finishes only when the agent can be used.
+- **`resources`.** Half a gigabyte requested, at most two.
+
+<Optional title="Show the whole manifest">
 
 ```yaml
 # Module 0 lab: the pi agent as an ordinary Kubernetes workload, with no
@@ -82,6 +93,8 @@ spec:
             requests: { memory: 512Mi }
             limits: { memory: 2Gi }
 ```
+
+</Optional>
 
 Apply it and wait for it:
 

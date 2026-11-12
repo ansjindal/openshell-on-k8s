@@ -20,6 +20,8 @@ NS_COLORS = {
     "certs":      ("#14b8a6", "#edfcf9", "#0f766e"),
     "controller": ("#06b6d4", "#ecfdff", "#0e7490"),
     "kyverno":    ("#ec4899", "#fdf2f8", "#be185d"),
+    "agents":     ("#ef4444", "#fef2f2", "#b91c1c"),
+    "demo":       ("#64748b", "#f5f7fa", "#475569"),
 }
 
 EXTRA_SYMBOLS = {

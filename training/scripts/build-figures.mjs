@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const docs = join(here, "..", "..", "docs");
-const NAMES = ["architecture", "sandbox-anatomy", "credential-flow"];
+const NAMES = ["architecture", "sandbox-anatomy", "credential-flow", "cluster"];
 
 // generator palette (docs/src/lib.py) -> site variables (globals.css --dg-*)
 const MAP = {
@@ -25,6 +25,8 @@ const MAP = {
   "#14b8a6": "#14b8a6", "#edfcf9": "var(--dg-ns-cm-t)", "#0f766e": "var(--dg-ns-cm-l)",
   "#06b6d4": "#06b6d4", "#ecfdff": "var(--dg-ns-asb-t)", "#0e7490": "var(--dg-ns-asb-l)",
   "#ec4899": "#ec4899", "#fdf2f8": "var(--dg-ns-kyv-t)", "#be185d": "var(--dg-ns-kyv-l)",
+  "#ef4444": "#ef4444", "#fef2f2": "var(--dg-ns-ag-t)", "#b91c1c": "var(--dg-ns-ag-l)",
+  "#64748b": "#64748b", "#f5f7fa": "var(--dg-ns-demo-t)", "#475569": "var(--dg-ns-demo-l)",
   "#d62d2d": "var(--dg-red)", "#fdf0f0": "var(--dg-red-t)", "#fbdcdc": "var(--dg-red-t)",
 };
 
