@@ -26,7 +26,7 @@ export function ReadScene({ scene }: { scene: string }) {
     const io = new IntersectionObserver((entries) => {
       const seen = entries.filter((e) => e.isIntersecting).map((e) => Number((e.target as HTMLElement).dataset.n));
       if (seen.length) setActive(Math.max(...seen));
-    }, { rootMargin: "-35% 0px -55% 0px" });
+    }, { rootMargin: "-38% 0px -52% 0px" });
     items.current.forEach((el) => el && io.observe(el));
     return () => io.disconnect();
   }, []);
@@ -43,13 +43,13 @@ export function ReadScene({ scene }: { scene: string }) {
       <div>
         {blocks.map((b, i) => (
           <div key={i} data-n={i} ref={(el) => { items.current[i] = el; }} onClick={() => setActive(i)}
-            className={`cursor-pointer border-l-2 py-5 pl-4 transition-all duration-300 ${i === 0 ? "" : "min-h-[26vh]"} ${i === active ? "border-[var(--color-nv)] opacity-100" : "border-[var(--color-line)] opacity-55 hover:opacity-80"}`}>
+            className={`cursor-pointer border-l-2 py-4 pl-4 transition-all duration-300 ${i === active ? "border-[var(--color-nv)] opacity-100" : "border-[var(--color-line)] opacity-55 hover:opacity-80"}`}>
             {i > 0 && <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-nv-bright)]">Step {i} of {blocks.length - 1}</div>}
             <div className={`font-bold text-[var(--color-fg)] ${i === 0 ? "text-[18px]" : "text-[16px]"}`}>{b.label}</div>
             <p className="mt-1.5 text-[15px] leading-[25px] text-[var(--color-fg-dim)]">{b.text}</p>
           </div>
         ))}
-        <div className="h-[20vh]" />
+        <div className="h-[30vh]" />
       </div>
       <div>
         <div className="sticky top-20">

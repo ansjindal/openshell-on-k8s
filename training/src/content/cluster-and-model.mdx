@@ -1,0 +1,151 @@
+Before you build an agent, look at what it will run on: a Kubernetes cluster on your VM, and **LiteLLM**, the one place in the cluster that knows how to reach your model. Everything in this module runs **without OpenShell**: you'll see agents as they are usually deployed today.
+
+<BeforeYouStart
+  will="tour the cluster with kubectl, read how LiteLLM is configured with your inference endpoint, and call the model through it."
+  time="about eight minutes. Every command only reads, except a short-lived port-forward."
+/>
+
+**Open the Cluster shell** at the bottom of the page if you want to type along: it's a real bash shell on the VM, with `kubectl` pointed at the cluster.
+
+<Section n="1" title="The cluster" goal="See the node and what runs on it.">
+
+<Step n="1" title="The node">
+
+```bash
+kubectl get nodes -o wide
+```
+<Output summary="One node, Ready: k3s, a full Kubernetes API on one VM.">
+<ExpectedOutput>
+{`NAME             STATUS   ROLES           AGE   VERSION        INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION           CONTAINER-RUNTIME
+brev-abc123xyz   Ready    control-plane   22h   v1.37.2+k3s1   10.160.1.113   <none>        Ubuntu 22.04.5 LTS   6.8.0-1073-gcp (amd64)   containerd://2.3.7-k3s1`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="What runs on it">
+
+Count the pods in each namespace:
+
+```bash
+kubectl get pods -A --no-headers | awk '{print $1}' | sort | uniq -c
+```
+<Output summary="Each component lives in its own namespace.">
+<ExpectedOutput>
+{`      1 agent-sandbox-system
+      3 cert-manager
+      3 demo
+      2 envoy-gateway-system
+      1 keycloak
+      4 kube-system
+      4 kyverno
+      1 litellm
+     10 monitoring
+      3 openshell
+      4 openshell-lab-default
+      2 openshell-lab-team-a`}
+</ExpectedOutput>
+</Output>
+
+| Namespace | What it is |
+|---|---|
+| `litellm` | the model gateway: this lesson |
+| `monitoring` | Prometheus, Grafana, Loki, Alloy, Tempo |
+| `keycloak` | sign-in for people |
+| `envoy-gateway-system` | routes the lab's web pages |
+| `cert-manager`, `kyverno` | certificates and admission rules |
+| `demo` | a small shop app the capstone breaks on purpose |
+| `openshell`, `openshell-lab-*`, `agent-sandbox-system` | OpenShell and its sandboxes: Module 1. Leave them for now. |
+
+</Step>
+
+</Section>
+
+<Section n="2" title="LiteLLM: one gateway to your model" goal="See where the inference endpoint is configured.">
+
+<Step n="1" title="The LiteLLM service">
+
+```bash
+kubectl -n litellm get deploy,svc
+```
+<Output summary="One deployment, one Service: litellm.litellm.svc.cluster.local, port 4000.">
+<ExpectedOutput>
+{`NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/litellm   1/1     1            1           22h
+
+NAME              TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/litellm   ClusterIP   10.43.190.70   <none>        4000/TCP   22h`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Its configuration">
+
+LiteLLM's configuration is a ConfigMap. Read the model list:
+
+```bash
+kubectl -n litellm get configmap litellm-config -o jsonpath='{.data.config\.yaml}' | sed -n '/^model_list/,$p'
+```
+<Output summary="Your inference endpoint, behind one model name and the alias default.">
+<ExpectedOutput>
+{`model_list:
+- litellm_params:
+    api_base: <MODEL_BASE_URL>
+    api_key: os.environ/UPSTREAM_API_KEY
+    model: openai/<MODEL_NAME>
+    stream_options:
+      include_usage: true
+  model_name: <MODEL_NAME>
+router_settings:
+  model_group_alias:
+    default: <MODEL_NAME>`}
+</ExpectedOutput>
+</Output>
+
+- `api_base` is the **inference endpoint** you gave the lab (`MODEL_BASE_URL` in `.env`); `model` is `MODEL_NAME`.
+- `api_key: os.environ/UPSTREAM_API_KEY`: the upstream key comes from a Kubernetes Secret, never from the config.
+- `default` is an alias: clients ask for `default` and LiteLLM picks the real model.
+- Clients authenticate to LiteLLM itself with its **master key** (Secret `litellm-secrets`), not with the upstream key.
+
+</Step>
+
+</Section>
+
+<Section n="3" title="Talk to the model through LiteLLM" goal="List the models and ask one question.">
+
+<Step n="1" title="Call LiteLLM from the VM">
+
+The Service is only reachable inside the cluster, so open a short-lived port-forward, read the master key from its Secret (it's never printed), and call the OpenAI-compatible API:
+
+```bash
+KEY=$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+kubectl -n litellm port-forward svc/litellm 4000:4000 >/dev/null 2>&1 & PF=$!; sleep 3
+curl -s localhost:4000/v1/models -H "Authorization: Bearer $KEY" | grep -o '"id":"[^"]*"'
+curl -s localhost:4000/v1/chat/completions -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"model":"default","messages":[{"role":"user","content":"Say hello in five words."}]}' | grep -o '"content":"[^"]*"'
+kill $PF
+```
+<Output summary="The alias and your model, and an answer from it.">
+<ExpectedOutput>
+{`"id":"default"
+"id":"<MODEL_NAME>"
+"content":"\\n\\nHello, I hope you're well."`}
+</ExpectedOutput>
+</Output>
+
+Any client with the master key can now call your model, from anywhere that can reach the Service. Keep that in mind for the next two labs.
+
+</Step>
+
+</Section>
+
+## What you learned
+
+<Learned next="/learn/pi-agent" nextLabel="Build an agent with pi">
+
+- **One VM, one Kubernetes node**, with each component in its own namespace.
+- **LiteLLM is the model gateway.** The inference endpoint and its key live in its configuration and Secrets; clients use LiteLLM's own key and the alias `default`.
+- **Whoever holds the LiteLLM key can call the model**, from anywhere that reaches the Service.
+
+</Learned>

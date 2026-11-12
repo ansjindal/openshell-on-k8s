@@ -1,35 +1,15 @@
-Good news: **the VM is already provisioned.** Ansible (`./scripts/setup.sh`) installed k3s, the agent-sandbox controller, LiteLLM, cert-manager, Keycloak, the OpenShell gateway, the console and the monitoring stack when the machine came up. You don't stand anything up here; you **confirm it's healthy**.
+You met the cluster in Module 0. **OpenShell is already installed on it too:** Ansible (`./scripts/setup.sh`) installed k3s, the agent-sandbox controller, LiteLLM, cert-manager, Keycloak, the OpenShell gateway, the console and the monitoring stack when the machine came up. You don't stand anything up here; you **confirm it's healthy**.
 
-**Concept:** [Parts 3, 11 and 12 in the Overview: how OpenShell is built, on Kubernetes, and this lab's platform](/learn/openshell#t-3).
+**Concept:** [Parts 3, 11 and 12 in the Overview: how OpenShell is built, OpenShell on Kubernetes, and this lab's platform](/learn/openshell#t-3).
 
 <BeforeYouStart
-  will="check the node, the control plane, the gateway, the first sandbox, LiteLLM and Keycloak."
+  will="check the OpenShell control plane, the gateway and who you are to it, the first sandbox, LiteLLM and Keycloak."
   time="about five minutes. Every command only reads; nothing changes."
 />
 
 **Open the Cluster shell.** It's a real bash shell on the VM, with `KUBECONFIG` pointed at `/etc/rancher/k3s/k3s.yaml`, started in the repository folder.
 
-<Section n="1" title="The node is up" goal="Confirm the single k3s node is Ready.">
-
-<Step n="1" title="List the nodes">
-
-```bash
-kubectl get nodes
-```
-<Output>
-<ExpectedOutput>
-{`NAME             STATUS   ROLES           AGE   VERSION
-brev-abc123xyz   Ready    control-plane   40m   v1.37.2+k3s1`}
-</ExpectedOutput>
-</Output>
-
-One node, `Ready`: k3s, a full Kubernetes API.
-
-</Step>
-
-</Section>
-
-<Section n="2" title="The control plane is running" goal="See the gateway, console and registry pods.">
+<Section n="1" title="The control plane is running" goal="See the gateway, console and registry pods.">
 
 <Step n="1" title="List the openshell pods">
 
@@ -53,7 +33,7 @@ registry-6968dc66b4-t6jbm              1/1     Running   0          10m`}
 
 </Section>
 
-<Section n="3" title="The gateway answers" goal="Confirm the CLI is connected, and see who you are.">
+<Section n="2" title="The gateway answers" goal="Confirm the CLI is connected, and see who you are.">
 
 <Step n="1" title="Check the gateway status">
 
@@ -100,7 +80,7 @@ This shell presents a client certificate with `OU=operator`, which cert-manager 
 
 </Section>
 
-<Section n="4" title="A sandbox is already running" goal="Find agent-0, created at provisioning time.">
+<Section n="3" title="A sandbox is already running" goal="Find agent-0, created at provisioning time.">
 
 <Step n="1" title="List the sandboxes">
 
@@ -120,7 +100,7 @@ agent-0  2026-11-10 15:26:24  Ready`}
 
 </Section>
 
-<Section n="5" title="The model path and sign-in are up" goal="Confirm LiteLLM and Keycloak are Running.">
+<Section n="4" title="The model path and sign-in are up" goal="Confirm LiteLLM and Keycloak are Running.">
 
 <Step n="1" title="List the LiteLLM and Keycloak pods">
 
@@ -148,7 +128,7 @@ One <code>Ready</code> node; <code>openshell-0</code>, the console, LiteLLM and 
 
 ## What you learned
 
-<Learned next="/learn/build-an-agent" nextLabel="Build an agent and seal it">
+<Learned next="/learn/build-an-agent" nextLabel="Seal the agent">
 
 - **The node is up.** Confirm the single k3s node is Ready.
 - **The control plane is running.** See the gateway, console and registry pods.

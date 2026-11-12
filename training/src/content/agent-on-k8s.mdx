@@ -1,0 +1,167 @@
+Agents usually reach production as ordinary workloads: a container, a Deployment, a Secret with an API key. Do exactly that with your pi agent, connect it to the model through LiteLLM, and look at what it can reach from inside the cluster. There is **no OpenShell** around it yet.
+
+<BeforeYouStart
+  will="deploy pi as a Kubernetes Deployment with the LiteLLM key in a Secret, use it, and check what it holds and can reach."
+  time="about ten minutes. The pod takes about half a minute to start (it installs pi from npm)."
+/>
+
+<Section n="1" title="Deploy it" goal="Run pi as an ordinary Deployment in its own namespace.">
+
+<Step n="1" title="A namespace and the key">
+
+The agent needs a key for LiteLLM. Put LiteLLM's master key in a Secret in a new namespace, `agents` (it's never printed):
+
+```bash
+kubectl create namespace agents
+kubectl -n agents create secret generic litellm-key \
+  --from-literal=LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)"
+```
+<Output>
+<ExpectedOutput>
+{`namespace/agents created
+secret/litellm-key created`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="The Deployment">
+
+`manifests/agents/pi-agent.yaml` runs the `node:22` image, installs pi at start, and writes the same kind of `models.json` you wrote on the VM, this time pointing at LiteLLM's Service:
+
+```yaml
+# Module 0 lab: the pi agent as an ordinary Kubernetes workload, with no
+# OpenShell around it. It gets the LiteLLM key as an environment variable,
+# installs pi from npm at start, and points it at LiteLLM in the cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pi-agent
+  namespace: agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: pi-agent }
+  template:
+    metadata:
+      labels: { app: pi-agent }
+    spec:
+      containers:
+        - name: agent
+          image: node:22
+          env:
+            - name: PI_OFFLINE
+              value: "1"
+            - name: LITELLM_API_KEY
+              valueFrom:
+                secretKeyRef: { name: litellm-key, key: LITELLM_API_KEY }
+          command: ["bash", "-c"]
+          args:
+            - |
+              npm install -g --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2
+              mkdir -p ~/.pi/agent
+              cat > ~/.pi/agent/models.json <<'JSON'
+              {
+                "providers": {
+                  "lab": {
+                    "baseUrl": "http://litellm.litellm.svc.cluster.local:4000/v1",
+                    "api": "openai-completions",
+                    "apiKey": "$LITELLM_API_KEY",
+                    "compat": { "supportsDeveloperRole": false, "supportsReasoningEffort": false },
+                    "models": [{ "id": "default" }]
+                  }
+                }
+              }
+              JSON
+              touch /tmp/ready
+              sleep infinity
+          readinessProbe:
+            exec: { command: ["test", "-f", "/tmp/ready"] }
+            periodSeconds: 3
+          resources:
+            requests: { memory: 512Mi }
+            limits: { memory: 2Gi }
+```
+
+Apply it and wait for it:
+
+```bash
+cd ~/openshell-on-k8s && kubectl apply -f manifests/agents/pi-agent.yaml && kubectl -n agents rollout status deploy/pi-agent --timeout=240s
+```
+<Output summary="Ready once pi is installed.">
+<ExpectedOutput>
+{`deployment.apps/pi-agent created
+Waiting for deployment "pi-agent" rollout to finish: 0 of 1 updated replicas are available...
+deployment "pi-agent" successfully rolled out`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="2" title="Use it" goal="Ask it something, then give it a shell.">
+
+<Step n="1" title="Ask it something">
+
+```bash
+kubectl -n agents exec deploy/pi-agent -- pi --provider lab --model default --no-session -p "In one sentence: what is an AI agent harness?"
+```
+<Output summary="The answer came from your model, through LiteLLM.">
+<ExpectedOutput>
+{`An AI agent harness is a framework that provides the infrastructure, tools, and orchestration capabilities to build, deploy, and manage autonomous AI agents that can perceive, reason, and act in environments.`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Give it a tool">
+
+```bash
+kubectl -n agents exec deploy/pi-agent -- pi --provider lab --model default --no-session --tools bash -p "Use bash to run curl -s -m 8 -o /dev/null -w %{http_code} https://example.com and reply with one line: the HTTP status it printed."
+```
+<Output summary="200: from inside the cluster, the agent reaches the internet.">
+<ExpectedOutput>
+{`200`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="3" title="What it holds, and what it can reach" goal="Look at the agent's pod the way an attacker would.">
+
+<Step n="1" title="Its key and the cluster">
+
+```bash
+kubectl -n agents exec deploy/pi-agent -- bash -c 'echo "LITELLM_API_KEY: ${LITELLM_API_KEY:0:3}… (${#LITELLM_API_KEY} characters)"; curl -sk -m 5 -o /dev/null -w "Kubernetes API with its token: HTTP %{http_code}\n" -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/api'
+```
+<Output summary="The real LiteLLM key is in its environment, and its pod can talk to the Kubernetes API.">
+<ExpectedOutput>
+{`LITELLM_API_KEY: sk-… (51 characters)
+Kubernetes API with its token: HTTP 200`}
+</ExpectedOutput>
+</Output>
+
+Anything the agent runs (a tool, a script, an installed package, a command a prompt talked it into) can read that key, send it anywhere on the internet, and probe the cluster from the inside. That is the default for an agent deployed as an ordinary workload.
+
+</Step>
+
+</Section>
+
+<Optional title="Keep it, or clean up">
+
+Leave `pi-agent` running: in Module 1 you run the same agent inside OpenShell and compare. When you're done with both, remove it with `kubectl delete namespace agents`.
+
+</Optional>
+
+## What you learned
+
+<Learned next="/learn/agent-misled" nextLabel="When an agent is misled">
+
+- **Deploying an agent is ordinary Kubernetes**: an image, a Deployment, a Secret with a key.
+- **Ordinary means unbounded.** From its pod the agent reached the internet, held the real LiteLLM key and talked to the Kubernetes API.
+- **Nothing records what it does.** No log tells you which hosts it called, or why.
+
+</Learned>

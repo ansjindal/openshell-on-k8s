@@ -1,0 +1,51 @@
+# Module 0 lab: the pi agent as an ordinary Kubernetes workload, with no
+# OpenShell around it. It gets the LiteLLM key as an environment variable,
+# installs pi from npm at start, and points it at LiteLLM in the cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pi-agent
+  namespace: agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: pi-agent }
+  template:
+    metadata:
+      labels: { app: pi-agent }
+    spec:
+      containers:
+        - name: agent
+          image: node:22
+          env:
+            - name: PI_OFFLINE
+              value: "1"
+            - name: LITELLM_API_KEY
+              valueFrom:
+                secretKeyRef: { name: litellm-key, key: LITELLM_API_KEY }
+          command: ["bash", "-c"]
+          args:
+            - |
+              npm install -g --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2
+              mkdir -p ~/.pi/agent
+              cat > ~/.pi/agent/models.json <<'JSON'
+              {
+                "providers": {
+                  "lab": {
+                    "baseUrl": "http://litellm.litellm.svc.cluster.local:4000/v1",
+                    "api": "openai-completions",
+                    "apiKey": "$LITELLM_API_KEY",
+                    "compat": { "supportsDeveloperRole": false, "supportsReasoningEffort": false },
+                    "models": [{ "id": "default" }]
+                  }
+                }
+              }
+              JSON
+              touch /tmp/ready
+              sleep infinity
+          readinessProbe:
+            exec: { command: ["test", "-f", "/tmp/ready"] }
+            periodSeconds: 3
+          resources:
+            requests: { memory: 512Mi }
+            limits: { memory: 2Gi }

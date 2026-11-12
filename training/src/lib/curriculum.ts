@@ -11,20 +11,23 @@ const L = (slug: string, title: string, blurb: string, minutes: number, kind: Le
 export const CURRICULUM: Part[] = [
   {
     id: "m0", n: 0, title: "Agents", accent: "nv",
-    subtitle: "What an AI agent is, the harness that runs it, and why the guardrail has to sit outside it.",
+    subtitle: "What an agent is, then build one and deploy it on Kubernetes the usual way, without OpenShell, and see what it can reach.",
     lessons: [
       L("welcome", "Overview", "What you'll learn, how the labs work, and the one command that builds the stack.", 5),
-      L("what-is-an-agent", "What is an agent?", "A model in a ReAct loop, plus the knowledge it reads, the tools it calls, the skills it loads and the harness that runs it all.", 8),
-      L("agent-misled", "When an agent is misled", "One poisoned issue, what it touches, and where the guardrail should live.", 8),
+      L("what-is-an-agent", "What is an agent?", "A model in a ReAct loop, plus the knowledge it reads, the tools it calls, the skills it loads and the harness that runs it all.", 6),
+      L("cluster-and-model", "Your cluster and the model", "The Kubernetes cluster on your VM, and LiteLLM configured with your inference endpoint.", 8, "lab"),
+      L("pi-agent", "Build an agent with pi", "The pi harness on your VM: connect it to the model, ask it something, give it a shell.", 8, "lab"),
+      L("agent-on-k8s", "Deploy the agent on Kubernetes", "pi as an ordinary Deployment with the LiteLLM key in a Secret, and what it can reach from inside the cluster.", 10, "lab"),
+      L("agent-misled", "When an agent is misled", "One poisoned issue, what it touches, and where the guardrail should live.", 6),
     ],
   },
   {
     id: "os", n: 1, title: "OpenShell", accent: "nv", role: "You are the platform operator.",
-    subtitle: "The overview explains OpenShell one topic at a time; then the labs, one by one: check your environment, build an agent, seal it, and open its network rule by rule.",
+    subtitle: "The overview explains OpenShell in thirteen parts; then the labs, one by one: verify OpenShell, seal the agent from Module 0, and open its network rule by rule.",
     lessons: [
       L("openshell", "Overview", "OpenShell one topic at a time: the sandbox, gateway and supervisor, kernel, policy, keys, audit, Kubernetes, Sentry.", 40),
-      L("deploy", "Verify your cluster", "Kubernetes first, then OpenShell: the node, the control plane, the gateway, your identity, the first sandbox.", 8, "lab"),
-      L("build-an-agent", "Build an agent and seal it", "pi on the VM, connected to your model; then the same agent in a sandbox, connected again through the provider.", 20, "lab"),
+      L("deploy", "Verify OpenShell", "The OpenShell control plane, the gateway and who you are to it, the first sandbox.", 6, "lab"),
+      L("build-an-agent", "Seal the agent", "The same pi agent in an OpenShell sandbox: npm refused, one door opened, the model through the provider, the seal tested.", 15, "lab"),
       L("create-sandbox", "Create a sandbox", "openshell sandbox create, and the workload and supervisor pods it makes.", 9, "lab"),
       L("into-the-sandbox", "Test the seal from inside", "Exec in: the sandbox user, Landlock, and a network that only reaches the supervisor.", 8, "lab"),
       L("policy", "Egress policy, rule by rule", "Deny by default; grant one endpoint live, then narrow it to GET with an L7 rule.", 10, "lab"),

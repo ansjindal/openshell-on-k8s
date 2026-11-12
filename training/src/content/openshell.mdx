@@ -22,7 +22,7 @@ The same agent, the same poisoned issue. The model is still misled, but every ha
 
 <ReadScene scene="contained" />
 
-**Try it:** [1.3 Build an agent and seal it](/learn/build-an-agent).
+**Try it:** [1.3 Seal the agent](/learn/build-an-agent).
 
 <div id="t-3" className="scroll-mt-20" />
 
@@ -69,7 +69,7 @@ openshell sandbox list
 Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; each workspace's sandboxes live in a namespace the gateway creates for it, such as <code>openshell-lab-default</code>. You can always drop to <code>kubectl -n openshell-lab-default get sandboxes,pods</code> to see what the gateway did.
 </Callout>
 
-**Try it:** [1.2 Verify your cluster](/learn/deploy).
+**Try it:** [1.2 Verify OpenShell](/learn/deploy).
 
 <div id="t-4" className="scroll-mt-20" />
 
@@ -205,7 +205,7 @@ You ask the gateway for a sandbox. It writes a `Sandbox` resource and starts a s
 A sandbox is a pair of pods plus a policy. Creating an agent means creating a sandbox; deleting it tears both pods down. Everything else, isolation, policy, credentials and audit, hangs off that.
 </Callout>
 
-**Try it:** [1.2 Verify your cluster](/learn/deploy).
+**Try it:** [1.2 Verify OpenShell](/learn/deploy).
 
 <div id="t-12" className="scroll-mt-20" />
 
@@ -228,7 +228,7 @@ The same platform with every component. It is dense, so read it one path at a ti
 - **Monitoring**: Prometheus and Grafana for metrics, Loki for logs and OpenShell's audit events, Tempo for traces.
 - **OpenClaw 🦞**: the default agent, baked into the default sandbox image `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox`.
 
-**Try it:** [1.2 Verify your cluster](/learn/deploy).
+**Try it:** [1.2 Verify OpenShell](/learn/deploy).
 
 <div id="t-13" className="scroll-mt-20" />
 
@@ -259,7 +259,7 @@ Together the two are the **NVIDIA Open Agent Safety Platform**. You deploy the l
 
 ## What you learned
 
-<Learned next="/learn/deploy" nextLabel="Lab 1.2: Verify your cluster">
+<Learned next="/learn/deploy" nextLabel="Lab 1.2: Verify OpenShell">
 
 - **The boundary sits outside the agent.** OpenShell sandboxes the whole agent process; the agent can only ask.
 - **Gateway and supervisor.** The gateway governs sandboxes, policies and keys; a supervisor per sandbox decides every connection, and fails closed.
