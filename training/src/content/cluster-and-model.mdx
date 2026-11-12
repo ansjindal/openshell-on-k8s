@@ -29,7 +29,7 @@ Now look at it for real.
 
 **Open the Cluster shell** at the bottom of the page if you want to type along: it's a real bash shell on the VM, with `kubectl` pointed at the cluster.
 
-<Section n="1" title="The cluster" goal="See the node and what runs on it.">
+<Section n="1" title="The cluster" goal="See the node, and what runs on it.">
 
 <Step n="1" title="The node">
 
@@ -44,32 +44,8 @@ brev-abc123xyz   Ready    control-plane   22h   v1.37.2+k3s1   10.160.1.113   <n
 </ExpectedOutput>
 </Output>
 
-</Step>
 
-<Step n="2" title="What runs on it">
-
-Count the pods in each namespace:
-
-```bash
-kubectl get pods -A --no-headers | awk '{print $1}' | sort | uniq -c
-```
-<Output summary="Each component lives in its own namespace.">
-<LiveDiagram id="cluster-tour" layer={2} />
-<ExpectedOutput>
-{`      1 agent-sandbox-system
-      3 cert-manager
-      3 demo
-      2 envoy-gateway-system
-      1 keycloak
-      4 kube-system
-      4 kyverno
-      1 litellm
-     10 monitoring
-      3 openshell
-      4 openshell-lab-default
-      2 openshell-lab-team-a`}
-</ExpectedOutput>
-</Output>
+What runs on that node, one namespace per component:
 
 | Namespace | What it is |
 |---|---|
@@ -93,7 +69,7 @@ kubectl get pods -A --no-headers | awk '{print $1}' | sort | uniq -c
 kubectl -n litellm get deploy,svc
 ```
 <Output summary="One deployment, one Service: litellm.litellm.svc.cluster.local, port 4000.">
-<LiveDiagram id="cluster-tour" layer={3} />
+<LiveDiagram id="cluster-tour" layer={2} />
 <ExpectedOutput>
 {`NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/litellm   1/1     1            1           22h
@@ -113,7 +89,7 @@ LiteLLM's configuration is a ConfigMap. Read the model list:
 kubectl -n litellm get configmap litellm-config -o jsonpath='{.data.config\.yaml}' | sed -n '/^model_list/,$p'
 ```
 <Output summary="Your inference endpoint, behind one model name and the alias default.">
-<LiveDiagram id="cluster-tour" layer={4} />
+<LiveDiagram id="cluster-tour" layer={3} />
 <ExpectedOutput>
 {`model_list:
 - litellm_params:
@@ -153,7 +129,7 @@ curl -s localhost:4000/v1/chat/completions -H "Authorization: Bearer $KEY" -H "C
 kill $PF
 ```
 <Output summary="The alias and your model, and an answer from it.">
-<LiveDiagram id="cluster-tour" layer={5} />
+<LiveDiagram id="cluster-tour" layer={4} />
 <ExpectedOutput>
 {`"id":"default"
 "id":"<MODEL_NAME>"

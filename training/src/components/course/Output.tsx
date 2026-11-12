@@ -4,13 +4,15 @@
 //     <LiveDiagram id="deploy" layer={1} />
 //     <ExpectedOutput>{`…what the command printed…`}</ExpectedOutput>
 //   </Output>
-// Before you run the step it shows what was recorded on a lab VM like yours.
-// After Run it shows your VM's output (and the diagram fills in from it); the
-// recorded text stays one click away.
+// Before you run the step it shows "Recorded output": what a lab VM like yours
+// printed, then the diagram. After Run a second fold, "Your output", comes
+// first: what your VM printed, then the diagram with your values. The recorded
+// fold stays, closed, as in the course template.
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { StepContext } from "./Structure";
 
-export const OutputContext = createContext<{ inside: boolean; collapsePrinted: boolean; markDiagram: () => () => void; cmds?: string[] }>({ inside: false, collapsePrinted: false, markDiagram: () => () => {} });
+export type OutMode = "recorded" | "yours";
+export const OutputContext = createContext<{ inside: boolean; collapsePrinted: boolean; markDiagram: () => () => void; cmds?: string[]; mode?: OutMode }>({ inside: false, collapsePrinted: false, markDiagram: () => () => {} });
 
 export function Output({ summary, children }: { summary?: ReactNode; children?: ReactNode }) {
   const { live, markOutput, cmds } = useContext(StepContext);
@@ -28,23 +30,31 @@ export function Output({ summary, children }: { summary?: ReactNode; children?: 
         <span className="rl-caret" /><span className="rl-badge do">Output</span><span className="rl-boxhint">{hint}</span>
       </div>
       <div className="rl-boxbody">
-        <details className="rl-optitem rl-kcur" open>
-          <summary>{live ? "Your output" : "Recorded output"}</summary>
-          <div className="rl-kresult"><div className="rl-ktour rl-korder">
-            <div className="rl-kcap">
-              <span className={`rl-kdot${live ? (live.exit === 0 ? " ok" : "") : " rec"}`} />
-              <span>{!live ? "Recorded on a lab VM (n2d-standard-8, OpenShell 0.1.7)" : running ? "Running on your lab VM…" : `From your lab VM · exit ${live.exit}`}</span>
-            </div>
-            {summary && !live && <div className="rl-ktourbody"><div className="rl-ctext">{summary}</div></div>}
-            {/* first what the command printed (yours after a run), then the diagram */}
-            {live && (
+        {live && (
+          <details className="rl-optitem rl-kcur" open>
+            <summary>Your output</summary>
+            <div className="rl-kresult"><div className="rl-ktour rl-korder">
+              <div className="rl-kcap">
+                <span className={`rl-kdot${live.exit === 0 ? " ok" : ""}`} />
+                <span>{running ? "Running on your lab VM…" : `From your lab VM · exit ${live.exit}`}</span>
+              </div>
               <details className="rl-optitem rl-kcmds" open>
                 <summary>What the command printed (your run)</summary>
                 {cmds.length === 1 && <pre className="rl-code"><code>{cmds[0]}</code></pre>}
                 <pre className="rl-kout">{live.text || (running ? "" : "(no output)")}</pre>
               </details>
-            )}
-            <OutputContext.Provider value={{ inside: true, collapsePrinted: !!live, markDiagram, cmds }}>
+              <OutputContext.Provider value={{ inside: true, collapsePrinted: true, markDiagram, cmds, mode: "yours" }}>
+                {children}
+              </OutputContext.Provider>
+            </div></div>
+          </details>
+        )}
+        <details className={`rl-optitem ${live ? "rl-expect" : "rl-kcur"}`} open={!live}>
+          <summary>Recorded output</summary>
+          <div className="rl-kresult"><div className="rl-ktour rl-korder">
+            <div className="rl-kcap"><span className="rl-kdot rec" /><span>Recorded on a lab VM (n2d-standard-8, OpenShell 0.1.7)</span></div>
+            {summary && <div className="rl-ktourbody"><div className="rl-ctext">{summary}</div></div>}
+            <OutputContext.Provider value={{ inside: true, collapsePrinted: false, markDiagram, cmds, mode: "recorded" }}>
               {children}
             </OutputContext.Provider>
           </div></div>

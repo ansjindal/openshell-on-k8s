@@ -293,11 +293,10 @@ export const DIAGRAMS: Record<string, Diagram> = {
     w: 960, h: 500,
     layers: [
       { n: 0, name: "You" },
-      { n: 1, step: "1.1", name: "The node", note: "One k3s node, in two halves: the control plane (the API server and friends) decides, the worker side (kubelet, containerd) runs the pods. kubectl talks to the API server." },
-      { n: 2, step: "1.2", name: "Namespaces", note: "Each component in its own namespace, with the number of pods your command counted. LiteLLM is the one to watch." },
-      { n: 3, step: "2.1", name: "LiteLLM", note: "One Deployment behind one Service, reachable only inside the cluster at litellm.litellm.svc.cluster.local:4000." },
-      { n: 4, step: "2.2", name: "Its configuration", note: "LiteLLM's model list: your inference endpoint and model, under the alias default. The upstream key comes from a Secret." },
-      { n: 5, step: "3.1", name: "A call", note: "A port-forward from the VM to the Service, LiteLLM's master key, and an answer from your model." },
+      { n: 1, step: "1.1", name: "The node", note: "One k3s node, in two halves: the control plane (the API server and friends) decides, the worker side (kubelet, containerd) runs the pods, one namespace per component. kubectl talks to the API server." },
+      { n: 2, step: "2.1", name: "LiteLLM", note: "One Deployment behind one Service, reachable only inside the cluster at litellm.litellm.svc.cluster.local:4000." },
+      { n: 3, step: "2.2", name: "Its configuration", note: "LiteLLM's model list: your inference endpoint and model, under the alias default. The upstream key comes from a Secret." },
+      { n: 4, step: "3.1", name: "A call", note: "A port-forward from the VM to the Service, LiteLLM's master key, and an answer from your model." },
     ],
     nodes: [
       { id: "you", icon: "i-term", x: 15, y: 170, w: 170, h: 80, label: "You", sub: "kubectl · Cluster shell", layer: 0 },
@@ -309,7 +308,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { id: "sch", icon: "i-gear", x: 584, y: 66, w: 160, h: 50, label: "scheduler", sub: "places pods", layer: 1 },
       { id: "cm", icon: "i-sync", x: 754, y: 66, w: 170, h: 50, label: "controllers", sub: "keep it as declared", layer: 1 },
       { id: "wk", icon: "i-cube", x: 220, y: 144, w: 715, h: 332, label: "worker · kubelet + containerd run the pods", layer: 1, kind: "group" },
-      ...([
+      ...((SUBS) => ([
         ["ll", "litellm", ["litellm"], 470, 172, "ext", "i-chip"],
         ["mon", "monitoring", ["monitoring"], 232, 172, undefined, "i-chart"],
         ["kc", "keycloak", ["keycloak"], 705, 172, undefined, "i-people"],
@@ -320,35 +319,29 @@ export const DIAGRAMS: Record<string, Diagram> = {
         ["os", "openshell + sandboxes", ["openshell", "openshell-lab-default", "openshell-lab-team-a", "agent-sandbox-system"], 470, 280, undefined, "i-shield"],
         ["ag", "agents", ["agents"], 705, 280, undefined, "i-bot"],
       ] as [string, string, string[], number, number, DNode["kind"], string][]).map(([id, label, names, x, y, kind, icon]): DNode => ({
-        id, x, y, w: 218, h: 46, label, icon, sub: id === "os" ? "Module 1" : id === "ag" ? "empty until 0.4" : "pods", layer: 2, kind,
+        id, x, y, w: 218, h: 46, label, icon, sub: SUBS[id], layer: 1, kind,
+      })))({ ll: "the model gateway", mon: "metrics · logs · traces", kc: "sign-in for people", env: "routes web traffic", demo: "a small shop app", ks: "DNS · metrics", cm2: "certificates · admission", os: "Module 1", ag: "empty until 0.4" } as Record<string, string>),
+      { id: "dep", icon: "i-chip", x: 232, y: 352, w: 218, h: 108, label: "deploy/litellm", sub: "svc/litellm · ClusterIP\n:4000, in-cluster only", layer: 2, kind: "ext",
         dyn: (o) => {
-          const counts = Object.fromEntries(lines(o(2)).map((l) => /^\s*(\d+)\s+(\S+)/.exec(l)).filter(Boolean).map((m) => [m![2], +m![1]]));
-          if (!Object.keys(counts).length) return;
-          const n = names.reduce((a, k) => a + (counts[k] ?? 0), 0);
-          return { sub: `${n} pod${n === 1 ? "" : "s"}${id === "os" ? " · Module 1" : ""}` };
-        },
-      })),
-      { id: "dep", icon: "i-chip", x: 232, y: 352, w: 218, h: 108, label: "deploy/litellm", sub: "svc/litellm · ClusterIP\n:4000, in-cluster only", layer: 3, kind: "ext",
-        dyn: (o) => {
-          const t = o(3) ?? ""; const d = /deployment\.apps\/litellm\s+(\S+)/.exec(t); const sv = /service\/litellm\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)/.exec(t);
+          const t = o(2) ?? ""; const d = /deployment\.apps\/litellm\s+(\S+)/.exec(t); const sv = /service\/litellm\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)/.exec(t);
           return d || sv ? { sub: `${d ? d[1] + " ready" : ""}\nsvc ${sv ? sv[1] + " " + sv[2] : ""}\n${sv ? sv[3] : ""}` } : undefined;
         } },
-      { id: "cfg", icon: "i-doc", x: 470, y: 352, w: 218, h: 108, label: "model_list", sub: "your model\nalias: default\nkey from a Secret", layer: 4,
-        dyn: (o) => { const m = /model:\s*openai\/(\S+)/.exec(o(4) ?? ""); return m ? { sub: `${short(m[1], 26)}\nalias: default\nkey from a Secret` } : undefined; } },
-      { id: "ans", icon: "i-bot", x: 705, y: 352, w: 218, h: 108, label: "the answer", sub: "\"Hello, I hope\nyou're well.\"", layer: 5, kind: "accent",
+      { id: "cfg", icon: "i-doc", x: 470, y: 352, w: 218, h: 108, label: "model_list", sub: "your model\nalias: default\nkey from a Secret", layer: 3,
+        dyn: (o) => { const m = /model:\s*openai\/(\S+)/.exec(o(3) ?? ""); return m ? { sub: `${short(m[1], 26)}\nalias: default\nkey from a Secret` } : undefined; } },
+      { id: "ans", icon: "i-bot", x: 705, y: 352, w: 218, h: 108, label: "the answer", sub: "\"Hello, I hope\nyou're well.\"", layer: 4, kind: "accent",
         dyn: (o) => {
-          const m = /"content":"((?:[^"\\]|\\.)*)"/.exec(o(5) ?? ""); if (!m) return;
+          const m = /"content":"((?:[^"\\]|\\.)*)"/.exec(o(4) ?? ""); if (!m) return;
           const a = m[1].replace(/\\n/g, " ").replace(/\\"/g, '"').trim();
           return { sub: `"${short(a, 26)}${a.length > 26 ? "" : ""}"\n${a.length > 26 ? short(a.slice(25), 26) : ""}` };
         } },
-      { id: "up", icon: "i-globe", x: 15, y: 330, w: 170, h: 80, label: "model API", sub: "your inference\nendpoint", layer: 4, kind: "ext" },
+      { id: "up", icon: "i-globe", x: 15, y: 330, w: 170, h: 80, label: "model API", sub: "your inference\nendpoint", layer: 3, kind: "ext" },
     ],
     edges: [
       { from: "you", to: "api", label: "kubectl", layer: 1, kind: "ok", dy: -4 },
-      { from: "ll", to: "dep", layer: 3, kind: "dash" },
-      { from: "dep", to: "up", label: "HTTPS", layer: 4, kind: "ok" },
-      { from: "you", to: "dep", label: "port-forward", layer: 5, kind: "ok", dx: -22, dy: -6 },
-      { from: "dep", to: "ans", layer: 5, kind: "ok" },
+      { from: "ll", to: "dep", layer: 2, kind: "dash" },
+      { from: "dep", to: "up", label: "HTTPS", layer: 3, kind: "ok" },
+      { from: "you", to: "dep", label: "port-forward", layer: 4, kind: "ok", dx: -22, dy: -6 },
+      { from: "dep", to: "ans", layer: 4, kind: "ok" },
     ],
   },
   // ---- module overviews (ScrollBuild): one layer per lesson, 600 wide so the

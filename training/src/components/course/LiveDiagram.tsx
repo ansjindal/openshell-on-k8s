@@ -117,7 +117,10 @@ export function LiveDiagram({ id, layer }: { id: string; layer: number }) {
   const done = !!(step.id && progress.steps[step.id]) || inOutput;
   // Output of the step behind each layer (if you ran it): diagrams draw what
   // your commands actually found, not only the textbook picture.
+  // The recorded fold draws the recorded picture; only "Your output" uses your values.
+  const recorded = octx.mode === "recorded";
   const out = (n: number) => {
+    if (recorded) return undefined;
     const l = d.layers.find((x) => x.n === n);
     return l?.step ? stepOutput(progress, `${slug}:${number}.${l.step}`) : undefined;
   };
