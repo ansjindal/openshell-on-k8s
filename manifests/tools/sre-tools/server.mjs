@@ -1,5 +1,5 @@
 // sre-tools: a small MCP server (Streamable HTTP, stateless) that gives agents
-// the cluster's SRE tools: pod status, events, Prometheus, Loki, and one write
+// the cluster's SRE tools: pod status, events, Prometheus, Loki, Tempo, and one write
 // tool, scale_deployment. It runs as an ordinary Deployment + Service in the
 // `tools` namespace; agents reach it at http://sre-tools.tools.svc.cluster.local:8080/mcp,
 // and OpenShell decides, per sandbox, which tools each agent may call.
@@ -11,6 +11,7 @@ import { z } from "zod";
 
 const PROM = process.env.PROMETHEUS_URL || "http://kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090";
 const LOKI = process.env.LOKI_URL || "http://loki.monitoring.svc.cluster.local:3100";
+const TEMPO = process.env.TEMPO_URL || "http://tempo.monitoring.svc.cluster.local:3200";
 const SA = "/var/run/secrets/kubernetes.io/serviceaccount";
 const KUBE = "https://kubernetes.default.svc";
 const token = () => readFileSync(`${SA}/token`, "utf8");
@@ -89,6 +90,20 @@ function tools() {
     if (j.status !== "success") return text(`ERR ${j.error || r.status}`);
     const lines = j.data.result.flatMap((s) => s.values.map(([, l]) => `${s.stream.pod || s.stream.app || ""} ${l}`)).slice(0, 20);
     return text(lines.length ? lines.join("\n") : "no lines");
+  });
+
+  s.registerTool("tempo_search", {
+    title: "Tempo trace search",
+    description: "Search the last N minutes of traces with TraceQL and return each trace's root span, duration and matching span count. Read-only.",
+    inputSchema: { query: z.string().describe('TraceQL, e.g. { resource.service.name = "shop" && status = error }'), minutes: z.number().int().min(1).max(120).optional() },
+    annotations: { readOnlyHint: true },
+  }, async ({ query, minutes = 30 }) => {
+    const end = Math.floor(Date.now() / 1000), start = end - minutes * 60;
+    const r = await fetch(`${TEMPO}/api/search?limit=15&start=${start}&end=${end}&q=${encodeURIComponent(query)}`);
+    if (!r.ok) return text(`ERR tempo ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const j = await r.json();
+    const rows = (j.traces || []).map((t) => `${t.traceID.slice(0, 12)}  ${t.rootServiceName} "${t.rootTraceName}"  ${t.durationMs ?? 0} ms  ${t.spanSet?.matched ?? t.spanSet?.spans?.length ?? 0} matching span(s)`);
+    return text(rows.length ? `${rows.length} trace(s):\n${rows.join("\n")}` : "no traces match");
   });
 
   s.registerTool("scale_deployment", {

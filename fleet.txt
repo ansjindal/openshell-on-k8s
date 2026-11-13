@@ -1,8 +1,9 @@
-# The SRE copilot fleet — one agent per line, WHITESPACE-separated columns:
-#   name      backend(host:port, or "-")                                          skill(@scope/name, or "-")
-# (this k3s ships Loki + Prometheus; add Tempo to the cluster for a traces agent)
-logs      loki.monitoring.svc.cluster.local:3100                              -
-metrics   kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090   -
-traces    tempo.monitoring.svc.cluster.local:3200                              -
-events    loki.monitoring.svc.cluster.local:3100                              -
-analyst   -                                                                   -
+# The SRE copilot fleet: one pi agent per line, whitespace-separated columns:
+#   name      sre-tools MCP tools this agent may call (comma-separated, or "-" for none)
+# Each agent gets its role from manifests/fleet/roles/<name>.md, the platform
+# skills from the skill repository, and a policy that allows ONLY its tools.
+logs      loki_query
+metrics   prometheus_query
+traces    tempo_search
+events    cluster_events,pod_status
+analyst   -
