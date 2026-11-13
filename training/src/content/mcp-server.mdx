@@ -1,0 +1,121 @@
+An agent's harness can run tools itself, like pi's `bash`. **MCP** moves tools out of the agent into a **server**: the harness lists the server's tools, the model picks one, and the harness sends the call. On Kubernetes that server is an ordinary workload with its own identity, so the agent never holds the credentials the tool uses.
+
+<BeforeYouStart
+  will="read the sre-tools MCP server's manifest, see it running, and call it by hand: initialize a session, list its tools, call one."
+  time="about ten minutes. Everything here only reads."
+/>
+
+## How MCP works
+
+An MCP client talks to a server in **JSON-RPC** messages, each one an HTTP `POST` to the server's endpoint (`/mcp`) in the **Streamable HTTP** transport:
+
+1. **`initialize`**: the client and server agree on a protocol revision (here `2025-11-25`) and on what each supports;
+2. **`tools/list`**: the server describes its tools: a name, a description for the model, and a JSON schema for the arguments;
+3. **`tools/call`**: the client calls one tool by name, with arguments, and gets the result as text.
+
+The model never talks to the server. It only sees the tool descriptions in its prompt and asks the harness to call one; the harness makes the request.
+
+<Section n="1" title="The sre-tools server on the cluster">
+
+The setup installed **sre-tools**, a small MCP server written for this lab with the official SDK (`manifests/tools/sre-tools/server.mjs`, about 150 lines). Its tools:
+
+| Tool | What it does | Changes anything? |
+|---|---|---|
+| `pod_status(namespace)` | each pod's phase, readiness, restarts and why a container waits | no |
+| `cluster_events(namespace)` | the most recent Kubernetes events | no |
+| `prometheus_query(query)` | an instant PromQL query | no |
+| `loki_query(query, minutes)` | the newest log lines for a LogQL query | no |
+| `scale_deployment(namespace, name, replicas)` | sets a Deployment's replicas, in `demo` only | **yes** |
+
+<YamlRead id="sre-tools-manifest" />
+
+<Step n="1" title="See the server and its Service">
+
+```bash
+kubectl -n tools get deploy,svc
+```
+<Output>
+<ExpectedOutput>
+{`NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/sre-tools   1/1     1            1           24m
+
+NAME                TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/sre-tools   ClusterIP   10.43.243.184   <none>        8080/TCP   24m`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="2" title="Call it by hand, the way a harness does">
+
+The Service is only reachable inside the cluster, so open a short-lived port-forward to it, then send MCP requests with `curl`. Every request is a `POST` with a JSON-RPC body; `Accept` must allow both JSON and an event stream, as the transport requires.
+
+<Step n="1" title="Initialize a session">
+
+```bash
+kubectl -n tools port-forward svc/sre-tools 8080:8080 >/dev/null 2>&1 & PF=$!; sleep 3
+curl -s localhost:8080/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}'
+kill $PF
+```
+<Output summary="The server agrees on 2025-11-25 and says it offers tools.">
+<ExpectedOutput>
+{`{"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"sre-tools","version":"1.0.0"}},"jsonrpc":"2.0","id":1}`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="List its tools">
+
+After `initialize`, every request names the agreed revision in the `MCP-Protocol-Version` header:
+
+```bash
+kubectl -n tools port-forward svc/sre-tools 8080:8080 >/dev/null 2>&1 & PF=$!; sleep 3
+curl -s localhost:8080/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -H 'MCP-Protocol-Version: 2025-11-25' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | grep -o '"name":"[^"]*"'
+kill $PF
+```
+<Output summary="Five tools. This list, with each tool's description and schema, is what the model sees.">
+<ExpectedOutput>
+{`"name":"pod_status"
+"name":"cluster_events"
+"name":"prometheus_query"
+"name":"loki_query"
+"name":"scale_deployment"`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="Call a tool">
+
+```bash
+kubectl -n tools port-forward svc/sre-tools 8080:8080 >/dev/null 2>&1 & PF=$!; sleep 3
+curl -s localhost:8080/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -H 'MCP-Protocol-Version: 2025-11-25' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"pod_status","arguments":{"namespace":"demo"}}}'
+kill $PF
+```
+<Output summary="The demo shop's three pods, as the server's ServiceAccount sees them.">
+<ExpectedOutput>
+{`{"result":{"content":[{"type":"text","text":"loadgen-754f44c876-7f6vq  Running  ready 1/1  restarts 0\\npayments-76d47df547-d8c4k  Running  ready 1/1  restarts 0\\nshop-app-7bb978d6c8-xhx69  Running  ready 1/1  restarts 0"}]},"jsonrpc":"2.0","id":3}`}
+</ExpectedOutput>
+</Output>
+
+Anyone who can reach the server can call **every** tool, including `scale_deployment`. That's why the next lab puts OpenShell between agents and the server.
+
+</Step>
+
+</Section>
+
+## What you learned
+
+<Learned next="/learn/mcp-policy" nextLabel="Decide which tools an agent may call">
+
+- **MCP is JSON-RPC over HTTP**: `initialize`, `tools/list`, `tools/call`, each a `POST` to `/mcp`.
+- **A tool server is an ordinary workload**: a Deployment, a Service, its own ServiceAccount and RBAC. The agent never holds the credentials the tools use.
+- **The server alone doesn't decide who may call what**: anything that reaches it can call every tool.
+
+</Learned>

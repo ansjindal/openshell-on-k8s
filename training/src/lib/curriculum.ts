@@ -48,7 +48,19 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m4", n: 3, title: "Capstone: SRE Copilot Fleet", accent: "nv", role: "You are the SRE.",
+    id: "tools", n: 3, title: "Tools and skills, the standard way", accent: "nv", role: "You are the platform team.",
+    subtitle: "Give agents tools and know-how through open standards: an MCP server on the cluster with OpenShell deciding which tools each agent may call, and a git repository of Agent Skills every sandbox clones.",
+    lessons: [
+      L("tools-overview", "Overview", "MCP and Agent Skills: what each gives an agent, and where each runs on the cluster.", 5),
+      L("mcp-server", "Serve tools with MCP", "An MCP server as a Deployment and Service; initialize, tools/list and tools/call by hand.", 10, "lab"),
+      L("mcp-policy", "Decide which tools an agent may call", "protocol: mcp rules allow four tools and deny one; pi uses the server from a sandbox.", 15, "lab"),
+      L("skill-repo", "A skill repository", "Agent Skills in git: add one, lint it, push it, clone it read-only into the sandbox, and triage an outage.", 20, "lab"),
+      L("two-harnesses", "Same tools and skills, another harness", "OpenClaw uses the same MCP server and skills, under the same policy.", 10, "lab"),
+      L("tools-check", "Summary & knowledge check", "MCP, tool rules, Agent Skills and the skill repository.", 6, "check"),
+    ],
+  },
+  {
+    id: "m4", n: 4, title: "Capstone: SRE Copilot Fleet", accent: "nv", role: "You are the SRE.",
     subtitle: "You are the SRE. Bring up a fleet of sealed specialists, break a real service, let the fleet find the root cause, and approve the fix yourself.",
     lessons: [
       L("m4-overview", "Overview", "What this module builds: a fleet of sealed specialists that finds a real fault.", 4),
@@ -62,7 +74,7 @@ export const CURRICULUM: Part[] = [
     ],
   },
   {
-    id: "m5", n: 4, title: "Going Further",
+    id: "m5", n: 5, title: "Going Further",
     subtitle: "Where to take it next: high availability, more nodes, a namespace per team, credentials in Vault.",
     lessons: [
       L("next-steps", "Next steps & resources", "HA, multi-node, tenancy, credential drivers, other agents, and NVIDIA Sentry beyond the host.", 10),

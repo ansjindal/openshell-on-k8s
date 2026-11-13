@@ -1,0 +1,188 @@
+The MCP server offers five tools to anyone who reaches it. Here you give an agent **four** of them: a sandbox whose policy reads every MCP request, allows the four read-only tools by name, and denies `scale_deployment`. Then pi, inside that sandbox, uses the tools, and tries the one it can't have.
+
+<BeforeYouStart
+  will="read an MCP policy, create the sandbox tool-agent in your dev workspace with it, call an allowed and a denied tool from inside, read the decisions in the audit log, then let pi use the server."
+  time="about fifteen minutes. tool-agent stays for the next two labs."
+/>
+
+## How OpenShell reads MCP
+
+On an endpoint with **`protocol: mcp`**, the supervisor parses every request as MCP before it leaves the sandbox: the JSON-RPC **method** (`initialize`, `tools/list`, `tools/call`, …) and, for `tools/call`, the **tool name**. Rules allow or deny by method and tool; **deny rules win**. A refused call never reaches the server, and both outcomes are written as OCSF events.
+
+Two limits to know: the tool's **arguments** are not inspected (an allowed tool may be called with any arguments the server accepts), and the server's **responses** are not parsed.
+
+<Section n="1" title="The MCP policy">
+
+<YamlRead id="mcp-agent-policy" />
+
+</Section>
+
+<Section n="2" title="Create tool-agent and test the rules from inside">
+
+<Step n="1" title="Create the sandbox with this policy">
+
+The same command as in 1.4, in the same `dev` workspace, with this policy file:
+
+```bash
+cd ~/openshell-on-k8s && openshell --workspace dev sandbox create --name tool-agent --provider litellm --policy manifests/policies/mcp-agent.yaml --memory 2Gi --no-tty --detach -- sleep infinity && sleep 15 && openshell --workspace dev sandbox list
+```
+<Output>
+<ExpectedOutput>
+{`Created sandbox: tool-agent
+
+  [0.0s] Requesting compute...
+NAME        CREATED              PHASE
+tool-agent  2026-11-13 11:05:06  Ready`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="An allowed tool">
+
+From inside the sandbox, `curl` calls `pod_status` at the Service's full name:
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'curl -s http://sre-tools.tools.svc.cluster.local:8080/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -H "MCP-Protocol-Version: 2025-11-25" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"pod_status\",\"arguments\":{\"namespace\":\"demo\"}}}"'
+```
+<Output summary="Allowed: the supervisor passed it to the server.">
+<ExpectedOutput>
+{`{"result":{"content":[{"type":"text","text":"loadgen-754f44c876-7f6vq  Running  ready 1/1  restarts 0\\npayments-76d47df547-d8c4k  Running  ready 1/1  restarts 0\\nshop-app-7bb978d6c8-xhx69  Running  ready 1/1  restarts 0"}]},"jsonrpc":"2.0","id":1}`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="A denied tool">
+
+The same request, for `scale_deployment`:
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'curl -s -w "\nHTTP %{http_code}\n" http://sre-tools.tools.svc.cluster.local:8080/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -H "MCP-Protocol-Version: 2025-11-25" -d "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"scale_deployment\",\"arguments\":{\"namespace\":\"demo\",\"name\":\"payments\",\"replicas\":0}}}"'
+```
+<Output summary="403 from the supervisor: a deny rule matched. The server never saw it.">
+<ExpectedOutput>
+{`{"error":"policy_denied","policy":"sre_tools","rule":"POST /mcp","detail":"MCP request blocked by a deny rule; ask the policy owner to review deny_rules and tool selectors","layer":"l7",...}
+HTTP 403`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="4" title="Both decisions in the audit log">
+
+`engine:l7-mcp` marks decisions made by reading MCP; each names the method and the tool:
+
+```bash
+openshell --workspace dev logs tool-agent | grep OCSF | grep l7-mcp | tail -2 | sed -E 's/(decision=[a-z]+ rule_methods=[^ ]+ tools=[^ ]+).*/\1]/'
+```
+<Output>
+<ExpectedOutput>
+{`[1794567918.781] [sandbox] [OCSF ] [ocsf] HTTP:POST [INFO] ALLOWED POST http://sre-tools.tools.svc.cluster.local:8080/mcp [policy:sre_tools engine:l7-mcp] [msg:JSONRPC_L7_REQUEST decision=allow rule_methods=tools/call tools=pod_status]
+[1794567918.875] [sandbox] [OCSF ] [ocsf] HTTP:POST [MED] DENIED POST http://sre-tools.tools.svc.cluster.local:8080/mcp [policy:sre_tools engine:l7-mcp] [reason:JSONRPC_L7_REQUEST decision=deny rule_methods=tools/call tools=scale_deployment]`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="3" title="Let pi use the server">
+
+<Step n="1" title="Install pi and point it at LiteLLM">
+
+As in 1.4: pi from npm, and its `models.json` with the provider's placeholder:
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- npm install --prefix /sandbox/pi --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2 && openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'mkdir -p ~/.pi/agent && cat > ~/.pi/agent/models.json <<EOF
+{ "providers": { "lab": { "baseUrl": "http://litellm.litellm.svc.cluster.local:4000/v1", "api": "openai-completions", "apiKey": "\$LITELLM_API_KEY", "compat": { "supportsDeveloperRole": false, "supportsReasoningEffort": false }, "models": [{ "id": "default" }] } } }
+EOF'
+```
+<Output>
+<ExpectedOutput>
+{`added 123 packages in 10s`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Add the MCP server to pi">
+
+pi has MCP built in. **`pi mcp add`** writes the server into `~/.pi/agent/mcp.json`, in the `mcpServers` format most harnesses share:
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi mcp add sre-tools --url http://sre-tools.tools.svc.cluster.local:8080/mcp && openshell --workspace dev sandbox exec -n tool-agent -- cat /sandbox/.pi/agent/mcp.json
+```
+<Output>
+<ExpectedOutput>
+{`Added global MCP server "sre-tools" in /sandbox/.pi/agent/mcp.json.
+Check it with: pi mcp list. If it requires sign-in: pi mcp login sre-tools
+{
+  "mcpServers": {
+    "sre-tools": {
+      "url": "http://sre-tools.tools.svc.cluster.local:8080/mcp"
+    }
+  }
+}`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="pi connects and lists the tools">
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi mcp list
+```
+<Output summary="Connected through the supervisor; pi sees all five tools. Listing isn't calling.">
+<ExpectedOutput>
+{`sre-tools: connected, 5 tools (codemode, global)
+  http://sre-tools.tools.svc.cluster.local:8080/mcp
+  tools: pod_status, cluster_events, prometheus_query, loki_query, scale_deployment`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="4" title="Ask pi to use an allowed tool">
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "Use the sre-tools pod_status tool for namespace demo and list each pod with its status, one per line."
+```
+<Output>
+<ExpectedOutput>
+{`loadgen-754f44c876-7f6vq Running
+payments-76d47df547-d8c4k Running
+shop-app-7bb978d6c8-xhx69 Running`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="5" title="Ask pi to use the denied tool">
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "Use the sre-tools scale_deployment tool to scale deployment payments in namespace demo to 0 replicas, then report exactly what the tool returned."
+```
+<Output summary="pi gets the supervisor's 403 as the tool's result; payments keeps its replica.">
+<ExpectedOutput>
+{`MCP HTTP request failed with status 403: {"error":"policy_denied","policy":"sre_tools","rule":"POST /mcp","detail":"MCP request blocked by a deny rule; ask the policy owner to review deny_rules and tool selectors","layer":"l7",...,"binary":"/usr/bin/node",...}`}
+</ExpectedOutput>
+</Output>
+
+The model asked, pi tried, and the platform said no, whatever the prompt said. Check for yourself: `kubectl -n demo get deploy payments` still shows `1/1`.
+
+</Step>
+
+</Section>
+
+## What you learned
+
+<Learned next="/learn/skill-repo" nextLabel="A skill repository">
+
+- **`protocol: mcp` makes the supervisor read MCP**: the method and the tool name of every request.
+- **Allow by tool, deny by tool.** Deny rules win; a tool with no allow rule is refused too.
+- **The decision is the platform's, not the agent's.** pi saw all five tools, but only four could be called, and each decision is an OCSF event.
+- **Arguments and responses aren't inspected**: allow only tools whose every use is acceptable.
+
+</Learned>

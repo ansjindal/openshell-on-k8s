@@ -1,0 +1,115 @@
+Nothing you built in this module is specific to pi. The MCP server is a URL, the skills are folders in `~/.agents/skills`, and the policy is OpenShell's. Here **OpenClaw**, a different harness that is also in the sandbox image, uses the same server and the same skills in the same sandbox, under the same rules.
+
+<BeforeYouStart
+  will="add the MCP server to OpenClaw, probe it through the supervisor, see OpenClaw pick up the same skills, call a tool, then clean up tool-agent."
+  time="about ten minutes."
+/>
+
+## Where each harness keeps the same things
+
+| | MCP servers | Skills |
+|---|---|---|
+| **pi** | `~/.pi/agent/mcp.json` (`pi mcp add`) | `~/.agents/skills/`, `~/.pi/agent/skills/` |
+| **OpenClaw** | `mcp.servers` in `~/.openclaw/openclaw.json` (`openclaw mcp add`) | `~/.agents/skills/`, its workspace's `skills/` |
+| **Claude Code, Codex, Gemini CLI, …** | each its own config file, same `url` | `~/.agents/skills/` or their own folder |
+
+The files differ; what's in them doesn't. And the supervisor only sees MCP requests and git fetches, whichever program sends them. The one thing the policy needs to know is the **program**: OpenClaw runs on its own Node, `/usr/local/lib/openclaw/node/bin/node`, which `mcp-agent.yaml` and `tools-agent.yaml` already list next to pi's.
+
+<Section n="1" title="OpenClaw, with the same server and skills">
+
+<Step n="1" title="Add the MCP server to OpenClaw">
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- openclaw mcp add sre-tools --url http://sre-tools.tools.svc.cluster.local:8080/mcp --transport streamable-http
+```
+<Output>
+<ExpectedOutput>
+{`Config write will strip JSON5 comments from /sandbox/.openclaw/openclaw.json.
+Saved MCP server "sre-tools" to /sandbox/.openclaw/openclaw.json.`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Probe it, through the supervisor">
+
+`openclaw mcp doctor --probe` opens a session and lists the tools: `initialize`, `notifications/initialized` and `tools/list`, all allowed by the policy:
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- openclaw mcp doctor sre-tools --probe
+```
+<Output>
+<ExpectedOutput>
+{`MCP doctor (/sandbox/.openclaw/openclaw.json):
+- sre-tools: ok`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="The same skills">
+
+OpenClaw scans `~/.agents/skills` too, so it finds the skills you cloned in 3.4:
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- openclaw skills list | grep -E "demo-app-map|k8s-triage|incident-report"
+```
+<Output>
+<ExpectedOutput>
+{`│ ✓ ready       │ demo-app-map             │ The demo shop's services and how they depend on  │ agents-skills-personal │
+│ ✓ ready       │ incident-report          │ Write a short, evidence-based incident report.   │ agents-skills-personal │
+│ ✓ ready       │ k8s-triage               │ Investigate a failing, slow or erroring service  │ agents-skills-personal │`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="4" title="Call a tool from OpenClaw">
+
+`openclaw agent --local` runs one turn in the sandbox; a fresh `--session-id` keeps it from continuing an earlier conversation:
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'openclaw agent --local --agent main --session-id "$(cat /proc/sys/kernel/random/uuid)" --message "Use the sre-tools pod_status tool for namespace demo and list each pod with its status, one per line."' 2>&1 | grep -v "^\["
+```
+<Output summary="The same tool, through the same rule. The audit log shows tools=pod_status, from OpenClaw's Node.">
+<ExpectedOutput>
+{`loadgen-754f44c876-7f6vq  Running  ready 1/1  restarts 0
+payments-76d47df547-snvxm  Running  ready 1/1  restarts 0
+shop-app-7bb978d6c8-xhx69  Running  ready 1/1  restarts 0`}
+</ExpectedOutput>
+</Output>
+
+Ask OpenClaw for `scale_deployment` and it gets the same 403 as pi: the rule is about the tool, not the harness.
+
+</Step>
+
+</Section>
+
+<Section n="2" title="Clean up">
+
+<Step n="1" title="Delete tool-agent">
+
+The MCP server, the skill repository and the `dev` workspace stay; the capstone uses them.
+
+```bash
+openshell --workspace dev sandbox delete tool-agent
+```
+<Output>
+<ExpectedOutput>
+{`✓ Deleted sandbox tool-agent`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+## What you learned
+
+<Learned next="/learn/tools-check" nextLabel="Summary & knowledge check">
+
+- **The standards are harness-neutral**: an MCP server is a URL, a skill is a folder in `~/.agents/skills`.
+- **Each harness keeps them in its own config**, but they point at the same things.
+- **The policy follows the request, not the harness**: the same rules held for pi and OpenClaw; only the program path had to be listed.
+
+</Learned>

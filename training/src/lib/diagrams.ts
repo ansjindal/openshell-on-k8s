@@ -424,8 +424,31 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
 
+  m3: {
+    title: "Module 3: tools and skills, the standard way",
+    w: 600, h: 400,
+    layers: [{ n: 0, name: "A sandbox" }, { n: 1, name: "An MCP server" }, { n: 2, name: "Rules per tool" }, { n: 3, name: "A skill repository" }, { n: 4, name: "Two harnesses" }],
+    nodes: [
+      { id: "sb", x: 10, y: 15, w: 280, h: 230, label: "sandbox tool-agent · workspace dev", layer: 0, kind: "group" },
+      { id: "pi", icon: "i-bot", x: 25, y: 50, w: 120, h: 56, label: "pi", sub: "mcp.json", layer: 0 },
+      { id: "oc", icon: "i-bot", x: 155, y: 50, w: 120, h: 56, label: "OpenClaw", sub: "mcp add", layer: 4, dashed: true },
+      { id: "sk", icon: "i-doc", x: 25, y: 120, w: 250, h: 50, label: "~/.agents/skills", sub: "k8s-triage · incident-report · …", layer: 3 },
+      { id: "sup", icon: "i-shield", x: 25, y: 182, w: 250, h: 52, label: "supervisor", sub: "protocol: mcp · tool rules", layer: 0, kind: "accent" },
+      { id: "mcp", icon: "i-svc", x: 340, y: 30, w: 250, h: 74, label: "sre-tools MCP server", sub: "namespace tools · :8080/mcp\npod_status · prometheus · loki …", layer: 1, kind: "ext" },
+      { id: "deny", icon: "i-ban", x: 340, y: 125, w: 250, h: 52, label: "scale_deployment", sub: "denied by the policy", layer: 2, kind: "deny" },
+      { id: "git", icon: "i-git", x: 340, y: 200, w: 250, h: 62, label: "skill repository", sub: "Gitea · platform/skills\nclone only", layer: 3, kind: "ext" },
+      { id: "you", icon: "i-term", x: 10, y: 290, w: 280, h: 56, label: "You, the platform team", sub: "write a skill · skill-lint · git push", layer: 3 },
+    ],
+    edges: [
+      { from: "sup", to: "mcp", label: "4 tools", layer: 2, kind: "ok" },
+      { from: "sup", to: "deny", layer: 2, kind: "deny" },
+      { from: "sup", to: "git", label: "git clone", layer: 3, kind: "ok", dy: 10 },
+      { from: "you", to: "git", label: "push", layer: 3, kind: "ok" },
+    ],
+  },
+
   m4: {
-    title: "Module 3: a fleet of sealed specialists",
+    title: "Module 4: a fleet of sealed specialists",
     w: 600, h: 390,
     layers: [{ n: 0, name: "You, the SRE" }, { n: 1, name: "The challenge" }, { n: 2, name: "Spin up the fleet" }, { n: 3, name: "Fleet status" }, { n: 4, name: "Investigate" }, { n: 5, name: "Under the hood" }, { n: 6, name: "Build your own" }],
     nodes: [

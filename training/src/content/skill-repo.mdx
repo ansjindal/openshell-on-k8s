@@ -1,0 +1,256 @@
+Tools let an agent act; **skills** tell it how to act well: which tool first, what to ignore, how to report. The **Agent Skills** standard keeps each skill in a folder, so skills can live in **git**: reviewed, versioned, and shared by every agent on the cluster. Here you look at the platform's skill repository, add a skill to it, and deliver it into `tool-agent`.
+
+<BeforeYouStart
+  will="read the Agent Skills format, clone the platform's skill repository, write a skill and check it against the standard, push it, open the sandbox's policy to the repository for a read-only clone, and watch pi use the skills on a real outage."
+  time="about twenty minutes. You break the demo shop on purpose, and put it back."
+/>
+
+## The Agent Skills format
+
+A skill is a folder with a **`SKILL.md`**: YAML frontmatter, then Markdown instructions. Optional `references/`, `scripts/` and `assets/` folders hold what the instructions point to.
+
+```markdown
+---
+name: k8s-triage                    # 1-64 chars, a-z 0-9 and -, same as the folder
+description: Investigate a failing service … Use when asked why a service is down.
+license: Apache-2.0                 # optional
+metadata: { owner: platform-team }  # optional, strings only
+---
+
+# Kubernetes triage
+Use the sre-tools MCP tools in this order …
+```
+
+Harnesses load skills in three stages: at start only each skill's **name and description** (so many skills cost little), the full `SKILL.md` when a task matches the description, and the files it references only when needed. The folder most clients scan is **`~/.agents/skills/<name>/`**. Spec: [agentskills.io/specification](https://agentskills.io/specification).
+
+<Section n="1" title="The platform's skill repository">
+
+The setup installed **Gitea**, a small git server, in namespace `skills`, and created the public repository **`platform/skills`** from the repo's `skills/` folder (`ansible/roles/19-skill-repo`). Anyone in the cluster may clone it; only the `platform` user may push.
+
+<Step n="1" title="See the git server">
+
+```bash
+kubectl -n skills get deploy,svc
+```
+<Output>
+<ExpectedOutput>
+{`NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gitea   1/1     1            1           19m
+
+NAME            TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
+service/gitea   ClusterIP   10.43.4.17   <none>        3000/TCP   19m`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Clone it in the Cluster shell">
+
+Through a port-forward (on 3300: the training site already uses 3000 on the VM):
+
+```bash
+kubectl -n skills port-forward svc/gitea 3300:3000 >/dev/null 2>&1 & PF=$!; sleep 3
+rm -rf ~/skills && git clone http://localhost:3300/platform/skills.git ~/skills && ls ~/skills
+kill $PF
+```
+<Output summary="Two skills and a README.">
+<ExpectedOutput>
+{`Cloning into '/home/ubuntu/skills'...
+README.md
+incident-report
+k8s-triage`}
+</ExpectedOutput>
+</Output>
+
+Read them: `cat ~/skills/k8s-triage/SKILL.md ~/skills/incident-report/SKILL.md`. `k8s-triage` says which sre-tools tool to use when and what to ignore; `incident-report` fixes the shape of the answer.
+
+</Step>
+
+</Section>
+
+<Section n="2" title="Add a skill">
+
+<Step n="1" title="Write demo-app-map">
+
+A skill can be pure knowledge. This one tells an agent how the demo shop's services depend on each other:
+
+```bash
+mkdir -p ~/skills/demo-app-map && cat > ~/skills/demo-app-map/SKILL.md <<'SKILL'
+---
+name: demo-app-map
+description: The demo shop's services and how they depend on each other. Use when investigating anything in namespace demo, to know which service calls which.
+---
+
+# The demo shop (namespace demo)
+
+| Service | What it does | Calls |
+|---|---|---|
+| `shop-app` | The shop front end: `/` and `/checkout`. | `payments` on every checkout |
+| `payments` | Takes payments. | nothing |
+| `loadgen` | Sends steady traffic to `shop-app`. | `shop-app` |
+
+If `payments` has no ready pod, every checkout fails with `payment call failed`
+and `shop-app` answers 5xx: look at `payments` first.
+SKILL
+```
+
+</Step>
+
+<Step n="2" title="Check it against the standard">
+
+**`./scripts/skill-lint`** checks what every client relies on: a `SKILL.md` with frontmatter, a valid `name` matching the folder, a `description` of at most 1024 characters, and known fields only:
+
+```bash
+cd ~/openshell-on-k8s && ./scripts/skill-lint ~/skills/demo-app-map ~/skills/k8s-triage ~/skills/incident-report
+```
+<Output>
+<ExpectedOutput>
+{`ok  /home/ubuntu/skills/demo-app-map
+ok  /home/ubuntu/skills/k8s-triage
+ok  /home/ubuntu/skills/incident-report`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="Push it as the platform team">
+
+The `platform` user's password is in a Secret; it goes straight into the push URL and is never printed:
+
+```bash
+kubectl -n skills port-forward svc/gitea 3300:3000 >/dev/null 2>&1 & PF=$!; sleep 3
+PW=$(kubectl -n skills get secret skill-repo-admin -o jsonpath='{.data.password}' | base64 -d)
+cd ~/skills && git add demo-app-map && git -c user.name=platform -c user.email=platform@skills.lab.local commit -q -m "Add demo-app-map" && git push "http://platform:$PW@localhost:3300/platform/skills.git" main 2>&1 | grep -v "^remote:" | sed "s/$PW/***/g"
+kill $PF
+```
+<Output>
+<ExpectedOutput>
+{`To http://localhost:3300/platform/skills.git
+   24952d9..e64618d  main -> main`}
+</ExpectedOutput>
+</Output>
+
+In a real platform this would be a pull request, reviewed and merged, with `skill-lint` in CI.
+
+</Step>
+
+</Section>
+
+<Section n="3" title="Deliver the skills into tool-agent">
+
+<Step n="1" title="Open the sandbox to the repository, read-only">
+
+<YamlRead id="skill-repo-policy" />
+
+```bash
+cd ~/openshell-on-k8s && openshell --workspace dev policy set tool-agent --policy manifests/policies/tools-agent.yaml --wait
+```
+<Output>
+<ExpectedOutput>
+{`✓ Policy version 2 submitted (hash: 66193409c3aa)
+✓ Policy version 2 loaded (active version: 2)`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Clone the skills into the sandbox">
+
+Clone the repository to `/sandbox/skills`, then link each skill into `~/.agents/skills/`, where pi, OpenClaw and other clients look (the image already brings one skill there, `github`):
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'rm -rf /sandbox/skills && git clone -q http://gitea.skills.svc.cluster.local:3000/platform/skills.git /sandbox/skills && for d in /sandbox/skills/*/; do ln -sfn "$d" ~/.agents/skills/$(basename "$d"); done && ls ~/.agents/skills'
+```
+<Output>
+<ExpectedOutput>
+{`demo-app-map
+github
+incident-report
+k8s-triage`}
+</ExpectedOutput>
+</Output>
+
+To update, `git -C /sandbox/skills pull` and link again: every sandbox gets a new skill the same way.
+
+</Step>
+
+<Step n="3" title="pi finds them">
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --no-mcp -p "List the names of the skills available to you, one per line, nothing else."
+```
+<Output>
+<ExpectedOutput>
+{`demo-app-map
+github
+incident-report
+k8s-triage`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="4" title="Put it together: an outage, investigated">
+
+<Step n="1" title="Break the shop">
+
+Scale `payments` to zero, as a careless change might, and wait until its pod is gone:
+
+```bash
+kubectl -n demo scale deploy/payments --replicas=0 && kubectl -n demo wait --for=delete pod -l app=payments --timeout=90s; sleep 20
+```
+
+</Step>
+
+<Step n="2" title="Ask the agent">
+
+A plain question, no hints. The skills tell pi how to investigate and how to report; the MCP tools give it the evidence; the policy keeps it read-only:
+
+```bash
+openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "Users report the shop in namespace demo is failing. Investigate and report."
+```
+<Output summary="The report follows incident-report; the evidence came from four different tools.">
+<ExpectedOutput>
+{`**Summary**: The shop's payments service is unavailable due to zero replicas, causing checkout failures for users.
+
+**Evidence**:
+- prometheus_query: kube_deployment_spec_replicas{namespace="demo"} shows payments deployment has 0 replicas.
+- prometheus_query: kube_deployment_status_replicas_available{namespace="demo"} shows payments deployment has 0 available replicas.
+- pod_status: only loadgen and shop-app pods are running; no payments pod present.
+- loki_query: {namespace="demo"} |= "error" returns multiple errors: "checkout failed: payment call failed: AbortError".
+- cluster_events: shows a recent ScalingReplicaSet Deployment/payments: Scaled down replica set payments-... from 1 to 0.
+
+**Root cause**: The payments deployment was scaled down to 0 replicas, making the payment service unavailable, which causes the shop application to fail when attempting to process payments.
+
+**Proposed fix**: Scale the payments deployment back to at least 1 replica, for example: kubectl scale deployment payments -n demo --replicas=1. (This change should be reviewed and approved by a human before applying.)`}
+</ExpectedOutput>
+</Output>
+
+Models vary: your report may word things differently, but it should name `payments` at zero replicas.
+
+</Step>
+
+<Step n="3" title="Approve the fix yourself">
+
+The agent proposed; you decide:
+
+```bash
+kubectl -n demo scale deploy/payments --replicas=1 && kubectl -n demo rollout status deploy/payments --timeout=90s
+```
+
+</Step>
+
+</Section>
+
+## What you learned
+
+<Learned next="/learn/two-harnesses" nextLabel="Same tools and skills, another harness">
+
+- **A skill is a folder**: `SKILL.md` with a name, a description and instructions, plus optional references and scripts.
+- **Skills belong in git**: reviewed, versioned, checked with `skill-lint`, and pushed by the platform team.
+- **A sandbox gets them with a read-only clone**: one policy entry allows `info/refs` and `git-upload-pack` for one repository, for git only.
+- **Tools, skills and policy together** turn a vague question into an evidence-based report, without the agent being able to change the cluster.
+
+</Learned>
