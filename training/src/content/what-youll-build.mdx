@@ -1,29 +1,26 @@
-You've built one sealed agent, given it a brain, skills from your own registry, and a soul. The capstone makes it a **system**: an **SRE copilot fleet** — several agents, each owning *one* observability tool and *nothing else*, combined to investigate a real incident and propose a fix you approve.
+You've sealed an agent, given it tools through MCP and know-how through skills. The capstone makes it a **system**: an **SRE copilot fleet** of pi agents, each allowed **one kind of tool** and nothing else, combined to investigate a real incident and propose a fix you approve.
 
 <FleetOrchestration />
 
 ## The idea: a team of read-only specialists
 
-When something breaks, you reach for four signals — **logs, metrics, traces, and the cluster's own events**. So the fleet is four read-only specialists plus a lead analyst:
+When something breaks, you reach for four signals: **logs, metrics, traces, and what Kubernetes did**. So the fleet is four read-only specialists plus a lead analyst, each a pi agent in its own sandbox, using the **sre-tools** MCP server and the **platform skills** from Module 3:
 
-- **logs** 🔎 — reads **Loki**, and can reach `loki.monitoring.svc:3100` and nothing else.
-- **metrics** 📈 — reads **Prometheus**, scoped to `…prometheus…:9090` only.
-- **traces** 🧵 — reads **Tempo**, scoped to `tempo.monitoring.svc:3200` only.
-- **events** 🛎️ — reads **Kubernetes events** (shipped into Loki by an event-exporter), scoped to Loki only — the control plane's own account of what's wrong (e.g. "Failed to pull image …").
-- **analyst** 🧠 — **no egress at all**; it concludes the others' findings into a root cause and a recommended fix.
+- **logs** 🔎: may call `loki_query`, nothing else.
+- **metrics** 📈: may call `prometheus_query`, nothing else.
+- **traces** 🧵: may call `tempo_search`, nothing else.
+- **events** 🛎️: may call `cluster_events` and `pod_status`: what the control plane changed, and which pods are missing.
+- **analyst** 🧠: **no tools at all**; it concludes the others' findings into a root cause and a recommended fix.
 
-Each agent's **policy is specific to its tool** — the metrics agent literally cannot read logs, the analyst cannot reach the network. That's not a limitation to work around; it *is* the product: a fleet you can hand a production incident without widening anyone's blast radius, and prove it from the audit log.
+Each agent's **policy names its tools**: the metrics agent can see that `loki_query` exists, but calling it is refused by its supervisor, and no agent can call `scale_deployment`. That's not a limitation to work around; it *is* the product: a fleet you can hand a production incident without widening anyone's blast radius, and prove it from the audit log.
 
 <Callout type="note" title="Agents diagnose; humans fix">
-These agents are sealed from the in-cluster Kubernetes API — they do <strong>read-only investigation</strong> of telemetry, never cluster administration. So the loop is: the fleet finds the root cause, proposes a change, and a <strong>human approves</strong> before anything is applied. (In production that applied change is a git commit ArgoCD syncs — same shape, just automated delivery.)
+The agents never hold Kubernetes credentials: the MCP server does, and the policy only lets them call read-only tools. So the loop is: the fleet finds the root cause, proposes a change, and a <strong>human approves</strong> before anything is applied. (In production that applied change is a git commit ArgoCD syncs: same shape, automated delivery.)
 </Callout>
 
-## The arc of this part
+## The arc of this module
 
-1. **Spin up & give each a soul** — one command brings the fleet up; each agent gets its own `IDENTITY.md` / `SOUL.md` and a policy scoped to just its backend.
-2. **Orchestrate an investigation** — a conductor *in this page* runs a fixed plan, handing each specialist a prescribed probe and letting a lead analyst conclude.
-3. **Test the fleet** — deploy a sample app, break it, watch it go unhealthy, let the fleet find the cause, and fix it with you in the loop.
-
-<Callout type="rh" title="The demo that lands">
-A judge breaks an app with one click, asks the fleet "what happened?", and watches four sealed agents — each provably touching only its own backend — converge on the root cause; then approves the one-line fix. Extensible, useful, and <em>governable</em> — on real OpenShift.
-</Callout>
+1. **Spin up the fleet**: one command brings five pi agents up, each with its role, the platform skills and a policy that allows only its tools.
+2. **See it at a glance**: every agent's status, what it may reach and which tools it may call.
+3. **Investigate an incident**: break the shop, and a conductor in this page asks each specialist for its evidence and the analyst for a verdict. You approve the fix.
+4. **Under the hood** and **build your own**: the plan, the prompts, and how to add a specialist.

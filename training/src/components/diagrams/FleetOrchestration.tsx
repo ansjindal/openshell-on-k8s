@@ -1,8 +1,8 @@
 import { DIAGRAM as C } from "./palette";
 
 // Module 5 capstone: the in-page orchestrator runs a FIXED plan (no model call to plan) — it
-// hands each sealed telemetry SPECIALIST (logs/metrics/events — each with egress to ONE
-// backend) a prescribed probe, then a no-egress ANALYST concludes the root cause + recommended
+// hands each sealed SPECIALIST (logs/metrics/events, each allowed ONE sre-tools MCP tool by
+// its policy) a prescribed tool call, then a no-tools ANALYST concludes the root cause + recommended
 // fix. Theme-aware: structural colors come from site CSS vars; accent hues are translucent.
 export function FleetOrchestration() {
   const W = 980, H = 452;
@@ -22,9 +22,9 @@ export function FleetOrchestration() {
   );
   const ax = 470, aw = 220;                       // telemetry agent cards
   const agents = [
-    { y: 64, role: "logs 🔎", egress: "Loki only" },
-    { y: 164, role: "metrics 📈", egress: "Prometheus only" },
-    { y: 264, role: "events 🛎️", egress: "k8s events (Loki)" },
+    { y: 64, role: "logs 🔎", egress: "loki_query only" },
+    { y: 164, role: "metrics 📈", egress: "prometheus_query only" },
+    { y: 264, role: "events 🛎️", egress: "cluster_events · pod_status" },
   ];
   const wx = 762, wy = 130, ww = 196, wh = 140;   // analyst agent
 
@@ -75,13 +75,13 @@ export function FleetOrchestration() {
         })}
 
         {/* conclude — the no-egress analyst */}
-        <Node x={wx} y={wy} w={ww} h={wh} cls="fo-amber" stroke={AMBER} title="analyst 🧠" sub="no egress · concludes" />
+        <Node x={wx} y={wy} w={ww} h={wh} cls="fo-amber" stroke={AMBER} title="analyst 🧠" sub="no tools · concludes" />
         <text x={wx + ww / 2} y={wy + 86} fontSize={9.4} className="fo-sub" textAnchor="middle">→ root cause</text>
         <text x={wx + ww / 2} y={wy + 102} fontSize={9.4} className="fo-sub" textAnchor="middle">→ recommended image</text>
         <Arrow x1={wx + ww / 2} y1={wy + wh} x2={wx + ww / 2} y2={wy + wh + 32} color={AMBER} marker="fa_a" />
         <text x={wx + ww / 2} y={wy + wh + 48} fontSize={9.6} className="fo-ink" textAnchor="middle" fontWeight={700}>root cause + fix → you approve ✋</text>
 
-        <text x={W / 2} y={H - 14} fontSize={10.3} className="fo-sub" textAnchor="middle">Sealed specialists read one backend each; a no-egress analyst concludes the root cause — every step governed and audited.</text>
+        <text x={W / 2} y={H - 14} fontSize={10.3} className="fo-sub" textAnchor="middle">Sealed pi specialists may call one sre-tools MCP tool each; a no-tools analyst concludes the root cause, every step governed and audited.</text>
       </svg>
     </figure>
   );

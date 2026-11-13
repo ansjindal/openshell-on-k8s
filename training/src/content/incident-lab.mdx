@@ -9,14 +9,14 @@ Now we put the fleet to work on a real incident — one you cause on purpose —
 
 A fleet of specialists isn't useful until something *combines* them. That's a small **orchestrator** built into this page — no separate app. When you hit **Investigate**, it:
 
-1. **Dispatches** — hands each specialist a prescribed diagnostic probe for its backend and runs it with `openclaw agent --local`, so the work happens **inside the agent's seal**, under its single-backend egress.
-2. **Reads, for real** — each agent runs its **`cluster-telemetry` skill** to query its own backend (`logs`→Loki, `metrics`→Prometheus, `traces`→Tempo, `events`→Loki) and interprets what comes back — the error rate, the error log lines, the failing span, the (absent) events.
-3. **Concludes** — hands all the findings to a dedicated **analyst agent** (no egress, no tools) that reasons over them into a root cause **and a recommended remediation** — derived from the live telemetry (error rate + error logs + failing trace span, with no infra events ruling out a scheduling cause), not guessed.
+1. **Dispatches**: hands each specialist the tool call for its signal and runs pi in its sandbox, so the work happens **inside the agent's seal**, with only the tools its policy allows.
+2. **Reads, for real**: each agent calls its **sre-tools** tool (`logs`→`loki_query`, `metrics`→`prometheus_query`, `traces`→`tempo_search`, `events`→`cluster_events` and `pod_status`) through the supervisor, and interprets the result with the platform skills.
+3. **Concludes**: hands all the findings to the **analyst** agent (no tools), which reasons over them into a root cause **and a recommended remediation**.
 
 You see **every agent's findings** *and* the analyst's concluded verdict — transparent, not a black box. The conductor never touches a backend itself; the agents do the governed reads. Watch the audit trail while it runs (`openshell logs <agent>` or Grafana, see [The Audit Trail](/learn/audit)): each agent, its one allowed host, every call logged.
 
-<Callout type="note" title="Why a skill, not web_fetch">
-OpenClaw's built-in <code>web_fetch</code> tool refuses private/internal/cluster addresses (an SSRF guard), so a sealed agent can't use it to read Loki/Prometheus/Tempo on <code>*.svc.cluster.local</code>. The <strong>cluster-telemetry skill</strong> shells out to <code>curl</code> instead — so the call is still governed by the agent's single-backend egress policy, and the SSRF protection stays on everywhere else. The agent runs <em>one</em> prescribed query (free-form exploration would overflow the model's context), then interprets the result in its own words.
+<Callout type="note" title="Why MCP tools, not raw HTTP">
+The agents never get a URL to Loki or Prometheus, and no network rule to reach them. They call named tools on the sre-tools MCP server, and each agent's policy names the tools it may call. The server holds the access; the policy decides who may use which tool; the audit log records every call.
 </Callout>
 
 </Section>

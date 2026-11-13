@@ -6,7 +6,7 @@ import { streamOrchestrate } from "@/lib/orchestrateStream";
 type Health = { exists?: boolean; healthy?: boolean; fault?: string; successRps?: number; errorRps?: number; totalRps?: number; errorPct?: number; pods?: string };
 type Invest = { ok?: boolean; results?: { agent: string; out: string }[]; answer?: string; error?: string; synthesizedBy?: string };
 type TL = { agent: string; status: "queued" | "running" | "done"; ms?: number; out?: string; request?: string; started?: number; interrupted?: boolean };
-const BACKEND: Record<string, string> = { logs: "Loki", metrics: "Prometheus", traces: "Tempo", events: "K8s events", analyst: "(no egress)" };
+const BACKEND: Record<string, string> = { logs: "loki_query", metrics: "prometheus_query", traces: "tempo_search", events: "cluster_events · pod_status", analyst: "(no tools)" };
 const LS_KEY = "incidentlab:v2";
 
 // Part VI capstone — the full incident loop on one instrumented app: a continuous loadgen drives

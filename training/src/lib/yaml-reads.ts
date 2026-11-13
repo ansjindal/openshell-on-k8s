@@ -77,33 +77,6 @@ export const YAML_READS: Record<string, YamlReadSpec> = {
     ],
   },
 
-  "metrics-agent-policy": {
-    title: "The metrics agent's policy, part by part",
-    label: "openshell policy get metrics --full (excerpt)",
-    code: `network_policies:
-  in-cluster-registry: { … }                 # every agent: install skills from your registry
-  telemetry:
-    name: telemetry
-    endpoints:
-      - { host: kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local, port: 9090,
-          protocol: rest, access: read-only, enforcement: enforce }   # GET/HEAD only, checked at L7
-    binaries: [ { path: /usr/bin/node }, { path: /usr/local/lib/openclaw/node/bin/node }, { path: /usr/bin/curl } ]
-# + _provider_litellm, merged in by the gateway from the attached \`litellm\` provider (model calls only)`,
-    intro: "Beyond the registry, the `metrics` agent gets one rule, specific to its tool. Scroll down: each part lights up as you read about it.",
-    parts: [
-      { title: "What every agent shares", at: [["in-cluster-registry"]],
-        text: "Every agent in the fleet may install skills from your in-cluster registry, and nothing else for installs." },
-      { title: "Its one tool rule", at: [["telemetry:", "name: telemetry"]],
-        text: "`telemetry` is the rule written for this agent's tool. `logs` and `events` get Loki instead, and `analyst` gets no `telemetry` rule at all." },
-      { title: "Prometheus, read-only", at: [["- { host: kps", "enforcement: enforce }"]],
-        text: "Prometheus inside the cluster on port 9090, inspected at L7 and **read-only**: `GET` queries work; a `POST`, or anything that would change data, is refused." },
-      { title: "The programs allowed", at: [["binaries:"]],
-        text: "Node (system and OpenClaw's own) and `curl`: the programs the agent's tool uses to query." },
-      { title: "The model", at: [["# + _provider_litellm"]],
-        text: "Model access isn't in the file: the gateway merges `_provider_litellm` in from the attached `litellm` provider, and it allows model calls only." },
-    ],
-  },
-
   "sre-tools-manifest": {
     title: "The MCP server's manifest, part by part",
     file: "manifests/tools/sre-tools.yaml",
