@@ -6,7 +6,7 @@ import { CURRICULUM } from "@/lib/curriculum";
 export const ROADMAP: Record<string, { doing: string; output: string }> = {
   m0: { doing: "Learn what an agent is, what its harness does, and how one poisoned issue turns it against you.", output: "Why the guardrail has to sit outside the agent." },
   os: { doing: "Each chapter explains one part of OpenShell, then you try it: build and seal an agent, test the sandbox from inside, open egress rule by rule.", output: "A sealed agent with a read-only GitHub rule and an L4 rule." },
-  m2: { doing: "Attach a model and your own provider, rotate a key, add a persona and skills, run a task.", output: "An agent that calls a model with a key it cannot read." },
+  m2: { doing: "Give an agent a persona, run tasks, read the audit trail, use the console.", output: "An agent with a persona, running tasks, with every decision on the record." },
   m3: { doing: "Follow decisions into Loki and Grafana, use the Console, add people and a workspace.", output: "A learner user in their own workspace namespace." },
   m4: { doing: "Bring up five agents, break a service, let the fleet find the cause, approve the fix.", output: "A root cause and a fix you approved; incident-desk at 0% errors." },
   m5: { doing: "Plan high availability, more nodes, tenancy and external credential stores.", output: "Your next steps." },

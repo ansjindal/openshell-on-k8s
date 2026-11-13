@@ -82,8 +82,8 @@ openshell sandbox list
 ## What changed in OpenShell 0.1 (and in this lab)
 
 - **No managed inference route.** `inference.local` and `openshell inference` are gone. Models are
-  a provider attached to each sandbox (`--provider litellm`); see the *Models Through a Provider*
-  and *Your Own Provider* lessons.
+  a provider attached to each sandbox (`--provider litellm`); see the *Add an Inference Provider*
+  lesson.
 - **No gVisor.** The 0.1 sandbox runtime requires Landlock ABI v3 and seccomp notifications in
   the workload, which gVisor does not implement. Isolation now comes from the two-pod design,
   Landlock, seccomp and the supervisor's network policy.
@@ -112,7 +112,7 @@ scripts/fleet             # runtime ops: up / down / status / task / shell / log
 scripts/fleet.sh          # Part III capstone: the SRE copilot fleet from a spec (fleet.txt)
 scripts/lab-cli-setup.sh  # point a user's openshell CLI at the gateway as the lab operator
 ansible/                  # the platform (roles 02-18; single node by default)
-manifests/                # policies, the demo apps, the echo API, the MCP server, the fleet's roles
+manifests/                # policies, the demo apps, the MCP server, the fleet's roles
 skills/                   # the platform's Agent Skills (seed of the in-cluster skill repository)
 images/pi-sandbox/        # the default sandbox image (pi on the OpenShell community base)
 training/                 # the training site: lessons (src/content/*.mdx) + live terminal
