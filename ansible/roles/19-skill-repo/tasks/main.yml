@@ -37,7 +37,7 @@
           $g admin user create --username '{{ skill_repo_user }}' --password '{{ _skill_pw.stdout }}' \
             --email '{{ skill_repo_user }}@skills.lab.local' --admin --must-change-password=false
         else
-          # keep the user's password in step with the Secret
+          # keep the password in step with the Secret
           $g admin user change-password --username '{{ skill_repo_user }}' --password '{{ _skill_pw.stdout }}' --must-change-password=false >/dev/null
         fi
       args: { executable: /bin/bash }
