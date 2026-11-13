@@ -65,7 +65,7 @@
 <rect x="364" y="196" width="368" height="76" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>
 <use href="#i-user" xlink:href="#i-user" x="374" y="214.75" width="22" height="22" color="#3d4652"/>
 <text x="404" y="229.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1f2328" text-anchor="start" xml:space="preserve">Agent process</text>
-<text x="404" y="247.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">e.g. OpenClaw · runs as user sandbox</text>
+<text x="404" y="247.35" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="normal" fill="#57606a" text-anchor="start" xml:space="preserve">e.g. pi · runs as user sandbox</text>
 </g>
 <g class="dg-node" data-node="Landlock filesystem policy">
 <rect x="364" y="298" width="368" height="94" rx="6" fill="#fff" stroke="#c3c9d1" stroke-width="1"/>

@@ -1,7 +1,7 @@
 # OpenShell on Kubernetes — a Brev Launchable
 
 Stand up **[NVIDIA OpenShell](https://docs.nvidia.com/openshell/) 0.1** on a real Kubernetes
-cluster and run **agents** (OpenClaw by default) inside isolated, policy-controlled sandboxes —
+cluster and run **agents** ([pi](https://github.com/earendil-works/pi)) inside isolated, policy-controlled sandboxes —
 on a **single VM**, with **one command**.
 
 It's a teaching launchable. You get the platform (k3s, the OpenShell gateway, Keycloak sign-in,
@@ -47,7 +47,6 @@ them from the instance (`/etc/brev/environment-context.json`), so the URLs are p
 |---|---|---|
 | `openshell` | `3001` | training site `/` · Keycloak `/auth` · Grafana `/grafana` |
 | `console` | `3002` | the OpenShell Console |
-| `openclaw` | `30789` | optional: OpenClaw's own Control UI (agent-0) |
 
 Sign in as **`demo`** (platform admin) or **`learner`** (user); the passwords are generated into
 `.sso-secrets.env` on the VM (`grep KC_ .sso-secrets.env`). Details: [brev/launchable.md](brev/launchable.md).
@@ -68,7 +67,7 @@ openshell sandbox list
 | **k3s** | — | v1.37 channel | single-node Kubernetes |
 | **agent-sandbox controller** | `agent-sandbox-system` | v1.0.10 | reconciles `Sandbox` CRs into workload pods |
 | **OpenShell gateway** | `openshell` | 0.1.7 | StatefulSet + SQLite; OIDC (Keycloak) for people, mTLS `OU=operator` for the VM's CLI; NodePort 30808 |
-| **Sandboxes** | `<workspace>` (`lab`, `dev`, `team-a`) | 0.1.7 | one namespace per workspace (operator mode): labelled `openshell.ai/workspace=true`, with the `openshell-workspace` chart; `lab` is the platform's; workload pod + supervisor pod each; default image `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox` (OpenClaw 2026.11.3) |
+| **Sandboxes** | `<workspace>` (`lab`, `dev`, `team-a`) | 0.1.7 | one namespace per workspace (operator mode): labelled `openshell.ai/workspace=true`, with the `openshell-workspace` chart; `lab` is the platform's; workload pod + supervisor pod each; default image `ghcr.io/ansjindal/openshell-on-k8s/pi-sandbox` (pi 1.5.2) |
 | **OpenShell Console** | `openshell` | 0.1.3 | [ai-openshell/console](https://github.com/ai-openshell/console) behind oauth2-proxy |
 | **LiteLLM** | `litellm` | 1.108.4 | OpenAI-compatible endpoint in front of your model; alias `default` |
 | **Keycloak** | `keycloak` | 26.8.2 | realm `openshell`; users `demo` (admin) and `learner` (user) |
@@ -76,7 +75,8 @@ openshell sandbox list
 | **Envoy Gateway** | `envoy-gateway-system` | v1.10.0 | Gateway API ingress for the public hosts |
 | **Monitoring** | `monitoring` | kps 92.21.1 · Loki 7.5.0 · Tempo 1.24.4 · Alloy 1.15.0 | metrics, logs, OCSF audit events, agent traces *(toggle)* |
 | **Kyverno** | `kyverno` | 3.9.2 | guardrails on sandbox pods *(toggle)* |
-| **Skill registry** | `openshell` | Verdaccio | the governed source of agent skills |
+| **Skill repository** | `skills` | Gitea 28.2 | `platform/skills`, Agent Skills every sandbox clones read-only |
+| **sre-tools** | `tools` | MCP SDK 1.32 | the MCP server agents call for pods, events, Prometheus, Loki and Tempo |
 | **Training site** | host (systemd) | — | `training/`: Next.js lessons + live terminal *(toggle)* |
 
 ## What changed in OpenShell 0.1 (and in this lab)
@@ -103,7 +103,6 @@ Everything is driven by `.env` (see [.env.example](.env.example)):
 - `PUBLIC_BASE_URL`, `CONSOLE_URL`, `BREV_URL_DOMAIN`: only to override the URLs detected from the Brev links.
 - `CREATE_FLEET`, `FLEET_SIZE`, `AGENT_CMD`: the initial agent fleet.
 - `ENABLE_TRAINING`: the training site (set `false` for the platform only).
-- `ENABLE_OPENCLAW_UI`: OpenClaw's Control UI on a host port.
 
 ## Layout
 
@@ -113,8 +112,9 @@ scripts/fleet             # runtime ops: up / down / status / task / shell / log
 scripts/fleet.sh          # Part III capstone: the SRE copilot fleet from a spec (fleet.txt)
 scripts/lab-cli-setup.sh  # point a user's openshell CLI at the gateway as the lab operator
 ansible/                  # the platform (roles 02-18; single node by default)
-manifests/                # policies, the demo apps, the echo API, OpenClaw roles and skills
-images/openclaw-sandbox/  # the default sandbox image (OpenClaw on the OpenShell community base)
+manifests/                # policies, the demo apps, the echo API, the MCP server, the fleet's roles
+skills/                   # the platform's Agent Skills (seed of the in-cluster skill repository)
+images/pi-sandbox/        # the default sandbox image (pi on the OpenShell community base)
 training/                 # the training site: lessons (src/content/*.mdx) + live terminal
 docs/                     # architecture, diagrams (SVG)
 brev/                     # Brev Launchable wizard mapping + setup wrapper

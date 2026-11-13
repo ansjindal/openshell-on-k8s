@@ -2,7 +2,7 @@
 
 [Agent Skills](https://agentskills.io/specification): one folder per skill, each
 with a `SKILL.md` (YAML frontmatter + instructions) and optional `references/`,
-`scripts/` and `assets/`. Any harness that follows the standard (pi, OpenClaw,
+`scripts/` and `assets/`. Any harness that follows the standard (pi,
 Claude Code, Codex, Gemini CLI, OpenCode, Goose, …) can load them.
 
 The lab serves this folder as the git repository `platform/skills` on the

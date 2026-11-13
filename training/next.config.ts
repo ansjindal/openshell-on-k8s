@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
       ["create-sandbox", "/learn/build-an-agent"], ["into-the-sandbox", "/learn/build-an-agent"],
       ["tcp-egress", "/learn/policy"], ["lab-keys", "/learn/inference"], ["lab-audit", "/learn/audit"],
       ["m3-overview", "/learn/m2-overview"], ["m3-check", "/learn/m2-check"],
+      ["skills", "/learn/skill-repo"], ["two-harnesses", "/learn/skill-repo"],
       ["m1-overview", "/learn/openshell"], ["m1-check", "/learn/os-check"], ["m0-check", "/learn/os-check"], ["pi-agent", "/learn/agent-on-k8s"],
     ];
     return moved.map(([from, to]) => ({ source: `/learn/${from}`, destination: to, permanent: false }));

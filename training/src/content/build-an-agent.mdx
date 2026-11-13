@@ -128,7 +128,7 @@ You don't write Kubernetes objects for a sandbox: you ask the **gateway** for on
 | `--memory 2Gi` | The workload pod's memory request and limit. (`--cpu` would become a request too; on an 8-vCPU VM a few of those fill the node.) |
 | `--no-tty --detach` | Don't attach a terminal, and return as soon as the sandbox is requested. |
 | `-- sleep infinity` | Everything after `--` is the sandbox's **main process**. The sandbox lives as long as it runs; `sleep infinity` keeps it up so you can `exec` into it. |
-| (no `--from`) | The gateway's default image, `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox`: Node, npm, Python, curl and OpenClaw on the OpenShell base. |
+| (no `--from`) | The gateway's default image, `ghcr.io/ansjindal/openshell-on-k8s/pi-sandbox`: Node, npm, Python, curl and git on the OpenShell base, plus a ready-made pi (used from Module 2 on). Here you install pi yourself, as in 0.4, to see the policy at work. |
 
 ```bash
 cd ~/openshell-on-k8s && openshell --workspace dev sandbox create --name pi-agent --provider litellm --policy manifests/policies/baseline.yaml --memory 2Gi --no-tty --detach -- sleep infinity

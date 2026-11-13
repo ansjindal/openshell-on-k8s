@@ -77,11 +77,11 @@ what's worth pointing at when you teach it.
 
 ## Running a different agent
 
-OpenClaw is the default because it is the gateway's default sandbox image
+pi is the agent because it is in the gateway's default sandbox image, `images/pi-sandbox`
 (`sandbox_image_repository` / `sandbox_image_tag` in `ansible/inventory/group_vars/all.yml`).
 To run another agent, create sandboxes `--from <image>` (or change the default), attach the
-`litellm` provider, point the agent at `http://litellm.litellm.svc.cluster.local:4000/v1` with
-`$LITELLM_API_KEY`, and set `AGENT_CMD` for `scripts/fleet task`.
+`litellm` provider, and point the agent at `http://litellm.litellm.svc.cluster.local:4000/v1`
+with `$LITELLM_API_KEY`, as the pi image's launcher does.
 
 Images must ship a policy that is valid for 0.1 in `/etc/openshell/policy.yaml`, or be created
 with `--policy`.

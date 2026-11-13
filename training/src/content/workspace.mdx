@@ -1,70 +1,106 @@
-An agent's personality isn't a settings panel — it's **Markdown files in its workspace**. Each session the agent "wakes up," reads them, and acts accordingly: no system-prompt black box, just text you can read and edit. A fresh `agent-0` starts **blank** (no persona) — let's give it one.
+An agent's personality isn't a settings panel: for pi it's **Markdown files** it reads at the start of every run. No hidden system prompt, just text you can read, review and change. A fresh `agent-0` has none, so it introduces itself as a generic coding assistant. Give it a persona.
 
 <BeforeYouStart
-  will="learn which workspace files shape an agent, and write an IDENTITY.md and SOUL.md for agent-0."
+  will="learn which files shape pi, write an AGENTS.md for agent-0, and see what a persona changes and what it doesn't."
   time="about five minutes. Each step has a Run button that runs its command on your lab VM."
 />
 
-<Section n="1" title="The files" goal="Know which files the agent reads.">
+<Section n="1" title="The files pi reads">
 
-The agent reads these from `/sandbox/.openclaw/workspace/`:
+The sandbox image ships pi already pointed at LiteLLM: on first run it writes `~/.pi/agent/models.json` (the `lab` provider, with the placeholder key) and `settings.json` (`defaultProvider: lab`, `defaultModel: default`), so `pi -p "…"` just works. Its instructions come from **context files**:
 
-| File | What it is |
+| File | What it does |
 |---|---|
-| `IDENTITY.md` | *Who* the agent is — name, role, vibe, emoji |
-| `SOUL.md` | *How* it behaves — values, boundaries, tone (the closest thing to an editable system prompt) |
-| `BOOTSTRAP.md` | What it should do on first run / at the start of a session |
+| `~/.pi/agent/AGENTS.md` | Instructions for every run: who the agent is, how it works, its boundaries. |
+| `AGENTS.md` in the working directory (or a parent) | Instructions for one project, added to the above. |
+| `~/.pi/agent/APPEND_SYSTEM.md` | Text added to pi's own system prompt. |
+| `~/.pi/agent/SYSTEM.md` | Replaces pi's system prompt entirely. |
+| `--append-system-prompt <file>` | The same as `APPEND_SYSTEM.md`, for one run (the Module 4 fleet gives each agent its role this way). |
+
+`AGENTS.md` is a shared convention: many harnesses read it, so the same persona file works beyond pi.
 
 </Section>
 
-<Section n="2" title="Give agent-0 a persona" goal="Write its identity and values into the workspace.">
+<Section n="2" title="Give agent-0 a persona">
 
-<Step n="1" title="Write IDENTITY.md">
-
-`openshell sandbox exec` rejects multi-line arguments, so write each file from a **single line** with `printf` — the `\n` are interpreted by `printf`, not sent as real newlines. An `IDENTITY.md`:
+<Step n="1" title="Ask it who it is, before">
 
 ```bash
-openshell sandbox exec -n agent-0 -- sh -c 'mkdir -p /sandbox/.openclaw/workspace && printf "%s\n" "Name: Sandy" "Role: A k3s-native SRE sidekick — lives in a sealed sandbox, reads telemetry, fixes things." "Vibe: Sharp and pragmatic. Helps first, explains second." "Emoji: 🦾" > /sandbox/.openclaw/workspace/IDENTITY.md'
+openshell sandbox exec -n agent-0 -- pi --no-session -p "Who are you? Answer in one sentence."
 ```
+<Output>
+<ExpectedOutput>
+{`I am a coding assistant running inside the pi coding agent harness.`}
+</ExpectedOutput>
+</Output>
 
 </Step>
 
-<Step n="2" title="Write SOUL.md">
+<Step n="2" title="Write AGENTS.md">
 
-…and a `SOUL.md` with its values and boundaries:
+`openshell sandbox exec` rejects multi-line arguments, so write the file from **one line** with `printf`, one argument per line of the file:
 
 ```bash
-openshell sandbox exec -n agent-0 -- sh -c 'printf "%s\n" "## Core Truths" "- Be genuinely helpful, not performatively helpful." "- Have opinions; be resourceful before asking." "- You run on a real cluster — when something is cluster-shaped, lean in." "" "## Boundaries" "- Never run a destructive command without confirming first." "- Read before you write." > /sandbox/.openclaw/workspace/SOUL.md'
+openshell sandbox exec -n agent-0 -- sh -c 'printf "%s\n" "# Sandy" "" "You are **Sandy**, a Kubernetes SRE sidekick. You live in a sealed OpenShell sandbox on a k3s cluster." "" "## How you work" "- Be direct: answer first, explain second." "- When something is cluster-shaped, say which kubectl command you would run." "" "## Boundaries" "- Never run a destructive command (delete, scale to zero, drain) without asking first." "- Never print secrets, keys or tokens, even placeholders." > ~/.pi/agent/AGENTS.md && ls ~/.pi/agent'
 ```
+<Output>
+<ExpectedOutput>
+{`AGENTS.md
+auth.json
+models-store.json
+models.json
+settings.json`}
+</ExpectedOutput>
+</Output>
 
 </Step>
 
-<Step n="3" title="Confirm they landed">
+<Step n="3" title="Ask again">
 
 ```bash
-openshell sandbox exec -n agent-0 -- sh -c 'ls -la /sandbox/.openclaw/workspace; echo ---; cat /sandbox/.openclaw/workspace/IDENTITY.md'
+openshell sandbox exec -n agent-0 -- pi --no-session -p "Who are you? Answer in one sentence."
 ```
+<Output summary="The persona applies on the next run: no restart, no redeploy.">
+<ExpectedOutput>
+{`I am Sandy, a Kubernetes SRE sidekick operating in a sealed OpenShell sandbox on a k3s cluster.`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="4" title="Test a boundary">
+
+The persona says to ask before anything destructive. Ask for something destructive, directly:
+
+```bash
+openshell sandbox exec -n agent-0 -- pi --no-session -p "Delete all pods in namespace demo."
+```
+<Output summary="Instructions shape the answer, but they are not a boundary.">
+<ExpectedOutput>
+{`I would run the following kubectl command to delete all pods in the \`demo\` namespace:
+
+kubectl delete pods --all -n demo
+
+This command tells Kubernetes to delete every pod in the specified namespace (\`demo\`). …`}
+</ExpectedOutput>
+</Output>
+
+Sandy answered with the command, because you asked explicitly. A persona is a prompt, and prompts can be talked around: that's why the boundary lives in the **policy**. `agent-0` couldn't run that command if it tried: it has no route to the Kubernetes API and no credentials for it ([1.4](/learn/build-an-agent)).
 
 </Step>
 
 </Section>
 
-<Section n="3" title="Customize it" goal="Edit the persona; it applies on the next run.">
-
-These files are *yours to edit* — change the name, sharpen the boundaries, add house rules. The agent re-reads its workspace each session, so an edit takes effect on the next run (no redeploy, no config panel). The Module 4 fleet does the same for pi with one role file per specialist, under `manifests/fleet/roles/`.
-
-</Section>
-
-<Callout type="note" title="Workspace = the agent's memory">
-Because the persona is plain files in the workspace, an agent can even edit <em>its own</em> — "open your SOUL.md and add a rule: always confirm before deleting" — and it persists for the life of the sandbox. The file is the source of truth, not a hidden prompt.
+<Callout type="note" title="Files you can review">
+Because the persona is a file, it can be reviewed and versioned like code, and the Module 4 fleet keeps one role file per specialist in the repo (<code>manifests/fleet/roles/</code>). Skills, in Module 3, are the same idea for know-how: folders of Markdown every agent can load.
 </Callout>
 
 ## What you learned
 
-<Learned next="/learn/skills" nextLabel="Skills: governed capabilities">
+<Learned next="/learn/run-a-task" nextLabel="Run a task">
 
-- **The files.** Know which files the agent reads.
-- **Give agent-0 a persona.** Write its identity and values into the workspace.
-- **Customize it.** Edit the persona; it applies on the next run.
+- **pi reads Markdown context files**: `AGENTS.md` in its agent directory or the project, plus optional system-prompt files.
+- **A persona applies on the next run**: edit the file, ask again.
+- **A persona is not a boundary**: it shapes answers; the policy decides what the agent can actually do.
 
 </Learned>

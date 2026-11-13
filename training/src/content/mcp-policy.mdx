@@ -89,29 +89,12 @@ openshell --workspace dev logs tool-agent | grep OCSF | grep l7-mcp | tail -2 | 
 
 <Section n="3" title="Let pi use the server">
 
-<Step n="1" title="Install pi and point it at LiteLLM">
+<Step n="1" title="Add the MCP server to pi">
 
-As in 1.4: pi from npm, and its `models.json` with the provider's placeholder:
-
-```bash
-openshell --workspace dev sandbox exec -n tool-agent -- npm install --prefix /sandbox/pi --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2 && openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'mkdir -p ~/.pi/agent && cat > ~/.pi/agent/models.json <<EOF
-{ "providers": { "lab": { "baseUrl": "http://litellm.litellm.svc.cluster.local:4000/v1", "api": "openai-completions", "apiKey": "\$LITELLM_API_KEY", "compat": { "supportsDeveloperRole": false, "supportsReasoningEffort": false }, "models": [{ "id": "default" }] } } }
-EOF'
-```
-<Output>
-<ExpectedOutput>
-{`added 123 packages in 10s`}
-</ExpectedOutput>
-</Output>
-
-</Step>
-
-<Step n="2" title="Add the MCP server to pi">
-
-pi has MCP built in. **`pi mcp add`** writes the server into `~/.pi/agent/mcp.json`, in the `mcpServers` format most harnesses share:
+pi ships in the sandbox image, already pointed at LiteLLM, and has MCP built in. **`pi mcp add`** writes the server into `~/.pi/agent/mcp.json`, in the `mcpServers` format most harnesses share:
 
 ```bash
-openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi mcp add sre-tools --url http://sre-tools.tools.svc.cluster.local:8080/mcp && openshell --workspace dev sandbox exec -n tool-agent -- cat /sandbox/.pi/agent/mcp.json
+openshell --workspace dev sandbox exec -n tool-agent -- pi mcp add sre-tools --url http://sre-tools.tools.svc.cluster.local:8080/mcp && openshell --workspace dev sandbox exec -n tool-agent -- cat /sandbox/.pi/agent/mcp.json
 ```
 <Output>
 <ExpectedOutput>
@@ -129,10 +112,10 @@ Check it with: pi mcp list. If it requires sign-in: pi mcp login sre-tools
 
 </Step>
 
-<Step n="3" title="pi connects and lists the tools">
+<Step n="2" title="pi connects and lists the tools">
 
 ```bash
-openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi mcp list
+openshell --workspace dev sandbox exec -n tool-agent -- pi mcp list
 ```
 <Output summary="Connected through the supervisor; pi sees all five tools. Listing isn't calling.">
 <ExpectedOutput>
@@ -144,10 +127,10 @@ openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbo
 
 </Step>
 
-<Step n="4" title="Ask pi to use an allowed tool">
+<Step n="3" title="Ask pi to use an allowed tool">
 
 ```bash
-openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "Use the sre-tools pod_status tool for namespace demo and list each pod with its status, one per line."
+openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session -p "Use the sre-tools pod_status tool for namespace demo and list each pod with its status, one per line."
 ```
 <Output>
 <ExpectedOutput>
@@ -159,10 +142,10 @@ shop-app-7bb978d6c8-xhx69 Running`}
 
 </Step>
 
-<Step n="5" title="Ask pi to use the denied tool">
+<Step n="4" title="Ask pi to use the denied tool">
 
 ```bash
-openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "Use the sre-tools scale_deployment tool to scale deployment payments in namespace demo to 0 replicas, then report exactly what the tool returned."
+openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session -p "Use the sre-tools scale_deployment tool to scale deployment payments in namespace demo to 0 replicas, then report exactly what the tool returned."
 ```
 <Output summary="pi gets the supervisor's 403 as the tool's result; payments keeps its replica.">
 <ExpectedOutput>

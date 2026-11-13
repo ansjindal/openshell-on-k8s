@@ -38,7 +38,7 @@ export const CURRICULUM: Part[] = [
     lessons: [
       L("m2-overview", "Overview", "What this module builds: your own provider, a persona, skills, tasks, then the audit trail, the console and people with roles.", 5),
       L("providers", "Your own provider", "Write a profile, attach it live, watch the real token arrive upstream, rotate it.", 10, "lab"),
-      L("workspace", "Give it a soul: workspace files", "IDENTITY/SOUL/BOOTSTRAP Markdown shape the agent.", 8, "lab"),
+      L("workspace", "Give it a persona: AGENTS.md", "A Markdown file pi reads on every run; what a persona changes, and what it does not.", 6, "lab"),
       L("run-a-task", "Run a task", "The fleet helper, then hand agents a prompt and read what they did.", 8, "lab"),
       L("audit", "The audit trail", "Every allow and deny as an OCSF event: CLI, Loki, Grafana; agent traces in Tempo.", 10, "lab"),
       L("console", "The OpenShell Console", "Sandboxes, logs, terminal, policy revisions and the proposals inbox.", 8, "lab"),

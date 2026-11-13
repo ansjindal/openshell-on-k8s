@@ -26,7 +26,7 @@ By default the gateway encrypts provider credentials in its database. In product
 
 ## Run a different agent
 
-OpenClaw is the default, but a sandbox runs any image. Build on the OpenShell community base images (they include the runtime the supervisor needs), ship a policy that's valid for 0.1 at `/etc/openshell/policy.yaml`, attach the `litellm` provider, and point the agent at `http://litellm.litellm.svc.cluster.local:4000/v1` with `$LITELLM_API_KEY`. Set `AGENT_CMD` so `./scripts/fleet task` runs it.
+pi is the default here (`images/pi-sandbox`), but a sandbox runs any image. Build on the OpenShell community base images (they include the runtime the supervisor needs), ship a policy that's valid for 0.1 at `/etc/openshell/policy.yaml`, attach the `litellm` provider, and point the agent at `http://litellm.litellm.svc.cluster.local:4000/v1` with `$LITELLM_API_KEY`, the way `images/pi-sandbox` does for pi.
 
 ## NVIDIA Sentry: beyond the host
 

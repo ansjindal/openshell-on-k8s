@@ -15,7 +15,6 @@ import { YamlRead } from "@/components/course/YamlRead";
 import { ScrollBuild } from "@/components/course/ScrollBuild";
 import { ModuleLessons } from "@/components/course/ModuleLessons";
 import { PolicyExplorer } from "@/components/diagrams/PolicyExplorer";
-import { SkillSupplyChain } from "@/components/diagrams/SkillSupplyChain";
 import { FleetOrchestration } from "@/components/diagrams/FleetOrchestration";
 import { DemoArchitecture } from "@/components/diagrams/DemoArchitecture";
 import { Orchestrator } from "@/components/Orchestrator";
@@ -47,7 +46,6 @@ const components: MDXComponents = {
   ModuleLessons,
   Q,
   PolicyExplorer,
-  SkillSupplyChain,
   FleetOrchestration,
   DemoArchitecture,
   Orchestrator,

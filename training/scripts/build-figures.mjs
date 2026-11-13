@@ -69,7 +69,6 @@ console.log("figures:", NAMES.join(", "));
 const YAML_FILES = [
   "manifests/agents/pi-agent.yaml",
   "manifests/policies/pi-agent.yaml",
-  "manifests/openclaw/policies/skills-locked.policy.yaml",
   "manifests/tools/sre-tools.yaml",
   "manifests/policies/mcp-agent.yaml",
   "manifests/policies/tools-agent.yaml",

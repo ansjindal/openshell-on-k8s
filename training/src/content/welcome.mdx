@@ -1,6 +1,6 @@
 Welcome to **OpenShell on Kubernetes**, a hands-on guide to running sandboxed AI agents on a real cluster. By the end you'll have created agents, opened and closed their network access line by line, given them credentials they never get to see, followed every decision in an audit trail, and pointed a small fleet of them at a live incident. All of it from a shell embedded in this page.
 
-Everything runs on one VM that's already provisioned: **k3s** (single-node upstream Kubernetes), the **agent-sandbox** controller, the **OpenShell 0.1** gateway, **LiteLLM** in front of the model, **Keycloak** for sign-in, the **OpenShell Console**, and **Prometheus, Grafana, Loki and Tempo**. The default agent is **OpenClaw 🦞**.
+Everything runs on one VM that's already provisioned: **k3s** (single-node upstream Kubernetes), the **agent-sandbox** controller, the **OpenShell 0.1** gateway, **LiteLLM** in front of the model, **Keycloak** for sign-in, the **OpenShell Console**, and **Prometheus, Grafana, Loki and Tempo**. The agent throughout is **pi**, a small open-source harness: first as an ordinary pod, then in every sandbox.
 
 ## What you'll learn
 

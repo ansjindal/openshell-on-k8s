@@ -35,7 +35,7 @@ S.rect(348, 150, 400, 596, fill="#fff", stroke=GREY, sw=1.3, rx=8)
 S.icon("i-bot", 360, 160, 22, GREY)
 S.text(390, 177, "workload pod", 15.5, True)
 S.text(500, 177, "· the agent", 13.5, False, SUB)
-wl = [("Agent process", ["e.g. OpenClaw · runs as user sandbox"], "i-user"),
+wl = [("Agent process", ["e.g. pi · runs as user sandbox"], "i-user"),
       ("Landlock filesystem policy", [("read-only:  /usr /etc …", "m"), ("read-write: /sandbox /tmp", "m")], "i-lock"),
       ("seccomp", ["system-call filter on the agent"], "i-shield"),
       ("No direct network", ["NetworkPolicy: only the supervisor", "may connect to this pod"], "i-ban"),

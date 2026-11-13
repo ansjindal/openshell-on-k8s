@@ -57,26 +57,6 @@ export const YAML_READS: Record<string, YamlReadSpec> = {
     ],
   },
 
-  "skills-locked-policy": {
-    title: "The locked skills policy, part by part",
-    file: "manifests/openclaw/policies/skills-locked.policy.yaml",
-    intro: "The whole file you just applied. Scroll down: each part lights up in the file as you read about it.",
-    parts: [
-      { title: "Why it exists", at: [["# The \"locked\"", "Node 24"]],
-        text: "The comments say it: the only place this sandbox may install from is the in-cluster registry. ClawHub and the public npm registry stay denied." },
-      { title: "The same baseline", at: [["version: 1", "process:"]],
-        text: "Files, Landlock and the `sandbox` user are the same as the lab's baseline policy: only the network part differs." },
-      { title: "One network rule", at: [["network_policies:", "name: in-cluster-registry"]],
-        text: "`network_policies` has a single entry, `in-cluster-registry`. Anything not listed is denied." },
-      { title: "Why the encoded slash", at: [["# access: full", "never need the agent"]],
-        text: "Scoped names such as `@workshop/x` are fetched as `/@workshop%2Fx`; `allow_encoded_slash` lets that `%2F` through, and it can only be set in a policy file. The registry (Verdaccio) fetches from public npm on the agent's behalf, so the agent itself never has to." },
-      { title: "The registry endpoint", at: [["- { host: registry.openshell"]],
-        text: "`registry.openshell.svc.cluster.local:4873`, inspected at L7 (`protocol: rest`) and enforced. `access: full` allows publishing as well as installing, because the skills lab publishes to it." },
-      { title: "Which programs may use it", at: [["binaries: ["]],
-        text: "`npm` and `node` in the places the image keeps them, plus OpenClaw's own Node 24. Any other program asking for the registry is denied." },
-    ],
-  },
-
   "sre-tools-manifest": {
     title: "The MCP server's manifest, part by part",
     file: "manifests/tools/sre-tools.yaml",
@@ -108,8 +88,6 @@ export const YAML_READS: Record<string, YamlReadSpec> = {
     parts: [
       { title: "The same baseline", at: [["version: 1", "run_as_group: sandbox"]],
         text: "Files, Landlock and the `sandbox` user, as in every sandbox in this course." },
-      { title: "npm, to install pi", at: [["=npm_registry:", "- path: /usr/bin/node"]],
-        text: "The read-only npm rule from 1.4, for `node` only, so pi can be installed." },
       { title: "The MCP server, as an MCP endpoint", at: [["=sre_tools:", "enforcement: enforce"]],
         text: "The Service's full name, port 8080 and path `/mcp`. `protocol: mcp` makes the supervisor read every request as MCP (JSON-RPC): the method, and for `tools/call` the tool's name." },
       { title: "Which MCP revisions", at: [["=mcp:", "versions:"]],
@@ -121,7 +99,7 @@ export const YAML_READS: Record<string, YamlReadSpec> = {
       { title: "One tool denied outright", at: [["deny_rules:", "tool: scale_deployment"]],
         text: "`scale_deployment` is denied explicitly. Deny rules win over allow rules, so no later allow can open it by accident." },
       { title: "Which programs", at: [["# pi", "- path: /usr/bin/curl"]],
-        text: "pi's Node, OpenClaw's own Node, and `curl` for the first test. Tool arguments are not inspected, and the server's responses aren't either: the rule is about which tool, not what it is asked." },
+        text: "pi's Node, and `curl` for the first test. Tool arguments are not inspected, and the server's responses aren't either: the rule is about which tool, not what it is asked." },
     ],
   },
 

@@ -1,7 +1,7 @@
 You've driven the gateway from the CLI. The same gateway has a web UI: the **OpenShell Console** ([ai-openshell/console](https://github.com/ai-openshell/console)), deployed on its own host. It isn't a separate system: it forwards your Keycloak token to the same gateway, so it sees and does exactly what *you* may see and do.
 
 <BeforeYouStart
-  will="sign in to the OpenShell Console, inspect agent-0 tab by tab, review the policy proposals drafted from denied traffic, and open OpenClaw's own UI."
+  will="sign in to the OpenShell Console, inspect agent-0 tab by tab, and review the policy proposals the gateway drafts from denied traffic."
   time="about ten minutes."
 />
 
@@ -60,37 +60,56 @@ Open **Sandboxes → agent-0**. The tabs map one-to-one to what you did in the s
 
 <Step n="2" title="Edit the policy from the console">
 
-Open **Policy**: you'll see the rule the [Skills](/learn/skills) lesson left on `agent-0` (`in-cluster-registry`) and `_provider_litellm`, merged in from the provider. Add or remove an endpoint here and run `openshell policy list agent-0` in the Cluster shell: a new revision, the same one.
+Open **Policy**: you'll see `agent-0`'s baseline and `_provider_litellm`, merged in from the provider. Add or remove an endpoint here and run `openshell policy list agent-0` in the Cluster shell: a new revision, the same one.
 
 </Step>
 
 </Section>
 
-<Section n="4" title="Proposals" goal="Turn denied traffic into a reviewable rule, or reject it.">
+<Section n="4" title="Proposals: denied traffic becomes a rule to review">
 
-<Step n="1" title="Open the proposals">
+When an agent keeps hitting a denied destination, the gateway analyses the denials and drafts a rule: a **proposal**, pending until a person decides.
 
-When an agent keeps hitting a denied destination, the gateway analyses the denials and drafts a rule. Open **Proposals** for `agent-0`: OpenClaw itself tried to reach `telemetry.openclaw.ai:443` and ClawHub, was denied, and each became a **pending** proposal with the binary, a confidence score and how often it was denied.
+<Step n="1" title="Make some denied traffic">
 
-</Step>
-
-<Step n="2" title="Decide">
-
-Nothing changes until a person decides. **Approve** turns a proposal into a new policy revision; **Reject** records why. Here the right call is *reject*: the agent has no business sending telemetry from a sealed lab. That's the workflow for growing a policy from real behaviour without ever loosening it silently.
-
-</Step>
-
-</Section>
-
-<Section n="5" title="OpenClaw's own UI" goal="Open OpenClaw's Control UI inside agent-0.">
-
-<Step n="1" title="Get the password and open it">
-
-Separately from the console, **OpenClaw** has its own web Control UI (chat, device pairing) inside `agent-0`. Its port lives in the sandbox, so the lab forwards it out with `openshell forward` to host port `30789` (a systemd unit, `openclaw-forward`). Use the **OpenClaw UI ↗** header link (it needs its own Brev Secure Link named `openclaw`). Its password is separate from Keycloak:
+From `agent-0`, try GitHub's API five times. Its policy has no rule for it, so each attempt is denied:
 
 ```bash
-grep OPENCLAW_GATEWAY_PASSWORD .sso-secrets.env
+openshell sandbox exec -n agent-0 -- sh -c 'for i in 1 2 3 4 5; do curl -s -m 5 -o /dev/null https://api.github.com/zen; done; echo done'
 ```
+
+</Step>
+
+<Step n="2" title="Read the proposal from the CLI">
+
+**`openshell rule get`** lists a sandbox's proposed network rules (give it a few seconds after the denials):
+
+```bash
+openshell rule get agent-0 | head -13
+```
+<Output summary="A pending rule, the binary that asked, a confidence score, and how often it was denied.">
+<ExpectedOutput>
+{`Network Rules:  (version 3, 3 chunks)
+
+  Chunk: a677be68-78df-4e1c-b468-9d2a37dfea89
+  Status: pending
+  Rule: allow_api_github_com_443
+  Binary: /usr/bin/curl
+  Confidence: 75%
+  Rationale: Allow curl to connect to api.github.com:443 (HTTPS).
+  Prover: prover: no new findings
+  Candidate: 22279106d24e
+  Endpoints: api.github.com:443 [L4]
+  Binaries: /usr/bin/curl
+  Hits: 5 (first seen 2026-11-13 12:07:54, last seen 2026-11-13 12:07:54)`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="Decide, in the console">
+
+Open **Proposals** for `agent-0` in the console: the same pending rule. Nothing changes until a person decides. **Approve** turns it into a new policy revision; **Reject** records why. Here the right call is *reject*: `agent-0` has no business calling GitHub. From the CLI it's `openshell rule reject agent-0 <chunk id>`. That's how a policy grows from real behaviour without ever loosening silently.
 
 </Step>
 
@@ -107,7 +126,6 @@ Create a sandbox in the console, then run <code>openshell sandbox list</code> he
 - **Open it.** Sign in to the console as demo.
 - **Around the console.** Know the main areas of the console.
 - **One sandbox, every angle.** Map each sandbox tab to the CLI you already used.
-- **Proposals.** Turn denied traffic into a reviewable rule, or reject it.
-- **OpenClaw's own UI.** Open OpenClaw's Control UI inside agent-0.
+- **Proposals.** Denied traffic becomes a pending rule; a person approves or rejects it.
 
 </Learned>

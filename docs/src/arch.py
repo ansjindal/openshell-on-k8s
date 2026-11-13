@@ -106,7 +106,7 @@ S.icon("i-cube", 686, 572, 20, GREEN_D)
 S.text(712, 588, "sandbox agent-0", 14.5, True)
 S.text(848, 588, "· Ready", 13.5, True, GREEN_D)
 S.raw('</g>')
-S.box(688, 598, 190, 128, "workload pod", ["OpenClaw agent", "Landlock + seccomp", "user sandbox",
+S.box(688, 598, 190, 128, "workload pod", ["pi agent", "Landlock + seccomp", "user sandbox",
       ("NetPol: supervisor only", "k")], icon="i-bot", kind="grey", tsize=14.5, lsize=13, gap=18)
 S.box(924, 598, 180, 128, "supervisor pod", ["policy L4 / L7", "credential injection", "OCSF audit",
       "trace relay"], icon="i-shield", kind="green", tsize=14.5, lsize=13, gap=18)

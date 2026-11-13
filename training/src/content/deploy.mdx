@@ -42,7 +42,7 @@ Scroll down to build one sandbox on Kubernetes in deployment order: LiteLLM, obs
 
 <ReadScene scene="k8s" />
 
-You ask the gateway for a sandbox. It writes a `Sandbox` resource and starts a supervisor pod; the controller turns the resource into the workload pod running OpenClaw. The workload pod can only talk to its supervisor. When the agent calls LiteLLM, the supervisor checks the request against the sandbox's policy, swaps the placeholder in `Authorization` for the real key, and forwards it.
+You ask the gateway for a sandbox. It writes a `Sandbox` resource and starts a supervisor pod; the controller turns the resource into the workload pod running the agent. The workload pod can only talk to its supervisor. When the agent calls LiteLLM, the supervisor checks the request against the sandbox's policy, swaps the placeholder in `Authorization` for the real key, and forwards it.
 
 <Callout type="note" title="The mental model">
 A sandbox is a pair of pods plus a policy. Creating an agent means creating a sandbox; deleting it tears both pods down. Everything else, isolation, policy, credentials and audit, hangs off that.
@@ -65,7 +65,7 @@ The same platform with every component. It is dense, so read it one path at a ti
 - **LiteLLM** (namespace `litellm`): one OpenAI-compatible endpoint in front of the model. Agents reach it through the `litellm` **provider**, with a key they never see.
 - **Keycloak**, **Envoy Gateway** and the **OpenShell Console**: people sign in with Keycloak; Envoy publishes the training site, Keycloak and Grafana on one host and the console on its own.
 - **Monitoring**: Prometheus and Grafana for metrics, Loki for logs and OpenShell's audit events, Tempo for traces.
-- **OpenClaw 🦞**: the default agent, baked into the default sandbox image `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox`.
+- **pi**: the agent, baked into the default sandbox image `ghcr.io/ansjindal/openshell-on-k8s/pi-sandbox` and already pointed at LiteLLM.
 
 
 **Open the Cluster shell.** It's a real bash shell on the VM, with `KUBECONFIG` pointed at `/etc/rancher/k3s/k3s.yaml`, started in the repository folder.

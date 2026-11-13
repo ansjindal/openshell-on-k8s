@@ -156,7 +156,7 @@ cd ~/openshell-on-k8s && openshell --workspace dev policy set tool-agent --polic
 
 <Step n="2" title="Clone the skills into the sandbox">
 
-Clone the repository to `/sandbox/skills`, then link each skill into `~/.agents/skills/`, where pi, OpenClaw and other clients look (the image already brings one skill there, `github`):
+Clone the repository to `/sandbox/skills`, then link each skill into `~/.agents/skills/`, where pi and other clients look:
 
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'rm -rf /sandbox/skills && git clone -q http://gitea.skills.svc.cluster.local:3000/platform/skills.git /sandbox/skills && for d in /sandbox/skills/*/; do ln -sfn "$d" ~/.agents/skills/$(basename "$d"); done && ls ~/.agents/skills'
@@ -164,7 +164,6 @@ openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'rm -rf /sandbox/s
 <Output>
 <ExpectedOutput>
 {`demo-app-map
-github
 incident-report
 k8s-triage`}
 </ExpectedOutput>
@@ -177,12 +176,11 @@ To update, `git -C /sandbox/skills pull` and link again: every sandbox gets a ne
 <Step n="3" title="pi finds them">
 
 ```bash
-openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --no-mcp -p "List the names of the skills available to you, one per line, nothing else."
+openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session --no-mcp -p "List the names of the skills available to you, one per line, nothing else."
 ```
 <Output>
 <ExpectedOutput>
 {`demo-app-map
-github
 incident-report
 k8s-triage`}
 </ExpectedOutput>
@@ -209,7 +207,7 @@ kubectl -n demo scale deploy/payments --replicas=0 && kubectl -n demo wait --for
 A plain question, no hints. The skills tell pi how to investigate and how to report; the MCP tools give it the evidence; the policy keeps it read-only:
 
 ```bash
-openshell --workspace dev sandbox exec -n tool-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "Users report the shop in namespace demo is failing. Investigate and report."
+openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session -p "Users report the shop in namespace demo is failing. Investigate and report."
 ```
 <Output summary="The report follows incident-report; the evidence came from four different tools.">
 <ExpectedOutput>
@@ -246,7 +244,7 @@ kubectl -n demo scale deploy/payments --replicas=1 && kubectl -n demo rollout st
 
 ## What you learned
 
-<Learned next="/learn/two-harnesses" nextLabel="Same tools and skills, another harness">
+<Learned next="/learn/tools-check" nextLabel="Summary & knowledge check">
 
 - **A skill is a folder**: `SKILL.md` with a name, a description and instructions, plus optional references and scripts.
 - **Skills belong in git**: reviewed, versioned, checked with `skill-lint`, and pushed by the platform team.
