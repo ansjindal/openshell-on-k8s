@@ -161,7 +161,7 @@ Error:   × code: 'The system is not in a state required for the operation's
 
 <Step n="3" title="Create the workspace in the gateway">
 
-The namespace is ready; now tell the gateway about it. The workspace name is the namespace name:
+The namespace is where the sandboxes will **run**. This command makes the other half, the workspace's **record** in the gateway, which holds its providers, members and sandboxes. It doesn't create or change a namespace: in operator mode the gateway only uses a namespace with the same name, so name them alike:
 
 ```bash
 openshell workspace create --name dev && openshell workspace list
@@ -175,6 +175,8 @@ lab      Active        2026-11-13 10:31:49
 dev      Active        2026-11-13 10:33:06`}
 </ExpectedOutput>
 </Output>
+
+You need both halves. Without this record, the gateway doesn't know `dev`, even though the namespace is labelled: `openshell --workspace dev provider create` fails with `workspace 'dev' not found`. Without the namespace and its label (steps 1 and 2), the record exists but every `sandbox create` is refused as `not in the operator namespace allowlist`.
 
 From now on, `--workspace dev` on an `openshell` command acts on your workspace. Without it, commands act on `lab`, the default set for this shell (`OPENSHELL_WORKSPACE=lab`).
 
