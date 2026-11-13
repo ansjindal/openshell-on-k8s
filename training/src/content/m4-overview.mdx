@@ -1,27 +1,38 @@
-In this module **you are the SRE**. You bring up a fleet of sealed specialists, break a real service, let the fleet find the root cause, and approve the fix yourself.
+In this module **you are the SRE**. You've sealed an agent, given it tools through MCP and know-how through skills; the capstone makes it a **system**: an **SRE copilot fleet** of pi agents, each allowed **one kind of tool** and nothing else. You bring the fleet up, break a real service, let the fleet find the root cause, and approve the fix yourself.
 
 <BeforeYouStart
   learn="how several narrowly scoped agents add up to one investigation, and why adding an agent never widens the trust boundary."
   prereq="Modules 1 to 3: the dev workspace, the sre-tools MCP server and the skill repository. A model configured (MODEL_API_KEY) so the agents can think."
-  start="The challenge."
+  start="Spin up the fleet."
 />
 
-<Section n="1" title="A fleet of sealed specialists">
+<Section n="1" title="How the fleet investigates an incident">
 
-Each card is one lesson of this module. Scroll through them, or click one: the picture builds as you read.
+Watch one investigation from start to finish. Each step lights up in turn; click a step to stop on it.
 
-<ScrollBuild diagram="m4" items={[
-  { title: "The challenge", text: "incident-desk is a small service with a real dependency. You will break it on purpose." },
-  { title: "Spin up the fleet", text: "One command: an analyst and four pi specialists for logs, metrics, traces and events, each with a role, the platform skills and a policy that names its MCP tools." },
-  { title: "The fleet at a glance", text: "Every agent's status, what its policy reaches, which tools it may call, and its role." },
-  { title: "Investigate an incident", text: "The analyst asks the specialists, combines their findings, and names the root cause. You approve the fix." },
-  { title: "Under the hood", text: "The plan, the tool calls and the synthesis: the code and prompts behind the fleet." },
-  { title: "Build your own", text: "A new agent is one line in fleet.txt and one role file; a new tool is one function in the MCP server." },
-]} />
+<FleetOrchestration />
 
 </Section>
 
-<Section n="2" title="Continue through the module">
+<Section n="2" title="A team of read-only specialists">
+
+When something breaks, you reach for four signals: **logs, metrics, traces, and what Kubernetes did**. So the fleet is four read-only specialists plus a lead analyst, each a pi agent in its own sandbox, using the **sre-tools** MCP server and the **platform skills** from Module 3:
+
+- **logs** may call `loki_query`, nothing else.
+- **metrics** may call `prometheus_query`, nothing else.
+- **traces** may call `tempo_search`, nothing else.
+- **events** may call `cluster_events` and `pod_status`: what the control plane changed, and which pods are missing.
+- **analyst** has **no tools at all**; it combines the others' findings into a root cause and a recommended fix.
+
+Each agent's **policy names its tools**: the metrics agent can see that `loki_query` exists, but its supervisor refuses the call, and no agent can call `scale_deployment`. That isn't a limitation to work around; it *is* the product: a fleet you can hand a production incident without widening anyone's blast radius, and prove it from the audit log.
+
+<Callout type="note" title="Agents diagnose; people fix">
+The agents never hold Kubernetes credentials: the MCP server does, and the policy only lets them call read-only tools. So the loop is: the fleet finds the root cause and proposes a change, and a <strong>person approves</strong> it before anything is applied. In production that change would be a git commit that Argo CD syncs: the same shape, with automated delivery.
+</Callout>
+
+</Section>
+
+<Section n="3" title="Continue through the module">
 
 Each lab follows **Read → Run → Output**: read the step, press Run to run it on your lab VM, and compare your output with the recorded one. Click a lesson to open it:
 

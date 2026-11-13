@@ -73,6 +73,7 @@ const YAML_FILES = [
   "manifests/tools/sre-tools.yaml",
   "manifests/policies/mcp-agent.yaml",
   "manifests/policies/tools-agent.yaml",
+  "scripts/fleet.sh",
 ];
 const repo = join(here, "..", "..");
 const yamlOut = Object.fromEntries(YAML_FILES.map((f) => [f, readFileSync(join(repo, f), "utf8").replace(/\n+$/, "")]));

@@ -1,88 +1,161 @@
-import { DIAGRAM as C } from "./palette";
+"use client";
+// Module 4: how the SRE copilot fleet investigates one incident, step by step.
+// Five steps play in turn (ask → orchestrate → investigate → conclude → approve):
+// the active step's boxes light up and data flows along its arrows; earlier
+// steps stay drawn, later ones are dimmed. Click a step to jump to it; the
+// player pauses while the pointer is over the figure, and doesn't autoplay
+// for people who prefer reduced motion. Colors come from the site's theme
+// variables, so it follows light and dark mode.
+import { useEffect, useRef, useState } from "react";
 
-// Module 5 capstone: the in-page orchestrator runs a FIXED plan (no model call to plan) — it
-// hands each sealed SPECIALIST (logs/metrics/events, each allowed ONE sre-tools MCP tool by
-// its policy) a prescribed tool call, then a no-tools ANALYST concludes the root cause + recommended
-// fix. Theme-aware: structural colors come from site CSS vars; accent hues are translucent.
+const STEPS = [
+  { name: "Ask", text: "You press Investigate in the incident panel: one incident, one question for the fleet." },
+  { name: "Orchestrate", text: "The orchestrator, built into the page, follows a fixed plan: it hands each specialist the one probe for its signal. It calls no model itself; the agents do the thinking." },
+  { name: "Investigate", text: "The four specialists run in parallel, each pi in its own sandbox. Each may call only the sre-tools tools its policy names: anything else, and scale_deployment for every agent, is refused by its supervisor." },
+  { name: "Conclude", text: "Their findings go to the analyst, a pi agent with no tools at all. It combines them into a root cause and a recommended fix." },
+  { name: "You approve", text: "Nothing changes until you approve the fix. Every tool call, and every refusal, is in the audit trail." },
+];
+
+const SPECIALISTS = [
+  { name: "logs", tools: "loki_query" },
+  { name: "metrics", tools: "prometheus_query" },
+  { name: "traces", tools: "tempo_search" },
+  { name: "events", tools: "cluster_events · pod_status" },
+];
+
+const W = 980, H = 410;
+const LANES = [
+  { x: 10, w: 160 }, { x: 186, w: 180 }, { x: 382, w: 300 }, { x: 698, w: 272 },
+];
+const SP = { x: 400, w: 264, h: 62, y0: 62, gap: 82 };
+const OR = { x: 200, y: 168, w: 152, h: 84 };
+const YOU = { x: 22, y: 178, w: 136, h: 64 };
+const AN = { x: 714, y: 92, w: 240, h: 130 };
+const AP = { x: 714, y: 286, w: 240, h: 76 };
+
 export function FleetOrchestration() {
-  const W = 980, H = 452;
-  const VIOLET = "#a78bfa", GREEN = "#8fce46", AMBER = "#e0a23a", CYAN = "#34d4e0";
-  const Node = ({ x, y, w, h = 56, cls, stroke, title, sub, dash }: { x: number; y: number; w: number; h?: number; cls: string; stroke: string; title: string; sub?: string; dash?: boolean }) => (
-    <g>
-      <rect x={x} y={y} width={w} height={h} rx={11} className={cls} stroke={stroke} strokeWidth={1.6} strokeDasharray={dash ? "5 4" : undefined} />
-      <text x={x + w / 2} y={y + (sub ? h / 2 - 1 : h / 2 + 4)} fontSize={12.5} className="fo-ink" textAnchor="middle" fontWeight={700}>{title}</text>
-      {sub && <text x={x + w / 2} y={y + h / 2 + 14} fontSize={9.6} className="fo-sub" textAnchor="middle">{sub}</text>}
-    </g>
-  );
-  const Arrow = ({ x1, y1, x2, y2, label, color, dash, lx, ly, marker }: { x1: number; y1: number; x2: number; y2: number; label?: string; color: string; dash?: boolean; lx?: number; ly?: number; marker: string }) => (
-    <g>
-      <path d={`M${x1},${y1} L${x2},${y2}`} stroke={color} strokeWidth={1.8} fill="none" markerEnd={`url(#${marker})`} strokeDasharray={dash ? "5 4" : undefined} opacity={dash ? 0.75 : 1} />
-      {label && <text x={lx ?? (x1 + x2) / 2} y={ly ?? Math.min(y1, y2) - 6} fontSize={9.4} fill={color} textAnchor="middle" fontWeight={700}>{label}</text>}
-    </g>
-  );
-  const ax = 470, aw = 220;                       // telemetry agent cards
-  const agents = [
-    { y: 64, role: "logs 🔎", egress: "loki_query only" },
-    { y: 164, role: "metrics 📈", egress: "prometheus_query only" },
-    { y: 264, role: "events 🛎️", egress: "cluster_events · pod_status" },
-  ];
-  const wx = 762, wy = 130, ww = 196, wh = 140;   // analyst agent
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const [hover, setHover] = useState(false);
+  const reduced = useRef(false);
+
+  useEffect(() => {
+    reduced.current = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    if (reduced.current) { setPlaying(false); setStep(STEPS.length - 1); }
+  }, []);
+
+  useEffect(() => {
+    if (!playing || hover) return;
+    const last = step === STEPS.length - 1;
+    const t = setTimeout(() => setStep((s) => (s + 1) % STEPS.length), last ? 5200 : 3600);
+    return () => clearTimeout(t);
+  }, [step, playing, hover]);
+
+  // 0 = not yet (dim), 1 = the active step, 2 = done (drawn, calm)
+  const st = (i: number) => (i < step ? 2 : i === step ? 1 : 0);
+  const op = (i: number) => (st(i) === 0 ? 0.38 : 1);
+
+  const Box = ({ x, y, w, h, i, tone, title, lines }: { x: number; y: number; w: number; h: number; i: number; tone: string; title: string; lines: string[] }) => {
+    const active = st(i) === 1;
+    const top = y + h / 2 - (lines.length * 15) / 2 - 1;
+    return (
+      <g style={{ opacity: op(i), transition: "opacity .45s" }}>
+        <rect x={x} y={y} width={w} height={h} rx={10} fill="var(--color-panel)" stroke={tone}
+          strokeWidth={active ? 2.4 : 1.4} className={active ? "fo-pulse" : undefined} />
+        <text x={x + w / 2} y={top} fontSize={13.5} fontWeight={700} fill="var(--color-fg)" textAnchor="middle">{title}</text>
+        {lines.map((l, k) => (
+          <text key={k} x={x + w / 2} y={top + 17 + k * 15} fontSize={11} fill="var(--color-fg-mut)" textAnchor="middle">{l}</text>
+        ))}
+      </g>
+    );
+  };
+
+  const Arrow = ({ d, i, tone }: { d: string; i: number; tone: string }) => {
+    const s = st(i);
+    return (
+      <g style={{ opacity: op(i), transition: "opacity .45s" }}>
+        <path d={d} fill="none" stroke={s === 1 ? tone : "var(--color-fg-mut)"} strokeWidth={s === 1 ? 2.2 : 1.5}
+          strokeDasharray={s === 1 ? "6 6" : undefined} className={s === 1 ? "fo-flow" : undefined}
+          markerEnd={`url(#fo-arrow-${s === 1 ? "on" : "off"})`} />
+      </g>
+    );
+  };
+
+  const NV = "var(--color-nv)";
+  const AMBER = "#d9962b";
+  const cy = (k: number) => SP.y0 + k * SP.gap + SP.h / 2;
 
   return (
-    <figure className="my-6 overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" fontFamily={C.font} role="img" aria-label="SRE copilot fleet orchestration">
+    <figure className="my-6 overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]"
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-line)] px-4 py-2.5">
+        {STEPS.map((s, i) => (
+          <button key={s.name} type="button" onClick={() => { setStep(i); setPlaying(false); }}
+            className={`rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors ${
+              i === step ? "border-[var(--color-nv)] bg-[var(--color-nv)] text-[#0b0f05]"
+              : i < step ? "border-[var(--color-nv-dim)] text-[var(--color-nv-bright)]"
+              : "border-[var(--color-line-2)] text-[var(--color-fg-mut)]"}`}>
+            {i + 1} · {s.name}
+          </button>
+        ))}
+        <button type="button" onClick={() => { if (!playing && step === STEPS.length - 1) setStep(0); setPlaying(!playing); }}
+          className="ml-auto rounded-md border border-[var(--color-line-2)] px-2.5 py-1 text-[12px] text-[var(--color-fg-mut)] hover:text-[var(--color-fg)]">
+          {playing ? "Pause" : "Play"}
+        </button>
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img"
+        aria-label="The SRE copilot fleet: you ask, the orchestrator hands each of four sealed specialists one probe, an analyst with no tools combines their findings, and you approve the fix."
+        style={{ fontFamily: "Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" }}>
         <style>{`
-          .fo-surface{fill:var(--color-panel);} .fo-card{fill:var(--color-bg-2);}
-          .fo-ink{fill:var(--color-fg);} .fo-sub{fill:var(--color-fg-mut);}
-          .fo-phase{fill:var(--color-fg-mut);letter-spacing:.08em;} .fo-lane{fill:var(--color-fg);opacity:.025;}
-          .fo-violet{fill:${VIOLET};opacity:.14;} .fo-green{fill:${GREEN};opacity:.13;} .fo-amber{fill:${AMBER};opacity:.15;}
+          .fo-flow{animation:fo-dash .9s linear infinite}
+          @keyframes fo-dash{to{stroke-dashoffset:-12}}
+          .fo-pulse{animation:fo-pulse 1.8s ease-in-out infinite}
+          @keyframes fo-pulse{50%{stroke-opacity:.45}}
+          @media (prefers-reduced-motion: reduce){.fo-flow,.fo-pulse{animation:none}}
         `}</style>
         <defs>
-          <marker id="fa_v" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill={CYAN} /></marker>
-          <marker id="fa_g" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill={GREEN} /></marker>
-          <marker id="fa_a" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill={AMBER} /></marker>
-          <marker id="fa_s" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill={C.sub} /></marker>
+          <marker id="fo-arrow-on" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="var(--color-nv)" /></marker>
+          <marker id="fo-arrow-off" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="var(--color-fg-mut)" /></marker>
         </defs>
-        <rect x={0} y={0} width={W} height={H} className="fo-surface" />
-        <rect x={12} y={36} width={150} height={380} rx={12} className="fo-lane" />
-        <rect x={184} y={36} width={240} height={380} rx={12} className="fo-lane" />
-        <rect x={446} y={36} width={278} height={380} rx={12} className="fo-lane" />
-        <rect x={744} y={36} width={224} height={380} rx={12} className="fo-lane" />
-        <text x={87} y={26} fontSize={10.5} className="fo-phase" textAnchor="middle" fontWeight={800}>① ASK</text>
-        <text x={304} y={26} fontSize={10.5} className="fo-phase" textAnchor="middle" fontWeight={800}>② ORCHESTRATE</text>
-        <text x={585} y={26} fontSize={10.5} className="fo-phase" textAnchor="middle" fontWeight={800}>③ INVESTIGATE (parallel)</text>
-        <text x={856} y={26} fontSize={10.5} className="fo-phase" textAnchor="middle" fontWeight={800}>④ CONCLUDE</text>
 
-        {/* ask */}
-        <Node x={24} y={168} w={140} cls="fo-card" stroke={C.ctrl} title="You / an app 🧑‍💻" sub="one incident" />
-        <Arrow x1={164} y1={196} x2={204} y2={196} label="task" color={CYAN} marker="fa_v" />
-
-        {/* orchestrate — a FIXED plan (no model call to plan); each agent gets a prescribed probe */}
-        <Node x={204} y={160} w={160} h={72} cls="fo-violet" stroke={VIOLET} title="Orchestrator" sub="fixed plan · one probe each" />
-        <text x={284} y={270} fontSize={9} className="fo-sub" textAnchor="middle">no model call here —</text>
-        <text x={284} y={283} fontSize={9} className="fo-sub" textAnchor="middle">agents do the inference</text>
-
-        {/* investigate — 3 sealed telemetry agents, each its own backend */}
-        {agents.map((a, i) => {
-          const cy = a.y + 28;
+        {LANES.map((l, i) => {
+          const on = i === 3 ? step >= 3 : i === step;
           return (
             <g key={i}>
-              <Node x={ax} y={a.y} w={aw} cls="fo-green" stroke={C.nvidia} title={a.role} sub={a.egress} />
-              <Arrow x1={364} y1={196} x2={ax} y2={cy} label={i === 0 ? "probe" : undefined} color={GREEN} marker="fa_g" lx={ax - 50} ly={a.y + 6} />
-              <Arrow x1={ax + aw} y1={cy} x2={wx} y2={wy + 34 + i * 10} label={i === 0 ? "findings" : undefined} color={C.sub} marker="fa_s" dash lx={wx - 28} ly={a.y + 6} />
+              <rect x={l.x} y={36} width={l.w} height={H - 46} rx={12} fill="var(--color-fg)"
+                style={{ opacity: on ? 0.06 : 0.025, transition: "opacity .45s" }} />
+              <text x={l.x + l.w / 2} y={24} fontSize={11.5} fontWeight={800} letterSpacing=".08em" textAnchor="middle"
+                fill={on ? "var(--color-nv-bright)" : "var(--color-fg-mut)"}>
+                {["1 · ASK", "2 · ORCHESTRATE", "3 · INVESTIGATE, IN PARALLEL", "4 · CONCLUDE   5 · APPROVE"][i]}
+              </text>
             </g>
           );
         })}
 
-        {/* conclude — the no-egress analyst */}
-        <Node x={wx} y={wy} w={ww} h={wh} cls="fo-amber" stroke={AMBER} title="analyst 🧠" sub="no tools · concludes" />
-        <text x={wx + ww / 2} y={wy + 86} fontSize={9.4} className="fo-sub" textAnchor="middle">→ root cause</text>
-        <text x={wx + ww / 2} y={wy + 102} fontSize={9.4} className="fo-sub" textAnchor="middle">→ recommended image</text>
-        <Arrow x1={wx + ww / 2} y1={wy + wh} x2={wx + ww / 2} y2={wy + wh + 32} color={AMBER} marker="fa_a" />
-        <text x={wx + ww / 2} y={wy + wh + 48} fontSize={9.6} className="fo-ink" textAnchor="middle" fontWeight={700}>root cause + fix → you approve ✋</text>
+        {/* arrows first, so boxes sit on top */}
+        <Arrow i={0} tone={NV} d={`M${YOU.x + YOU.w},${YOU.y + YOU.h / 2} L${OR.x - 4},${YOU.y + YOU.h / 2}`} />
+        {SPECIALISTS.map((_, k) => (
+          <Arrow key={`o${k}`} i={1} tone={NV} d={`M${OR.x + OR.w},${OR.y + OR.h / 2} L${SP.x - 4},${cy(k)}`} />
+        ))}
+        {SPECIALISTS.map((_, k) => (
+          <Arrow key={`f${k}`} i={3} tone={NV} d={`M${SP.x + SP.w},${cy(k)} L${AN.x - 4},${AN.y + 30 + k * 23}`} />
+        ))}
+        <Arrow i={4} tone={NV} d={`M${AN.x + AN.w / 2},${AN.y + AN.h} L${AN.x + AN.w / 2},${AP.y - 4}`} />
 
-        <text x={W / 2} y={H - 14} fontSize={10.3} className="fo-sub" textAnchor="middle">Sealed pi specialists may call one sre-tools MCP tool each; a no-tools analyst concludes the root cause, every step governed and audited.</text>
+        <Box {...YOU} i={0} tone="var(--color-fg-mut)" title="You" lines={["press Investigate", "one incident"]} />
+        <Box {...OR} i={1} tone="#8b7bd8" title="Orchestrator" lines={["in this page", "fixed plan", "one probe each"]} />
+        {SPECIALISTS.map((s, k) => (
+          <Box key={s.name} x={SP.x} y={SP.y0 + k * SP.gap} w={SP.w} h={SP.h} i={2} tone={NV}
+            title={`${s.name} · pi, sealed`} lines={[`may call ${s.tools} only`]} />
+        ))}
+        <Box {...AN} i={3} tone={AMBER} title="analyst · pi" lines={["no tools at all", "combines the findings", "→ a root cause", "→ a recommended fix"]} />
+        <Box {...AP} i={4} tone="var(--color-fg-mut)" title="You approve the fix" lines={["nothing changes until you do"]} />
       </svg>
+
+      <figcaption className="min-h-[3.2rem] border-t border-[var(--color-line)] px-4 py-3 text-[14px] leading-relaxed text-[var(--color-fg)]">
+        <strong className="text-[var(--color-nv-bright)]">{step + 1} · {STEPS[step].name}.</strong> {STEPS[step].text}
+      </figcaption>
     </figure>
   );
 }

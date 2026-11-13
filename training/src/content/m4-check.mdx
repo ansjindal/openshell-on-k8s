@@ -3,11 +3,10 @@ Check what you took away from Module 4, the SRE copilot fleet.
 ## What you learned
 
 - The fleet is four read-only pi specialists (logs, metrics, traces, events), each allowed only its own sre-tools MCP tools, plus an analyst with no tools at all.
-- `fleet.txt` names each agent and its tools; `scripts/fleet.sh up` writes each policy, creates the sandbox, uploads pi, and adds the model, the MCP server, the platform skills and the role.
+- `fleet.txt` names each agent and its tools; `scripts/fleet.sh up` writes each policy, creates the sandbox, and gives pi its MCP server, the platform skills and its role.
 - The agents hold no credentials to Loki, Prometheus, Tempo or the Kubernetes API: the MCP server does, and each agent's policy decides which of its tools that agent may call.
 - The orchestrator runs a fixed plan with one prescribed tool call per specialist, then hands all findings to the analyst for a root cause and a recommended action.
 - In the incident lab you take `payments` down for real; the fleet diagnoses it from live telemetry and a human approves the fix.
-- Extending the fleet is a few small, reviewable moves: a tool in the server, a line in `fleet.txt`, a role, a skill.
 
 ## Check your understanding
 
@@ -17,5 +16,4 @@ Check what you took away from Module 4, the SRE copilot fleet.
 <Q q="The metrics agent asks the MCP server for loki_query. What happens?" options={["The server answers: it has the tool", "Its supervisor refuses the call: its policy allows only prometheus_query", "LiteLLM refuses it", "The orchestrator rewrites the call"]} answer={1} why="The MCP rule names prometheus_query only; any other tool call is refused by the supervisor and logged." />
 <Q q="What does Inject fault do in the incident lab?" options={["Sets a flag that makes shop-app return 503", "Deletes the shop-app deployment", "Runs kubectl scale deploy/payments --replicas=0, taking a real dependency down", "Blocks the payments host in shop-app's policy"]} answer={2} why="It genuinely takes payments offline; checkout calls then fail with connection refused and return 503." />
 <Q q="How does the orchestrator decide what each specialist does?" options={["A model call plans the investigation first", "A fixed plan: one prescribed tool call per specialist", "Each agent explores freely until it finds the cause", "The analyst picks the calls"]} answer={1} why="The plan is fixed, with no model call to plan; the intelligence is in each agent making and interpreting its call, and in the analyst's synthesis." />
-<Q q="To add an alerts specialist, what changes besides its role and fleet.txt line?" options={["A new network rule to Alertmanager in its policy", "A new alerts_firing tool in the sre-tools MCP server", "A new LiteLLM provider", "Nothing else"]} answer={1} why="Agents reach systems only through MCP tools: add the tool to the server, then name it on the agent's line." />
 </Quiz>

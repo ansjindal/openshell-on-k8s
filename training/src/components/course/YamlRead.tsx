@@ -6,11 +6,13 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import hljs from "highlight.js/lib/core";
 import yaml from "highlight.js/lib/languages/yaml";
+import bash from "highlight.js/lib/languages/bash";
 import "highlight.js/styles/github-dark.css";
 import { YAML_READS } from "@/lib/yaml-reads";
 import { YAML_FILES } from "@/lib/yaml-files.generated";
 
 hljs.registerLanguage("yaml", yaml);
+hljs.registerLanguage("bash", bash);
 
 // `code` and **bold** in the part texts
 function inline(text: string): ReactNode {
@@ -24,7 +26,7 @@ export function YamlRead({ id }: { id: string }) {
   const r = YAML_READS[id];
   const code = r ? (r.file ? YAML_FILES[r.file] : r.code) ?? "" : "";
   const lines = useMemo(() => code.split("\n"), [code]);
-  const html = useMemo(() => lines.map((l) => hljs.highlight(l || " ", { language: "yaml" }).value), [lines]);
+  const html = useMemo(() => lines.map((l) => hljs.highlight(l || " ", { language: r?.lang ?? "yaml" }).value), [lines, r?.lang]);
   // each part's lines: [from, to] anchors are text found in the file, in order
   const spans = useMemo(() => (r?.parts ?? []).map((p) => {
     const set = new Set<number>();
@@ -79,7 +81,7 @@ export function YamlRead({ id }: { id: string }) {
         <div className="sticky top-20">
           <div className="overflow-hidden rounded-[10px] border border-[var(--color-code-bd,var(--color-line))] bg-[var(--color-code-bg,var(--color-ink2))]">
             <div className="flex items-center gap-2 border-b border-[var(--color-line)] px-4 py-2 font-mono text-[12px] text-[var(--color-fg-mut)]">
-              <span className="rounded bg-[var(--color-run-btn)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-nv-bright)]">yaml</span>
+              <span className="rounded bg-[var(--color-run-btn)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-nv-bright)]">{r.lang === "bash" ? "shell" : "yaml"}</span>
               {r.file ?? r.label}
             </div>
             <div ref={pane} className="relative max-h-[62vh] overflow-auto py-2">

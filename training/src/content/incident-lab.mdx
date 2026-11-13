@@ -5,15 +5,30 @@ Now we put the fleet to work on a real incident — one you cause on purpose —
   time="about fifteen minutes. Everything runs from the panel on this page."
 />
 
-<Section n="1" title="How the conductor runs an investigation">
+<Section n="1" title="How the orchestrator runs an investigation">
 
-A fleet of specialists isn't useful until something *combines* them. That's a small **orchestrator** built into this page — no separate app. When you hit **Investigate**, it:
+A fleet of specialists isn't useful until something *combines* them. That's a small **orchestrator** built into this website (`training/src/app/api/orchestrate/route.ts`, about 150 lines), the one you watched in the [Overview](/learn/m4-overview). When you press **Investigate**, it does three things.
 
-1. **Dispatches**: hands each specialist the tool call for its signal and runs pi in its sandbox, so the work happens **inside the agent's seal**, with only the tools its policy allows.
-2. **Reads, for real**: each agent calls its **sre-tools** tool (`logs`→`loki_query`, `metrics`→`prometheus_query`, `traces`→`tempo_search`, `events`→`cluster_events` and `pod_status`) through the supervisor, and interprets the result with the platform skills.
-3. **Concludes**: hands all the findings to the **analyst** agent (no tools), which reasons over them into a root cause **and a recommended remediation**.
+**1. It follows a fixed plan.** It spends no model call deciding what to do: each specialist gets **one prescribed tool call** for its signal, and the page shows that call under the agent while it runs.
 
-You see **every agent's findings** *and* the analyst's concluded verdict — transparent, not a black box. The conductor never touches a backend itself; the agents do the governed reads. Watch the audit trail while it runs (`openshell logs <agent>` or Grafana, see [The Audit Trail](/learn/audit)): each agent, its one allowed host, every call logged.
+| Agent | The call it is given | What it returns |
+|---|---|---|
+| `metrics` | `prometheus_query` for the shop's request rate by HTTP code, and each Deployment's available replicas | the 5xx rate; which Deployment has no pods |
+| `logs` | `loki_query` for the shop's error lines | what failed, and which dependency |
+| `traces` | `tempo_search` for the shop's error traces | how many, which operation, how long |
+| `events` | `cluster_events` and `pod_status` for `demo` | what Kubernetes changed, which pods are missing |
+
+**2. It runs each specialist inside its own sandbox, in parallel.** It runs the `pi` that ships in the image, with the agent's role, through the same `openshell sandbox exec` you have used all along. The prompt names the call and asks for at most five bullets of findings:
+
+```bash-ref
+openshell sandbox exec -n metrics -- pi --no-session --append-system-prompt /sandbox/ROLE.md -p "<the incident, the call to make, what to report>"
+```
+
+So every model call goes through the agent's `litellm` provider and every tool call through its `sre_tools` rule. The website holds no model key and no tool access: it can only ask the agents. If a model reaches for a tool it isn't allowed, its supervisor refuses the call: the policy, not the prompt, is the boundary.
+
+**3. The analyst concludes.** When the findings are in, they go to `analyst`, run with `--no-mcp --no-tools`, which reasons over them into a **root cause** and one **recommended action**. You see every agent's findings and the analyst's verdict, live, as they arrive.
+
+Why so prescriptive? A small model given a vague task over large telemetry wanders: it lists tools, tries several, and runs long. One prescribed call per specialist keeps each run short and reliable, and the analyst does the reasoning across them.
 
 <Callout type="note" title="Why MCP tools, not raw HTTP">
 The agents never get a URL to Loki or Prometheus, and no network rule to reach them. They call named tools on the sre-tools MCP server, and each agent's policy names the tools it may call. The server holds the access; the policy decides who may use which tool; the audit log records every call.
@@ -93,7 +108,7 @@ That's the capstone: a governed, observable SRE copilot — spun up repeatably, 
 
 ## What you learned
 
-<Learned next="/learn/orchestration" nextLabel="Under the hood">
+<Learned next="/learn/m4-check" nextLabel="Summary & knowledge check">
 
 - **The conductor asks, the agents investigate**: each specialist reads live data through its own tools.
 - **The demo is real**: a shop with a real dependency, reporting metrics, logs and traces.

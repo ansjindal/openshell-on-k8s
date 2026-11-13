@@ -4,9 +4,31 @@
 // containing `from` to the first line at or after it containing `to`;
 // "=text" instead matches a whole line.
 export type YamlPart = { title: string; text: string; at: [string, string?][] };
-export type YamlReadSpec = { title: string; intro: string; file?: string; code?: string; label?: string; parts: YamlPart[] };
+export type YamlReadSpec = { title: string; intro: string; file?: string; code?: string; label?: string; lang?: "yaml" | "bash"; parts: YamlPart[] };
 
 export const YAML_READS: Record<string, YamlReadSpec> = {
+  "fleet-sh": {
+    title: "What fleet.sh does, part by part",
+    file: "scripts/fleet.sh",
+    lang: "bash",
+    intro: "The whole helper is this one script. Scroll down: each part lights up as you read about it, with the lesson where you did the same step by hand.",
+    parts: [
+      { title: "One line of the spec per agent", at: [["# fleet.sh: bring up", "./scripts/fleet.sh up fleet.txt | status"]],
+        text: "Each line of `fleet.txt` is an agent's **name** and the **sre-tools tools** it may call, or `-` for none. Everything the agent gets follows from those two columns." },
+      { title: "A policy written from the line", at: [["policy_for() {", "binaries: [ {path: /usr/lib/git-core/git-remote-http} ]${mcp}"]],
+        text: "The same files, kernel and user rules as the baseline (1.5). Network: `skill_repo`, the read-only clone of the skill repository (3.4), and, if the line names tools, the `sre_tools` MCP rule from 3.3 with **only those tools** allowed and `scale_deployment` always denied. The model comes from the provider, not from this file." },
+      { title: "pi's tools, skills and role", at: [["configure() {", "/sandbox/ROLE.md"]],
+        text: "Run inside each sandbox once it is up: add the sre-tools server to pi's `mcp.json` (3.3), clone the skills and link them into `~/.agents/skills` (3.4), and copy the agent's role from `manifests/fleet/roles/<name>.md` to `/sandbox/ROLE.md`. pi itself, and its model settings, come with the image." },
+      { title: "Read the spec", at: [["up() {", "done 3< \"$spec\""]],
+        text: "Skip blank lines and comments; keep each agent's name and tools." },
+      { title: "Create the sandboxes, two at a time", at: [["create_one() {", "--provider \"$PROVIDER\" --memory 2Gi"]],
+        text: "The same `openshell sandbox create` as 1.4, in the platform workspace `lab`, with the agent's policy and the `litellm` provider. Two at a time, because the gateway checks each new sandbox's policy before it starts it." },
+      { title: "Wait, then configure every agent in parallel", at: [["for j in $(seq 1 72)", "echo \"   ✓ ${name} ready"]],
+        text: "Every five seconds, try a harmless `exec`; once it works the sandbox is Ready, so configure it and print one line." },
+      { title: "status and down", at: [["status() {", "down()"]],
+        text: "`status` is `openshell sandbox list`; `down` deletes the agents named in the spec." },
+    ],
+  },
   "pi-agent-deployment": {
     title: "The agent's Deployment, part by part",
     file: "manifests/agents/pi-agent.yaml",

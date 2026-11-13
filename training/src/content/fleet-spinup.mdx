@@ -1,36 +1,55 @@
-You don't want to repeat 1.4 and Module 3 by hand for every specialist: workspace, sandbox, policy, pi, its model, its MCP server, its skills. So the fleet is described in **one spec** and brought up by **one helper** that does all of it, in a loop.
+Five specialists, each with its own policy, tools, skills and role, is a lot to repeat by hand. So the fleet is written down in **one file**, `fleet.txt`, and brought up by **one script**, `scripts/fleet.sh`, which runs the same steps you ran by hand in Modules 1 and 3, once per agent.
 
 <BeforeYouStart
-  will="read the one-file fleet spec, bring five pi agents up with one helper, see them on the cluster, read one agent's MCP rule and its role."
-  time="about ten minutes, most of it waiting for the sandboxes to be Ready."
+  will="read fleet.txt and fleet.sh, bring five pi agents up with one command, see every agent's reach on one page, and read one agent's MCP rule and role."
+  time="about fifteen minutes, most of it waiting for the sandboxes to be Ready."
 />
 
-<Section n="1" title="Describe the fleet in one spec, one agent per line">
+<Section n="1" title="Read the fleet's spec, fleet.txt">
 
-`fleet.txt` is the whole fleet: **one agent per line, two whitespace-separated columns**, the agent's name and the sre-tools MCP tools it may call:
+`fleet.txt`, at the top of the repository, is the whole fleet: **one agent per line**, its name and the sre-tools MCP tools it may call.
 
-```text
+<Step n="1" title="Print fleet.txt">
+
+```bash
+cat ~/openshell-on-k8s/fleet.txt
+```
+<Output>
+<ExpectedOutput>
+{`# The SRE copilot fleet: one pi agent per line, whitespace-separated columns:
+#   name      sre-tools MCP tools this agent may call (comma-separated, or "-" for none)
+# Each agent gets its role from manifests/fleet/roles/<name>.md, the platform
+# skills from the skill repository, and a policy that allows ONLY its tools.
 logs      loki_query
 metrics   prometheus_query
 traces    tempo_search
 events    cluster_events,pod_status
-analyst   -
-```
+analyst   -`}
+</ExpectedOutput>
+</Output>
 
-- **`name`**: the sandbox's name, and its role file, `manifests/fleet/roles/<name>.md`.
-- **`tools`**: the sre-tools tools its policy allows, comma-separated; `-` means none. The analyst has none: it only reasons over the others' findings.
+- **The name** is the sandbox's name, and picks its role file, `manifests/fleet/roles/<name>.md`.
+- **The tools** are what its policy will allow, comma-separated; `-` means none. The analyst has none: it only reasons over the others' findings.
+
+</Step>
 
 </Section>
 
-<Section n="2" title="Bring the fleet up with one command">
+<Section n="2" title="Read what fleet.sh does with each line">
 
-For each line, `scripts/fleet.sh`:
+`scripts/fleet.sh` turns each line into a specialist:
 
-1. writes a **policy** that allows only a read-only clone of the skill repository and, if the agent has tools, the sre-tools MCP server for **those tools only** (the same `protocol: mcp` rule as 3.3, with `scale_deployment` always denied);
-2. creates the sandbox in the platform workspace, `lab`, with the `litellm` provider;
-3. adds the sre-tools server to pi's `mcp.json` (pi ships in the sandbox image, already pointed at LiteLLM), clones the **platform skills** into `~/.agents/skills`, and writes the agent's **role** to `/sandbox/ROLE.md`.
+<Diagram id="fleet-line" n="4.1" caption="For each line, fleet.sh writes a policy from the line's tools, creates a sandbox with it, then gives pi inside the sandbox its MCP server, the platform skills and its role. Every piece is a step you already did by hand." />
 
-The agents need no package egress at all: everything they run comes with the image.
+Read the script itself. It's short, and every part is something you've done before:
+
+<YamlRead id="fleet-sh" />
+
+</Section>
+
+<Section n="3" title="Bring the fleet up with one command">
+
+Now run it. The agents need no package egress at all: everything they run comes with the image.
 
 <Step n="1" title="Run fleet.sh with the spec">
 
@@ -82,9 +101,24 @@ analyst  2026-11-13 11:32:24  Ready`}
 
 </Section>
 
-<Section n="3" title="Look at what the helper created">
+<Section n="4" title="See every agent's reach on one page">
 
-Now look at the fleet from Kubernetes and from the gateway: the pods, one agent's MCP rule and one agent's role.
+The panel below reads the fleet live from the cluster. Each card is one agent:
+
+- **Status**: `Ready` means the gateway has the sandbox up and its policy loaded.
+- **May reach**: the hosts in its *effective* policy. Every agent reaches LiteLLM (through the provider) and the skill repository; the specialists also reach the **sre-tools** MCP server.
+- **May call**: the tools its MCP rule allows, exactly the ones on its line of `fleet.txt`.
+- **ROLE.md**: the role the agent was given.
+
+<FleetView />
+
+There's no honor system here. If the `metrics` agent tried `loki_query`, its supervisor would refuse the call, and the denial would be in its audit log, with the tool's name and the rule. No agent may call `scale_deployment`.
+
+</Section>
+
+<Section n="5" title="Look closer at one agent">
+
+Behind each card: the pods on the cluster, the MCP rule in its policy, and its role.
 
 <Step n="1" title="List the fleet's pods">
 
@@ -199,11 +233,10 @@ Adding an agent is one line in <code>fleet.txt</code> and one role file. It neve
 
 ## What you learned
 
-<Learned next="/learn/fleet-status" nextLabel="The fleet at a glance">
+<Learned next="/learn/incident-lab" nextLabel="Investigate an incident">
 
-- **One spec, one helper.** `fleet.txt` names each agent and its tools; `fleet.sh` does the rest.
-- **pi comes with the image**: the agents need no package egress.
-- **The policy makes the specialist**: an MCP rule that names its tools, plus the skill repository.
-- **Roles and skills are files** you can read, review and change in git.
+- **One spec, one script.** `fleet.txt` names each agent and its tools; `fleet.sh` writes the policy, creates the sandbox and configures pi, the same steps you did by hand.
+- **The policy makes the specialist**: an MCP rule that names its tools, plus a read-only clone of the skills.
+- **Every agent's reach is readable**, on its card and in its policy; roles and skills are files in git.
 
 </Learned>

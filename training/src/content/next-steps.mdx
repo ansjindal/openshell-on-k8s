@@ -2,11 +2,13 @@ You've gone end to end: confirmed the stack, created and sealed sandboxes, given
 
 ## Tear down, when you're actually done
 
-```bash-ref
+Run this only when you're done with the whole lab. It deletes the `agent-*` sandboxes in the platform workspace, `lab`, starting with `agent-0`, which Module 2 uses:
+
+```bash
 ./scripts/fleet down
 ```
 
-Deleting a sandbox removes its workload pod, its supervisor pod and its policy. This deletes every fleet sandbox, so run it only when you're done with the launchable.
+Deleting a sandbox removes its workload pod, its supervisor pod and its policy. The Module 4 fleet has its own teardown, `./scripts/fleet.sh down fleet.txt`, and the `dev` sandboxes go with `openshell --workspace dev sandbox delete <name>`.
 
 ## Make the gateway highly available
 
@@ -65,19 +67,3 @@ Together the two are the **NVIDIA Open Agent Safety Platform**. You deploy the l
 <Callout type="tip" title="The takeaway">
 Sandboxed agents on Kubernetes come down to a few ideas: a sandbox is a pair of pods, the supervisor owns the agent's network, credentials are placeholders until a policy says otherwise, and every decision is written down. Once that clicks, the rest is ordinary Kubernetes.
 </Callout>
-
-## Scaling OpenShell up
-
-When one sandbox becomes many teams, three questions come up. Each scene answers one.
-
-**Dedicated or shared supervisors?** By default each sandbox gets its own supervisor pod; a shared deployment can host many, at the cost of a wider blast radius.
-
-<ReadScene scene="topology" />
-
-**A highly available control plane.** Two or more gateway replicas on PostgreSQL; each supervisor keeps one session to one replica, and the others relay to it.
-
-<ReadScene scene="ha" />
-
-**Identities for people and workloads.** Keycloak (OIDC) for people; SPIFFE for sandboxes, so a sandbox can trade a short-lived identity for upstream tokens and carry no long-lived secret.
-
-<ReadScene scene="connect" />

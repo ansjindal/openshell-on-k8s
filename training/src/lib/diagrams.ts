@@ -420,6 +420,25 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { from: "v3", to: "v4", layer: 0, kind: "ok" },
     ],
   },
+  // ---- 4.2: one line of fleet.txt, and everything fleet.sh makes from it
+  "fleet-line": {
+    title: "One line of fleet.txt, one specialist",
+    w: 960, h: 330,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "txt", icon: "i-doc", x: 0, y: 125, w: 220, h: 80, label: "One line of fleet.txt", sub: "metrics   prometheus_query", layer: 0 },
+      { id: "sh", icon: "i-term", x: 270, y: 115, w: 190, h: 100, label: "scripts/fleet.sh", sub: "for each line:\nthe same steps you\ndid by hand", layer: 0, kind: "accent" },
+      { id: "pol", icon: "i-shield", x: 520, y: 0, w: 440, h: 96, label: "A policy for metrics", sub: "skill_repo: a read-only clone of the skills (3.4)\nsre_tools: prometheus_query only,\nscale_deployment denied (3.3)", layer: 0 },
+      { id: "sb", icon: "i-cube", x: 520, y: 117, w: 440, h: 96, label: "A sandbox named metrics, in workspace lab", sub: "openshell sandbox create, as in 1.4\nthe litellm provider for the model\npi from the image", layer: 0 },
+      { id: "in", icon: "i-bot", x: 520, y: 234, w: 440, h: 96, label: "Inside it, for pi", sub: "~/.pi/agent/mcp.json: the sre-tools server\n~/.agents/skills: the platform skills\n/sandbox/ROLE.md: from manifests/fleet/roles/metrics.md", layer: 0 },
+    ],
+    edges: [
+      { from: "txt", to: "sh", layer: 0, kind: "ok" },
+      { from: "sh", to: "pol", layer: 0, kind: "ok" },
+      { from: "sh", to: "sb", layer: 0, kind: "ok" },
+      { from: "sh", to: "in", layer: 0, kind: "ok" },
+    ],
+  },
   // ---- 3.4 §1: a skill's path from the platform team to pi in the sandbox
   "skill-flow": {
     title: "From the skill repository to the sandbox",
@@ -674,28 +693,4 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
 
-  m4: {
-    title: "Module 4: a fleet of sealed specialists",
-    w: 600, h: 390,
-    layers: [{ n: 0, name: "You, the SRE" }, { n: 1, name: "The challenge" }, { n: 2, name: "Spin up the fleet" }, { n: 3, name: "Fleet status" }, { n: 4, name: "Investigate" }, { n: 5, name: "Under the hood" }, { n: 6, name: "Build your own" }],
-    nodes: [
-      { id: "you", x: 10, y: 20, w: 150, h: 56, label: "You · SRE", sub: "approve the fix", layer: 0 },
-      { id: "an", x: 215, y: 20, w: 170, h: 56, label: "analyst", sub: "plans · combines", layer: 2, kind: "accent" },
-      { id: "svc", x: 420, y: 20, w: 170, h: 56, label: "incident-desk", sub: "payments → 0 replicas", layer: 1, kind: "deny" },
-      { id: "logs", x: 10, y: 130, w: 138, h: 56, label: "logs", sub: "loki_query", layer: 2 },
-      { id: "met", x: 158, y: 130, w: 138, h: 56, label: "metrics", sub: "prometheus_query", layer: 2 },
-      { id: "tr", x: 306, y: 130, w: 138, h: 56, label: "traces", sub: "tempo_search", layer: 2 },
-      { id: "ev", x: 454, y: 130, w: 136, h: 56, label: "events", sub: "cluster_events", layer: 2 },
-      { id: "st", x: 10, y: 230, w: 180, h: 56, label: "fleet status", sub: "Ready · tools · role", layer: 3 },
-      { id: "rc", x: 210, y: 230, w: 180, h: 56, label: "root cause", sub: "scaled to 0 → you fix it", layer: 4, kind: "accent" },
-      { id: "orch", x: 410, y: 230, w: 180, h: 56, label: "orchestrator", sub: "plan · tool calls · synthesise", layer: 5 },
-      { id: "new", x: 210, y: 320, w: 180, h: 56, label: "your agent", sub: "+ role · tools · skills", layer: 6, dashed: true },
-    ],
-    edges: [
-      { from: "you", to: "an", label: "fleet task", layer: 2, kind: "ok" },
-      { from: "an", to: "logs", layer: 2, kind: "dash" }, { from: "an", to: "met", layer: 2, kind: "dash" },
-      { from: "an", to: "tr", layer: 2, kind: "dash" }, { from: "an", to: "ev", layer: 2, kind: "dash" },
-      { from: "met", to: "rc", label: "evidence", layer: 4, kind: "ok", dx: 26 },
-    ],
-  },
 };
