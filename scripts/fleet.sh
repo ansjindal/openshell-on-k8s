@@ -83,7 +83,9 @@ YAML
 # Inside a Ready sandbox: pi, its model and MCP config, the skills, the role.
 configure() {                        # $1 = name, $2 = tools
   local name="$1" tools="$2"
-  ox "$name" "npm install --prefix /sandbox/pi --registry http://${REGISTRY}/ --no-audit --no-fund @earendil-works/pi-coding-agent@${PI_VERSION} | tail -1"
+  # One socket: many parallel connections to the same in-cluster name race the
+  # supervisor's DNS mappings (OpenShell 0.1.7) and get denied; one at a time is fine.
+  ox "$name" "npm install --prefix /sandbox/pi --registry http://${REGISTRY}/ --maxsockets 1 --no-audit --no-fund @earendil-works/pi-coding-agent@${PI_VERSION} | tail -1"
   ox "$name" "mkdir -p ~/.pi/agent && printf '%s' '{\"providers\":{\"lab\":{\"baseUrl\":\"http://litellm.litellm.svc.cluster.local:4000/v1\",\"api\":\"openai-completions\",\"apiKey\":\"\$LITELLM_API_KEY\",\"compat\":{\"supportsDeveloperRole\":false,\"supportsReasoningEffort\":false},\"models\":[{\"id\":\"default\"}]}}}' > ~/.pi/agent/models.json"
   if [[ "$tools" != "-" && -n "$tools" ]]; then
     ox "$name" "printf '%s' '{\"mcpServers\":{\"sre-tools\":{\"url\":\"${MCP_URL}\"}}}' > ~/.pi/agent/mcp.json"
