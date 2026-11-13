@@ -39,6 +39,9 @@ await app.prepare();
 // eslint-disable-next-line no-control-regex
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
 const CHECK_MAX_OUTPUT = 20000;
+// A Run is stopped after this long. pi investigations (several tool calls and
+// model turns) and steps that wait for pods take well over 25 s.
+const CHECK_TIMEOUT_MS = 180000;
 
 // Run an author-supplied lab "Check"/notebook-run command, streaming chunks to
 // onChunk as they arrive (some commands, e.g. `sandbox create`, print progress
@@ -55,7 +58,6 @@ function runCheckStream(cmd, onChunk) {
       // visible as literal text in the output panel. Ask nicely first; ANSI_RE
       // below strips whatever ignores that request.
       env: { ...LAB_BASE_ENV, KUBECONFIG: LAB_KUBECONFIG, LAB_CWD, NO_COLOR: "1", TERM: "dumb" },
-      timeout: 25000,
       // stdin 'ignore', not the 'pipe' default: node never writes to or closes
       // a piped child stdin, so anything that reads stdin until EOF before
       // exiting (openshell sandbox exec included) hangs forever waiting for a
@@ -71,10 +73,16 @@ function runCheckStream(cmd, onChunk) {
       total += s.length;
       onChunk(stream, s);
     };
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; try { p.kill("SIGTERM"); } catch {} }, CHECK_TIMEOUT_MS);
     p.stdout.on("data", (d) => send("stdout", d));
     p.stderr.on("data", (d) => send("stderr", d));
-    p.on("close", (code) => resolve(code ?? 1));
-    p.on("error", (e) => { onChunk("stderr", String(e)); resolve(1); });
+    p.on("close", (code) => {
+      clearTimeout(timer);
+      if (timedOut) onChunk("stderr", `\nStopped after ${CHECK_TIMEOUT_MS / 60000} minutes, the time limit for a Run. Run it in the Cluster shell to let it finish.`);
+      resolve(code ?? 1);
+    });
+    p.on("error", (e) => { clearTimeout(timer); onChunk("stderr", String(e)); resolve(1); });
   });
 }
 
@@ -95,6 +103,10 @@ const server = createServer((req, res) => {
       // arrives so long-running commands (sandbox create, …) show progress
       // instead of one dump at the end.
       res.writeHead(200, { "content-type": "application/x-ndjson", "cache-control": "no-cache" });
+      // A heartbeat line while a command is quiet (pi prints nothing until it
+      // answers), so proxies in front of the site don't drop an idle response.
+      // The client ignores lines without a chunk.
+      const beat = setInterval(() => res.write(JSON.stringify({ ping: true }) + "\n"), 15000);
       try {
         const exitCode = await runCheckStream(cmd, (stream, chunk) => {
           res.write(JSON.stringify({ stream, chunk }) + "\n");
@@ -102,6 +114,8 @@ const server = createServer((req, res) => {
         res.end(JSON.stringify({ done: true, exitCode }) + "\n");
       } catch (e) {
         res.end(JSON.stringify({ done: true, exitCode: 1, error: String(e) }) + "\n");
+      } finally {
+        clearInterval(beat);
       }
     });
     return;
