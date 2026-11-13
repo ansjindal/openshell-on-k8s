@@ -49,8 +49,9 @@ server:
       # Operator mode: a workspace is a namespace of the same name, created
       # ahead of time, labelled openshell.ai/workspace=true and given the
       # openshell-workspace chart (roles/10-cli_providers does it for the
-      # platform workspace, lab; the lessons do it for dev and team-a). The
-      # gateway discovers labelled namespaces and creates sandboxes in them.
+      # platform workspace, lab; the lessons do it for dev). The label is the
+      # gateway's allowlist: it creates sandboxes only in labelled namespaces
+      # of workspaces made with `openshell workspace create`.
       # (managed = the gateway creates openshell-<id>-<workspace> namespaces
       # itself; shared = one namespace for every workspace.)
       workspaceMode: operator

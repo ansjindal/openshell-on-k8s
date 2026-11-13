@@ -3,7 +3,7 @@ from lib import *
 
 S = Svg(1600, 1090, "One VM, the whole platform",
         "OpenShell on Kubernetes lab architecture: a single Brev VM running k3s with Envoy Gateway, the OpenShell gateway and console, "
-        "one namespace per workspace, of the same name, prepared with the openshell-workspace chart (lab with agent-0 and agent-1, team-a with lab-a), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.")
+        "one namespace per workspace, of the same name, prepared with the openshell-workspace chart (lab with agent-0 and agent-1, dev with pi-agent), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.")
 S.text(24, 38, "One VM, the whole platform", 26, True)
 S.text(24, 64, "OpenShell on Kubernetes training lab: everything below runs on a single Brev VM", 15, False, SUB)
 
@@ -113,11 +113,11 @@ S.box(924, 598, 180, 128, "supervisor pod", ["policy L4 / L7", "credential injec
 S.arrow("M880 676 H922", GREEN_D, both=True, flow="3")
 S.label(901, 664, "port", GREEN_D, size=12.5, flow="3")
 
-S.ns(472, 758, 660, 72, "team-a", green=True, sub="· workspace team-a · openshell-workspace chart")
-S.raw('<g class="dg-node" data-node="lab-a">')
+S.ns(472, 758, 660, 72, "dev", green=True, sub="· workspace dev · openshell-workspace chart")
+S.raw('<g class="dg-node" data-node="pi-agent">')
 S.rect(872, 764, 248, 60, fill="#fff", stroke=GREEN, sw=1.4, rx=8)
 S.icon("i-cube", 880, 770, 18, GREEN_D)
-S.text(902, 786, "lab-a", 14, True)
+S.text(902, 786, "pi-agent", 14, True)
 S.text(882, 810, "Ready", 13, True, GREEN_D)
 S.raw('</g>')
 pair(958, 774)

@@ -28,8 +28,8 @@ helm_version: "v3.22.1"
 # name, labelled openshell.ai/workspace=true and given the openshell-workspace
 # chart (sandbox ServiceAccount, RBAC for the gateway, SSH NetworkPolicy).
 # openshell_workspace is the platform's own workspace (agent-0, the fleet); the
-# CLI defaults to it through OPENSHELL_WORKSPACE. Learners create more (dev,
-# team-a) in the lessons, the same way.
+# CLI defaults to it through OPENSHELL_WORKSPACE. Learners create their own
+# (dev) in the lessons, the same way.
 openshell_gateway_id: lab
 openshell_workspace: lab
 openshell_workspace_label: "openshell.ai/workspace=true"

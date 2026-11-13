@@ -21,7 +21,7 @@ export const FIGURE_NOTES: Record<string, Record<string, string>> = {
     "agent-0": "A sandbox in workspace lab: a workload pod and its supervisor pod, in the namespace lab.",
     "agent-1": "Another sandbox in the same workspace, with its own workload pod, its own supervisor pod and its own policy.",
     "more sandboxes": "Every sandbox you create in this workspace lands here, each as its own workload + supervisor pair.",
-    "lab-a": "A sandbox in workspace team-a, so it runs in the namespace team-a with its own pair of pods. learner is a member of team-a.",
+    "pi-agent": "Your sandbox from 1.4, in your workspace dev, so it runs in the namespace dev with its own pair of pods.",
     "workload pod": sandbox,
     "supervisor pod": supervisor,
     "LiteLLM": "The model endpoint agents reach through the litellm provider. The sandbox holds a placeholder; the supervisor injects the real key.",

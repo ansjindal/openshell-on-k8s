@@ -24,14 +24,14 @@ export const FIGURE_TOURS: Record<string, TourPath[]> = {
     {
       title: "How a sandbox is made", flow: "2",
       intro: "One request to the gateway becomes a pair of pods in the workspace's namespace.",
-      nodes: ["openshell CLI", "OpenShell Console", "OpenShell gateway 0.1.7", "agent-sandbox controller", "Kyverno", "cert-manager", "agent-0", "agent-1", "lab-a", "workload pod", "supervisor pod", "more sandboxes"],
+      nodes: ["openshell CLI", "OpenShell Console", "OpenShell gateway 0.1.7", "agent-sandbox controller", "Kyverno", "cert-manager", "agent-0", "agent-1", "pi-agent", "workload pod", "supervisor pod", "more sandboxes"],
       steps: [
         { x: 40, y: 228, title: "You ask", text: "From the CLI, or the Console with your Keycloak token, you ask for a sandbox: a name, a policy, its providers." },
         { x: 88, y: 660, title: "The gateway", text: "Checks who you are, stores the sandbox and its policy, and decides which workspace it belongs to." },
         { x: 472, y: 510, title: "The workspace namespace", text: "In operator mode each workspace is a namespace prepared with the openshell-workspace chart (lab here); the gateway starts the supervisor pod in it." },
         { x: 486, y: 890, title: "The controller", text: "The gateway writes a Sandbox resource; the agent-sandbox controller turns it into the workload pod." },
         { x: 826, y: 890, title: "Kyverno", text: "Checks the pod on admission: no host network, no host PID, no host IPC." },
-        { x: 676, y: 566, title: "A pair, Ready", text: "Workload pod and supervisor pod, side by side. agent-1 and lab-a (in team-a's namespace) are made the same way." },
+        { x: 676, y: 566, title: "A pair, Ready", text: "Workload pod and supervisor pod, side by side. agent-1, and your pi-agent in dev's namespace, are made the same way." },
         { x: 88, y: 890, title: "cert-manager", text: "Issued the certificates the gateway and the CLI use for mTLS." },
       ],
     },

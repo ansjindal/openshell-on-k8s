@@ -34,16 +34,15 @@ export const CURRICULUM: Part[] = [
   },
   {
     id: "m2", n: 2, title: "Customize & operate agents", accent: "nv", role: "You are the agent developer, then the security reviewer.",
-    subtitle: "Customize agents with your own credentials, a persona and real tasks; then operate them: read the audit trail, use the web console, and give people roles and workspaces.",
+    subtitle: "Customize agents with your own credentials, a persona and real tasks; then operate them: read the audit trail and use the web console.",
     lessons: [
-      L("m2-overview", "Overview", "What this module builds: your own provider, a persona, skills, tasks, then the audit trail, the console and people with roles.", 5),
+      L("m2-overview", "Overview", "What this module builds: your own provider, a persona, skills, tasks, then the audit trail and the console.", 5),
       L("providers", "Your own provider", "Write a profile, attach it live, watch the real token arrive upstream, rotate it.", 10, "lab"),
       L("workspace", "Give it a persona: AGENTS.md", "A Markdown file pi reads on every run; what a persona changes, and what it does not.", 6, "lab"),
       L("run-a-task", "Run a task", "The fleet helper, then hand agents a prompt and read what they did.", 8, "lab"),
       L("audit", "The audit trail", "Every allow and deny as an OCSF event: CLI, Loki, Grafana; agent traces in Tempo.", 10, "lab"),
       L("console", "The OpenShell Console", "Sandboxes, logs, terminal, policy revisions and the proposals inbox.", 8, "lab"),
-      L("access-control", "Users, roles & workspaces", "Keycloak identities on the gateway: an admin, a user, a workspace.", 10, "lab"),
-      L("m2-check", "Summary & knowledge check", "Providers, persona, skills, audit, identities and workspaces.", 8, "check"),
+      L("m2-check", "Summary & knowledge check", "Providers, persona, tasks, audit and the console.", 8, "check"),
     ],
   },
   {

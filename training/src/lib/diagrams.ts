@@ -634,8 +634,8 @@ export const DIAGRAMS: Record<string, Diagram> = {
   // diagram fills the sticky panel beside the cards.
   m2: {
     title: "Module 2: customize agents, then operate them",
-    w: 600, h: 470,
-    layers: [{ n: 0, name: "The sandbox" }, { n: 1, name: "Your own provider" }, { n: 2, name: "A persona" }, { n: 3, name: "Run a task" }, { n: 4, name: "The audit trail" }, { n: 5, name: "The Console" }, { n: 6, name: "Users, roles & workspaces" }],
+    w: 600, h: 385,
+    layers: [{ n: 0, name: "The sandbox" }, { n: 1, name: "Your own provider" }, { n: 2, name: "A persona" }, { n: 3, name: "Run a task" }, { n: 4, name: "The audit trail" }, { n: 5, name: "The Console" }],
     nodes: [
       { id: "soul", x: 10, y: 25, w: 170, h: 62, label: "AGENTS.md", sub: "persona", layer: 2 },
       { id: "wl", x: 210, y: 20, w: 180, h: 72, label: "agent-0", sub: "pi · placeholders", layer: 0 },
@@ -646,8 +646,6 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { id: "loki", x: 10, y: 215, w: 170, h: 62, label: "Loki · Grafana", sub: "every allow and deny", layer: 4, kind: "ext" },
       { id: "con", x: 10, y: 310, w: 170, h: 62, label: "OpenShell Console", sub: "sandboxes · proposals", layer: 5, kind: "ext" },
       { id: "gw", x: 210, y: 310, w: 180, h: 62, label: "OpenShell gateway", sub: "one API, CLI and web", layer: 0, kind: "accent" },
-      { id: "wsB", x: 420, y: 310, w: 170, h: 62, label: "workspace team-a", sub: "its own namespace", layer: 6 },
-      { id: "kc", x: 10, y: 400, w: 170, h: 56, label: "Keycloak", sub: "people · roles", layer: 6, kind: "ext" },
     ],
     edges: [
       { from: "wl", to: "sup", layer: 0, kind: "dash" },
@@ -658,8 +656,6 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { from: "task", to: "sup", layer: 3, kind: "ok" },
       { from: "sup", to: "loki", label: "OCSF", layer: 4, kind: "ok" },
       { from: "con", to: "gw", layer: 5, kind: "ok" },
-      { from: "kc", to: "con", label: "sign-in", layer: 6, kind: "ok" },
-      { from: "gw", to: "wsB", layer: 6, kind: "ok" },
     ],
   },
 
