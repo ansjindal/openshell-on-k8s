@@ -11,6 +11,8 @@ In [0.4](/learn/agent-on-k8s) you ran pi as an ordinary pod: it reached any host
 
 You don't write Kubernetes objects for a sandbox: you ask the **gateway** for one with the `openshell` CLI, and it does the rest.
 
+<Diagram id="sandbox-create" n="1.6" caption="One command, three results: the gateway stores the sandbox and its policy, writes a Sandbox resource that the controller turns into the workload pod, and starts the supervisor pod that becomes its only way out." />
+
 <Step n="1" title="Read the create command, flag by flag, and run it">
 
 | Part | What it does |
@@ -65,6 +67,8 @@ For that one command, the gateway:
 1. stored the sandbox and its policy (revision 1);
 2. wrote a `Sandbox` resource in the workspace's namespace, `dev`, which the **agent-sandbox controller** turned into the **workload pod** `pi-agent`, where the agent runs;
 3. started the **supervisor pod** `os-supervisor-<id>`, which fetched the policy and the provider's credential and became the workload's only way out.
+
+<Diagram id="sandbox-pair" n="1.7" caption="The two pods share a pair id. The NetworkPolicies the gateway made let the workload talk only to its own supervisor, and the supervisor lets out only what the policy allows." />
 
 <Step n="1" title="List the Sandbox resources in dev">
 
@@ -223,6 +227,8 @@ Type those commands at the sandbox prompt, not in the Cluster shell: there they'
 <Section n="4" title="Run pi sealed: the model works, nothing else does">
 
 In 0.4 the pod installed pi from npm at start. The sandbox image ships it already, and its network is closed, so there's nothing to install. Run it and repeat what it did in 0.4: the model call goes through, everything else stops at the boundary. (Installing from npm, and opening the door it needs, is the first thing you do in [1.5](/learn/policy).)
+
+<Diagram id="pi-sealed" n="1.8" caption="What the next steps show: pi's model call matches the provider's rule and reaches LiteLLM with the real key; the curl its bash tool runs has no rule and gets no response; both decisions land in the audit log." />
 
 <Step n="1" title="See how pi is pointed at LiteLLM, with the placeholder">
 

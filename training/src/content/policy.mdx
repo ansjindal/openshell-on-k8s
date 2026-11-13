@@ -14,6 +14,8 @@ The workload pod has no network of its own (the NetworkPolicy from 1.4 lets it r
 - **L7**: for `protocol: rest`, which HTTP method and path, even inside TLS.
 - **Live**: network rules are **dynamic**; a new revision loads into a running sandbox without a restart. Files and process stay as they were at creation.
 
+<Diagram id="rule-check" n="1.9" caption="Every connection from the workload goes through the supervisor: first the door (host, port and program), then, for HTTP endpoints with protocol rest, the request itself (method and path). Anything without a match is refused and logged." />
+
 A few details the steps below rely on:
 
 - **`enforcement`** defaults to `audit` (log, but allow). Write `enforce` to block.
@@ -113,6 +115,8 @@ Installing at run time is here to show a policy door at work. For agents you run
 
 Before changing anything, read the policy `pi-agent` has now: its version, then everything it allows.
 
+<Diagram id="effective-policy" n="1.10" caption="What the gateway enforces is your file plus what attached providers add: here npm_registry from pi-agent.yaml and _provider_litellm from the litellm provider. Everything else is denied." />
+
 <Step n="1" title="Show the policy's version and status">
 
 All commands here carry `--workspace dev`, the workspace `pi-agent` lives in. **`openshell policy get`** asks the gateway for a sandbox's current policy:
@@ -176,6 +180,8 @@ openshell --workspace dev policy get pi-agent --full
 <Section n="3" title="Open GitHub's API for GET only, while it runs">
 
 Open one HTTP API for one method only, while the sandbox keeps running, and see both sides of the rule.
+
+<Diagram id="github-l7" n="1.11" caption="One read-only rule for curl and api.github.com: GET passes and GitHub answers; POST to the same host, from the same program, is refused by the supervisor at L7." />
 
 <Step n="1" title="Try GitHub first: no response">
 
@@ -250,6 +256,8 @@ HTTP 403`}
 <Section n="4" title="Open a non-HTTP door with a plain TCP rule">
 
 Not everything is HTTP: a database, an MQTT broker, any raw TCP service has no methods or paths to inspect. For those the policy has a plainer endpoint: **host and port only**, an L4 allow.
+
+<Diagram id="tcp-l4" n="1.12" caption="A TCP rule opens one host and port for the programs it names, without reading the traffic. Another host, or the same host from another program, is still refused." />
 
 <Step n="1" title="Preview the rule before applying it">
 
@@ -342,6 +350,8 @@ That program check is what stops an agent from sending data out through an unexp
 <Section n="5" title="Read every change as a numbered revision">
 
 Every `policy set` and `policy update` made a new revision. Read them back.
+
+<Diagram id="policy-revisions" n="1.13" caption="Each change made a new numbered revision of pi-agent's policy; the newest is loaded, the older ones stay readable." />
 
 <Step n="1" title="List the policy history">
 

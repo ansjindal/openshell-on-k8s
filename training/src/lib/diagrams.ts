@@ -310,6 +310,162 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { from: "gw", to: "role", layer: 0, kind: "ok" },
     ],
   },
+  // ---- 1.4 §1: what one `sandbox create` does
+  "sandbox-create": {
+    title: "What sandbox create does",
+    w: 960, h: 300,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "you", icon: "i-term", x: 0, y: 105, w: 190, h: 90, label: "sandbox create", sub: "openshell, the lab CLI\n--workspace dev", layer: 0 },
+      { id: "gw", icon: "i-shield", x: 275, y: 95, w: 210, h: 110, label: "OpenShell gateway", sub: "stores the sandbox,\nits policy (revision 1)\nand its provider", layer: 0, kind: "accent" },
+      { id: "ns", x: 540, y: 0, w: 420, h: 300, label: "namespace dev", layer: 0, kind: "group" },
+      { id: "cr", icon: "i-doc", x: 556, y: 36, w: 158, h: 76, label: "Sandbox resource", sub: "pi-agent", layer: 0 },
+      { id: "wl", icon: "i-bot", x: 775, y: 36, w: 180, h: 76, label: "workload pod", sub: "pi-agent\nthe agent runs here", layer: 0 },
+      { id: "sup", icon: "i-shield", x: 775, y: 196, w: 180, h: 86, label: "supervisor pod", sub: "os-supervisor-<id>\nthe policy, the real key", layer: 0, kind: "accent" },
+    ],
+    edges: [
+      { from: "you", to: "gw", label: "mTLS", layer: 0, kind: "ok" },
+      { from: "gw", to: "cr", label: "writes", layer: 0, kind: "ok" },
+      { from: "cr", to: "wl", label: "controller", layer: 0, kind: "ok" },
+      { from: "gw", to: "sup", label: "starts", layer: 0, kind: "ok" },
+      { from: "wl", to: "sup", label: "only way out", layer: 0, kind: "dash" },
+    ],
+  },
+  // ---- 1.4 §2: the pod pair and the NetworkPolicy between them
+  "sandbox-pair": {
+    title: "One sandbox, two pods",
+    w: 960, h: 300,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "ns", x: 0, y: 0, w: 680, h: 300, label: "namespace dev", layer: 0, kind: "group" },
+      { id: "wl", icon: "i-bot", x: 20, y: 40, w: 250, h: 96, label: "pi-agent", sub: "workload pod\nboundary-role=workload\nboundary-pair=<id>", layer: 0 },
+      { id: "sup", icon: "i-shield", x: 410, y: 40, w: 250, h: 96, label: "os-supervisor-<id>", sub: "supervisor pod\nboundary-role=supervisor\nboundary-pair=<id>", layer: 0, kind: "accent" },
+      { id: "np", icon: "i-route", x: 20, y: 180, w: 640, h: 96, label: "NetworkPolicies the gateway made", sub: "os-control-<id>: the workload may talk only to its own supervisor\nopenshell-sandbox-workloads, -supervisors: the defaults for each role\nopenshell-workspace-sandbox-ssh (from the chart): only the gateway reaches sandboxes", layer: 0 },
+      { id: "out", icon: "i-globe", x: 740, y: 40, w: 220, h: 96, label: "Everything else", sub: "LiteLLM, registries, APIs:\nonly what the policy allows", layer: 0, kind: "ext" },
+    ],
+    edges: [
+      { from: "wl", to: "sup", label: "same pair id", layer: 0, kind: "ok" },
+      { from: "sup", to: "out", label: "policy", layer: 0, kind: "ok" },
+    ],
+  },
+  // ---- 1.4 §4: pi sealed, the model works, curl doesn't, both logged
+  "pi-sealed": {
+    title: "pi, sealed",
+    w: 960, h: 340,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "sb", x: 0, y: 0, w: 300, h: 330, label: "sandbox pi-agent", layer: 0, kind: "group" },
+      { id: "pi", icon: "i-bot", x: 18, y: 40, w: 264, h: 90, label: "pi asks the model", sub: "POST /v1/chat/completions\nLITELLM_API_KEY: a placeholder", layer: 0 },
+      { id: "curl", icon: "i-term", x: 18, y: 200, w: 264, h: 90, label: "pi's bash tool runs curl", sub: "https://example.com", layer: 0, kind: "deny" },
+      { id: "sup", icon: "i-shield", x: 390, y: 70, w: 230, h: 150, label: "Supervisor", sub: "model call: matches\n_provider_litellm\nexample.com: no rule", layer: 0, kind: "accent" },
+      { id: "log", icon: "i-doc", x: 390, y: 260, w: 230, h: 70, label: "openshell logs pi-agent", sub: "ALLOWED and DENIED, as OCSF", layer: 0 },
+      { id: "ll", icon: "i-route", x: 700, y: 40, w: 260, h: 90, label: "LiteLLM", sub: "gets the real key\nand answers pi", layer: 0 },
+      { id: "no", icon: "i-ban", x: 700, y: 200, w: 260, h: 90, label: "Refused", sub: "curl gets no response: 000", layer: 0, kind: "deny" },
+    ],
+    edges: [
+      { from: "pi", to: "sup", label: "allowed", layer: 0, kind: "ok" },
+      { from: "curl", to: "sup", label: "no rule", layer: 0, kind: "deny" },
+      { from: "sup", to: "ll", label: "real key", layer: 0, kind: "ok" },
+      { from: "sup", to: "no", layer: 0, kind: "deny" },
+      { from: "sup", to: "log", layer: 0, kind: "dash" },
+    ],
+  },
+  // ---- 1.5 intro: how the supervisor decides
+  "rule-check": {
+    title: "How the supervisor decides",
+    w: 960, h: 270,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "wl", icon: "i-bot", x: 0, y: 30, w: 180, h: 96, label: "A program in the workload", sub: "curl, node, python3 …\nopens a connection", layer: 0 },
+      { id: "c1", icon: "i-shield", x: 250, y: 30, w: 200, h: 96, label: "L4: which door?", sub: "an entry for this\nhost and port,\nfor this program?", layer: 0, kind: "accent" },
+      { id: "c2", icon: "i-shield", x: 520, y: 30, w: 200, h: 96, label: "L7: which request?", sub: "protocol: rest only\nthe method and path", layer: 0, kind: "accent" },
+      { id: "ok", icon: "i-globe", x: 790, y: 30, w: 170, h: 96, label: "Out to the host", sub: "a provider's key\nadded if one applies", layer: 0 },
+      { id: "no", icon: "i-ban", x: 250, y: 190, w: 470, h: 70, label: "Refused, and logged", sub: "no entry: the connection fails (000, EACCES) · no matching rule: 403 policy_denied", layer: 0, kind: "deny" },
+    ],
+    edges: [
+      { from: "wl", to: "c1", layer: 0, kind: "ok" },
+      { from: "c1", to: "c2", label: "yes", layer: 0, kind: "ok" },
+      { from: "c2", to: "ok", label: "yes", layer: 0, kind: "ok" },
+      { from: "c1", to: "no", label: "no", layer: 0, kind: "deny" },
+      { from: "c2", to: "no", label: "no", layer: 0, kind: "deny" },
+    ],
+  },
+  // ---- 1.5 §2: the effective policy = your file + the provider's entry
+  "effective-policy": {
+    title: "The effective policy",
+    w: 960, h: 290,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "file", icon: "i-doc", x: 0, y: 10, w: 290, h: 120, label: "Your file: pi-agent.yaml", sub: "filesystem and process\nnpm_registry: registry.npmjs.org,\nread-only, /usr/bin/node only", layer: 0 },
+      { id: "prov", icon: "i-key", x: 0, y: 170, w: 290, h: 110, label: "Provider litellm, attached", sub: "adds _provider_litellm:\nLiteLLM model calls,\nfrom any program", layer: 0 },
+      { id: "eff", icon: "i-shield", x: 380, y: 60, w: 270, h: 170, label: "Effective policy, version 2", sub: "what policy get --full prints:\n_provider_litellm\nnpm_registry\neverything else: denied", layer: 0, kind: "accent" },
+      { id: "sup", icon: "i-shield", x: 740, y: 100, w: 220, h: 90, label: "Supervisor", sub: "enforces it on\nevery connection", layer: 0 },
+    ],
+    edges: [
+      { from: "file", to: "eff", label: "policy set", layer: 0, kind: "ok" },
+      { from: "prov", to: "eff", label: "merged in", layer: 0, kind: "ok" },
+      { from: "eff", to: "sup", label: "loaded", layer: 0, kind: "ok" },
+    ],
+  },
+  // ---- 1.5 §3: one read-only L7 rule, GET allowed, POST refused
+  "github-l7": {
+    title: "A read-only rule for GitHub's API",
+    w: 960, h: 300,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "sb", x: 0, y: 0, w: 290, h: 300, label: "sandbox pi-agent", layer: 0, kind: "group" },
+      { id: "get", icon: "i-term", x: 18, y: 44, w: 254, h: 90, label: "curl GET /zen", sub: "api.github.com:443", layer: 0 },
+      { id: "post", icon: "i-term", x: 18, y: 180, w: 254, h: 90, label: "curl POST /markdown", sub: "same host, same program", layer: 0, kind: "deny" },
+      { id: "rule", icon: "i-shield", x: 380, y: 60, w: 230, h: 180, label: "allow_api_github_com_443", sub: "read-only: GET, HEAD, OPTIONS\nrest: read each request (L7)\nenforce: block, not just log\nfor /usr/bin/curl only", layer: 0, kind: "accent" },
+      { id: "gh", icon: "i-globe", x: 700, y: 44, w: 260, h: 90, label: "api.github.com", sub: "HTTP 200\nEncourage flow.", layer: 0 },
+      { id: "no", icon: "i-ban", x: 700, y: 180, w: 260, h: 90, label: "403 policy_denied", sub: "layer l7, from the supervisor:\nGitHub never sees it", layer: 0, kind: "deny" },
+    ],
+    edges: [
+      { from: "get", to: "rule", label: "GET", layer: 0, kind: "ok" },
+      { from: "post", to: "rule", label: "POST", layer: 0, kind: "deny" },
+      { from: "rule", to: "gh", layer: 0, kind: "ok" },
+      { from: "rule", to: "no", layer: 0, kind: "deny" },
+    ],
+  },
+  // ---- 1.5 §4: a plain TCP (L4) rule: one host, one port, one program
+  "tcp-l4": {
+    title: "A plain TCP rule",
+    w: 960, h: 330,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "sb", x: 0, y: 0, w: 290, h: 330, label: "sandbox pi-agent", layer: 0, kind: "group" },
+      { id: "c1", icon: "i-term", x: 18, y: 36, w: 254, h: 76, label: "curl → example.com:443", sub: "the host and program in the rule", layer: 0 },
+      { id: "c2", icon: "i-term", x: 18, y: 134, w: 254, h: 76, label: "curl → example.org:443", sub: "another host", layer: 0, kind: "deny" },
+      { id: "c3", icon: "i-term", x: 18, y: 232, w: 254, h: 76, label: "python3 → example.com:443", sub: "another program", layer: 0, kind: "deny" },
+      { id: "rule", icon: "i-shield", x: 380, y: 90, w: 230, h: 150, label: "allow_example_com_443", sub: "host and port only (L4)\nno protocol: the bytes\npass uninspected\nfor /usr/bin/curl only", layer: 0, kind: "accent" },
+      { id: "ex", icon: "i-globe", x: 700, y: 36, w: 260, h: 90, label: "example.com", sub: "HTTP 200", layer: 0 },
+      { id: "no", icon: "i-ban", x: 700, y: 180, w: 260, h: 110, label: "Refused, and logged", sub: "example.org: curl exit 7\npython3: Permission denied", layer: 0, kind: "deny" },
+    ],
+    edges: [
+      { from: "c1", to: "rule", layer: 0, kind: "ok" },
+      { from: "c2", to: "rule", layer: 0, kind: "deny" },
+      { from: "c3", to: "rule", layer: 0, kind: "deny" },
+      { from: "rule", to: "ex", label: "allowed", layer: 0, kind: "ok" },
+      { from: "rule", to: "no", layer: 0, kind: "deny" },
+    ],
+  },
+  // ---- 1.5 §5: four revisions of one policy
+  "policy-revisions": {
+    title: "Four revisions of one policy",
+    w: 960, h: 140,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "v1", icon: "i-doc", x: 0, y: 20, w: 215, h: 100, label: "Version 1", sub: "the baseline\nsandbox create --policy", layer: 0 },
+      { id: "v2", icon: "i-doc", x: 248, y: 20, w: 215, h: 100, label: "Version 2", sub: "+ npm_registry\npolicy set, a whole file", layer: 0 },
+      { id: "v3", icon: "i-doc", x: 496, y: 20, w: 215, h: 100, label: "Version 3", sub: "+ api.github.com, read-only\npolicy update", layer: 0 },
+      { id: "v4", icon: "i-shield", x: 744, y: 20, w: 216, h: 100, label: "Version 4 · Loaded", sub: "+ example.com:443\npolicy update", layer: 0, kind: "accent" },
+    ],
+    edges: [
+      { from: "v1", to: "v2", layer: 0, kind: "ok" },
+      { from: "v2", to: "v3", layer: 0, kind: "ok" },
+      { from: "v3", to: "v4", layer: 0, kind: "ok" },
+    ],
+  },
   // ---- 1.3.4 the provider's rules: a model call gets the key, anything else is refused
   "provider-l7": {
     title: "One placeholder, two requests",
