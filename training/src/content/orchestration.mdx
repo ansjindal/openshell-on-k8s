@@ -39,11 +39,10 @@ Its role (`/sandbox/ROLE.md`) and the platform skills do the rest: what to ignor
 
 <Part n="3">How a sealed agent is invoked</Part>
 
-Each step runs **inside the agent's sandbox**, through pi. The website runs `openshell sandbox exec`; the prompt goes base64-encoded, because `exec` rejects arguments with newlines:
+Each step runs **inside the agent's sandbox**, through the `pi` that ships in the sandbox image (already pointed at LiteLLM, so no `--provider` or `--model`). The website runs `openshell sandbox exec`; the prompt goes base64-encoded, because `exec` rejects arguments with newlines:
 
 ```ts
-const PI = "PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default " +
-           "--no-session --append-system-prompt /sandbox/ROLE.md";
+const PI = "pi --no-session --append-system-prompt /sandbox/ROLE.md";
 
 openshell(["sandbox", "exec", "-n", agent, "--", "sh", "-c",
   `${PI} -p "$(printf %s ${b64} | base64 -d)"`]);

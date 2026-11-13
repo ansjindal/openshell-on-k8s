@@ -101,6 +101,10 @@ openshell --workspace dev sandbox exec -n pi-agent -- npm install --prefix /sand
 </ExpectedOutput>
 </Output>
 
+<Callout type="tip" title="Install at run time, or build it into the image">
+Installing at run time is here to show a policy door at work. For agents you run for real, build an image with the agent and its tools already in it, and the sandbox needs no door to a package registry at all. This lab does that: the default sandbox image, <a href="https://github.com/ansjindal/openshell-on-k8s/blob/main/images/pi-sandbox/Dockerfile"><code>images/pi-sandbox</code></a>, is the OpenShell base image plus pi, already pointed at LiteLLM. It's the pi you ran in 1.4, and the one every agent in the <a href="/learn/fleet-spinup">Module 4 SRE Copilot fleet</a> runs. What makes each fleet agent different (its role, its MCP tools, its skills) is added when it starts, not installed from the internet.
+</Callout>
+
 </Step>
 
 </Section>
