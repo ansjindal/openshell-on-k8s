@@ -43,6 +43,7 @@ export async function runApiCheckStream(
     const decoder = new TextDecoder();
     let buf = "";
     let exitCode = 1;
+    let finished = false;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -54,14 +55,17 @@ export async function runApiCheckStream(
         if (!line) continue;
         try {
           const obj = JSON.parse(line);
-          if (obj.done) exitCode = obj.exitCode ?? 1;
+          if (obj.done) { exitCode = obj.exitCode ?? 1; finished = true; }
           else if (obj.chunk) onChunk(obj.stream, obj.chunk);
         } catch { /* ignore a partial/malformed line */ }
       }
     }
+    // The stream ended without its final {done} line: the site restarted or the
+    // connection dropped mid-run. Say so, instead of a bare "exit 1".
+    if (!finished) onChunk("stderr", "The connection to your lab VM closed before the command finished (the training site may have restarted). Press Run again.");
     return { exitCode };
   } catch (e) {
-    onChunk("stderr", String(e));
+    onChunk("stderr", `Couldn't reach your lab VM (${String(e)}). Press Run again.`);
     return { exitCode: 1 };
   }
 }
