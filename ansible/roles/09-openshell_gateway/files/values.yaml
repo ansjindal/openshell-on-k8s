@@ -38,8 +38,8 @@ server:
     # Never accept anonymous callers. Browser users (the console) sign in with
     # Keycloak; the lab's CLI uses an mTLS operator certificate (see below).
     allowUnauthenticatedUsers: false
-  # Gateway id: part of every managed namespace name and of the tokens the
-  # gateway mints for supervisors. Keep it stable once workspaces exist.
+  # Gateway id: part of the tokens the gateway mints for supervisors (and of
+  # namespace names in managed mode). Keep it stable once sandboxes exist.
   sandboxJwt:
     gatewayId: lab   # = openshell_gateway_id in group_vars
   # A policy that fails validation deactivates the previous one.
