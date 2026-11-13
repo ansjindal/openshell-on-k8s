@@ -258,6 +258,8 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s http://litellm.litellm.svc.c
 
 The provider's profile allows model calls only. Try something else with the same key.
 
+<Diagram id="provider-l7" n="1.5" caption="The same placeholder on two requests. The supervisor checks each one against the provider's rules: a model call matches, gets the real key and reaches LiteLLM; an admin call matches nothing and is refused before any key is attached." />
+
 <Step n="1" title="Try LiteLLM's admin API: refused at L7">
 
 The same key would open LiteLLM's **admin API** (create keys, read spend). The profile doesn't allow it, so the supervisor refuses before anything leaves the sandbox:

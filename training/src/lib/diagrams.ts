@@ -310,6 +310,26 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { from: "gw", to: "role", layer: 0, kind: "ok" },
     ],
   },
+  // ---- 1.3.4 the provider's rules: a model call gets the key, anything else is refused
+  "provider-l7": {
+    title: "One placeholder, two requests",
+    w: 960, h: 330,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "sb", x: 0, y: 0, w: 290, h: 330, label: "sandbox agent-0", layer: 0, kind: "group" },
+      { id: "ok", icon: "i-bot", x: 18, y: 48, w: 254, h: 92, label: "A model call", sub: "POST /v1/chat/completions\nAuthorization: Bearer <placeholder>", layer: 0 },
+      { id: "bad", icon: "i-bot", x: 18, y: 200, w: 254, h: 92, label: "An admin call, same key", sub: "POST /key/generate\nAuthorization: Bearer <placeholder>", layer: 0, kind: "deny" },
+      { id: "sup", icon: "i-shield", x: 390, y: 70, w: 236, h: 196, label: "Supervisor", sub: "checks each request against\n_provider_litellm:\nGET /v1/models\nPOST /v1/chat/completions\n… 6 model-call rules,\nnothing else", layer: 0, kind: "accent" },
+      { id: "ll", icon: "i-route", x: 700, y: 40, w: 260, h: 92, label: "LiteLLM", sub: "receives the real key,\nswapped in on the way out,\nand answers", layer: 0 },
+      { id: "no", icon: "i-key", x: 700, y: 200, w: 260, h: 92, label: "Refused at L7", sub: "403 policy_denied\nno key attached:\nLiteLLM never sees it", layer: 0, kind: "deny" },
+    ],
+    edges: [
+      { from: "ok", to: "sup", label: "allowed", layer: 0, kind: "ok" },
+      { from: "bad", to: "sup", label: "no rule", layer: 0, kind: "deny" },
+      { from: "sup", to: "ll", label: "real key", layer: 0, kind: "ok" },
+      { from: "sup", to: "no", layer: 0, kind: "deny" },
+    ],
+  },
   // ---- 1.2 what a workspace is: a record in the gateway + a namespace of the same name
   "workspace": {
     title: "A workspace",
