@@ -23,6 +23,8 @@ IMAGE="${OPENCLAW_SANDBOX_IMAGE:-ghcr.io/ansjindal/openshell-on-k8s/openclaw-san
 PROVIDER="${OPENSHELL_PROVIDER:-litellm}"
 ROLES="$REPO/manifests/openclaw/fleet-roles"
 SKILLDIR="$REPO/manifests/openclaw/skills/cluster-telemetry"   # the in-cluster telemetry skill
+# The platform workspace (operator mode: namespace of the same name), unless set.
+export OPENSHELL_WORKSPACE="${OPENSHELL_WORKSPACE:-lab}"
 ox() { openshell sandbox exec -n "$1" -- sh -c "$2" </dev/null 2>&1 | grep -viE 'UNDICI|trace-warn' || true; }
 b64() { base64 | tr -d '\n'; }
 
