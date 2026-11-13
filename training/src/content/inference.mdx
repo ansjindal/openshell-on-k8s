@@ -149,6 +149,8 @@ kubectl label namespace dev openshell.ai/workspace=true --overwrite
 </ExpectedOutput>
 </Output>
 
+If you run it again, kubectl prints `namespace/dev not labeled`: the label is already there with the same value, so there was nothing to change. Either way, `dev` is labelled.
+
 Without the label, the next step still succeeds, but every `sandbox create` in `dev` is refused:
 
 ```text

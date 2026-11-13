@@ -201,3 +201,15 @@ html[data-theme="light"] .hljs-bullet { color: #953800; }
 
 /* the Next button at the end of a lesson keeps its own colours over link styles */
 .learned a.nextbtn, .learned a.nextbtn * { color: #0b0f05 !important; text-decoration: none !important; border-bottom: 0; }
+
+/* Run blocks, calmer: a compact tinted button beside its status line instead of
+   a full-width solid bar, and long commands wrap so the whole line is readable. */
+.rl-boxbody > .rl-ctrl { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 6px 14px; }
+.rl-ctrl .rl-run {
+  width: auto; padding: 6px 18px; font-size: 13.5px; border-radius: 7px;
+  background: var(--color-run-btn); color: var(--color-nv-bright);
+  border: 1px solid var(--color-run-btn-line); transition: background .15s, color .15s;
+}
+.rl-ctrl .rl-run:hover:not(:disabled) { background: var(--color-nv); color: #0b0f05; filter: none; }
+.rl-kcmdlist .rl-code, .rl-kcmdlist .rl-code code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.rl-res { margin: 0.9rem 0 1.4rem; }
