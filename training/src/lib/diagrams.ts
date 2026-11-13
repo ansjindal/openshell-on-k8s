@@ -288,6 +288,28 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
   // ---- 0.3 Your Kubernetes cluster and LiteLLM: one layer per command
+  // ---- 0.3.2 where a model gateway sits: drawn whole (<Diagram>), no layers
+  "gateway-place": {
+    title: "Where LiteLLM sits: between every agent and every model",
+    w: 830, h: 300,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "k8s", icon: "i-wheel", x: 10, y: 10, w: 568, h: 280, label: "Kubernetes cluster", layer: 0, kind: "group" },
+      { id: "a1", icon: "i-bot", x: 30, y: 50, w: 220, h: 62, label: "pi-agent", sub: "the agent you deploy in 0.4", layer: 0 },
+      { id: "a2", icon: "i-bot", x: 30, y: 127, w: 220, h: 62, label: "another agent", sub: "any harness, any team", layer: 0 },
+      { id: "a3", icon: "i-cube", x: 30, y: 204, w: 220, h: 62, label: "an app", sub: "anything that calls a model", layer: 0 },
+      { id: "ll", icon: "i-route", x: 334, y: 78, w: 226, h: 160, label: "LiteLLM", sub: "one OpenAI-compatible API\nmodel name → endpoint\nholds the real keys\nbudgets · rate limits · logs", layer: 0, kind: "accent" },
+      { id: "ep", icon: "i-cloud", x: 608, y: 66, w: 216, h: 70, label: "Your inference endpoint", sub: "your model\nits real key", layer: 0, kind: "ext" },
+      { id: "ot", icon: "i-globe", x: 608, y: 180, w: 216, h: 70, label: "Other providers", sub: "other APIs\nor local models", layer: 0, kind: "ext", dashed: true },
+    ],
+    edges: [
+      { from: "a1", to: "ll", layer: 0, kind: "ok" },
+      { from: "a2", to: "ll", label: "LiteLLM's key", layer: 0, kind: "ok", dy: -2 },
+      { from: "a3", to: "ll", layer: 0, kind: "ok" },
+      { from: "ll", to: "ep", label: "real key", layer: 0, kind: "ok" },
+      { from: "ll", to: "ot", layer: 0, kind: "dash" },
+    ],
+  },
   "cluster-tour": {
     title: "Your cluster, as your commands find it",
     w: 960, h: 500,

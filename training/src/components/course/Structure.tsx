@@ -10,6 +10,7 @@
 // Numbers combine with the lesson's own number: lesson 1.4, section 1, step 2 -> 1.4.1.2.
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { setStepDone, useProgress } from "@/lib/progress";
 
 type LessonCtx = { slug: string; number: string };
@@ -58,7 +59,16 @@ export function Learned({ next, nextLabel, children }: { next?: string; nextLabe
   return (
     <div className="learned">
       {children}
-      {next && <p>Next, <Link href={next} className="text-[var(--color-nv-bright)] underline">{nextLabel ?? "continue"}</Link>.</p>}
+      {next && (
+        <div className="not-prose mt-6">
+          <Link href={next}
+            className="nextbtn group inline-flex items-center gap-3 rounded-lg border border-[var(--color-nv)] bg-[var(--color-nv)] px-5 py-3 !text-[#0b0f05] !no-underline shadow-sm transition hover:brightness-110">
+            <span className="text-[12px] font-bold uppercase tracking-[0.1em] opacity-75">Next</span>
+            <span className="text-[15px] font-bold">{nextLabel ?? "Continue"}</span>
+            <ArrowRight size={17} className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

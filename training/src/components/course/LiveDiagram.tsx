@@ -194,3 +194,18 @@ export function DiagramSvg({ id, layer }: { id: string; layer: number }) {
     </svg>
   );
 }
+
+/** A diagram from lib/diagrams.ts drawn whole, as a figure:
+ *    <Diagram id="gateway-place" n="0.2" caption="…" /> */
+export function Diagram({ id, n, caption }: { id: string; n?: string; caption?: string }) {
+  const d = DIAGRAMS[id];
+  if (!d) return null;
+  return (
+    <figure className="not-prose my-6">
+      <div className="rounded-[10px] border border-[var(--color-line)] bg-[var(--color-ink2)] p-4">
+        <div className="mx-auto max-w-[900px]"><DiagramSvg id={id} layer={Infinity} /></div>
+      </div>
+      <figcaption className="mt-2 text-[13px] leading-[1.55] text-[var(--color-fg-dim)]">{n && <>Figure {n}. </>}{caption ?? d.title}</figcaption>
+    </figure>
+  );
+}

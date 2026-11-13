@@ -180,3 +180,24 @@ html[data-theme="light"] .sitehead { background: rgba(247, 249, 243, 0.92); bord
 .rl-korder > .rl-ktourbody:has(.rl-ctext) { order: -2; }
 .rl-korder > .rl-kfirst { order: -1; }
 .rl-korder > .rl-kcmds { margin-bottom: 10px; }
+
+/* Code highlighting: github-dark everywhere, these colours in light mode
+   (GitHub's light palette) so strings, keywords and variables stay readable. */
+html[data-theme="light"] .hljs { color: #1f2328; }
+html[data-theme="light"] .hljs-comment, html[data-theme="light"] .hljs-quote { color: #57606a; }
+html[data-theme="light"] .hljs-keyword, html[data-theme="light"] .hljs-selector-tag,
+html[data-theme="light"] .hljs-type, html[data-theme="light"] .hljs-doctag { color: #cf222e; }
+html[data-theme="light"] .hljs-built_in, html[data-theme="light"] .hljs-symbol { color: #953800; }
+html[data-theme="light"] .hljs-string, html[data-theme="light"] .hljs-regexp,
+html[data-theme="light"] .hljs-meta .hljs-string { color: #0a3069; }
+html[data-theme="light"] .hljs-variable, html[data-theme="light"] .hljs-template-variable,
+html[data-theme="light"] .hljs-attr, html[data-theme="light"] .hljs-attribute,
+html[data-theme="light"] .hljs-number, html[data-theme="light"] .hljs-literal,
+html[data-theme="light"] .hljs-meta, html[data-theme="light"] .hljs-selector-attr { color: #0550ae; }
+html[data-theme="light"] .hljs-title, html[data-theme="light"] .hljs-section,
+html[data-theme="light"] .hljs-name, html[data-theme="light"] .hljs-selector-id { color: #8250df; }
+html[data-theme="light"] .hljs-subst, html[data-theme="light"] .hljs-params { color: #1f2328; }
+html[data-theme="light"] .hljs-bullet { color: #953800; }
+
+/* the Next button at the end of a lesson keeps its own colours over link styles */
+.learned a.nextbtn, .learned a.nextbtn * { color: #0b0f05 !important; text-decoration: none !important; border-bottom: 0; }
