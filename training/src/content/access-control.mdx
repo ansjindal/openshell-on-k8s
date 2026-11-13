@@ -59,16 +59,15 @@ Make a new workspace, `team-a`, the same way you made `dev`, and give `learner` 
 
 <Step n="1" title="Create team-a: namespace, chart and workspace">
 
-A **workspace** is a tenant: its own sandboxes, providers and members. Make `team-a` the way you made `dev` in [1.4](/learn/build-an-agent): a namespace labelled as a workspace, the `openshell-workspace` chart in it, then the workspace in the gateway:
+A **workspace** is a tenant: its own sandboxes, providers and members. Make `team-a` the way you made `dev` in [1.3](/learn/inference): the `openshell-workspace` chart in a new namespace, the label that lets the gateway use it, then the workspace in the gateway:
 
 ```bash
-kubectl create namespace team-a --dry-run=client -o yaml | kubectl apply -f - && kubectl label namespace team-a openshell.ai/workspace=true --overwrite && helm upgrade --install openshell-workspace oci://ghcr.io/nvidia/openshell/openshell-workspace --version 0.1.7 --namespace team-a --wait | grep STATUS && openshell workspace create --name team-a
+helm upgrade --install openshell-workspace oci://ghcr.io/nvidia/openshell/openshell-workspace --version 0.1.7 --namespace team-a --create-namespace --wait | grep STATUS && kubectl label namespace team-a openshell.ai/workspace=true --overwrite && openshell workspace create --name team-a
 ```
 <Output>
 <ExpectedOutput>
-{`namespace/team-a created
+{`STATUS: deployed
 namespace/team-a labeled
-STATUS: deployed
 ✓ Created workspace team-a`}
 </ExpectedOutput>
 </Output>

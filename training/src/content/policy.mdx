@@ -1,8 +1,8 @@
-In [1.4](/learn/build-an-agent) you opened one door for `pi-agent` with a policy file. Real agents need more than npm: an API to read, a database to query. Here you open the network rule by rule, **while the sandbox runs**, and see how narrow each rule can be: one host, one HTTP method, one program.
+In [1.4](/learn/build-an-agent) `pi-agent` ran sealed: the model worked, curl got nowhere. Real agents need more: a package registry, an API to read, a database to query. Here you open the network rule by rule, **while the sandbox runs**: first with a policy file, then one rule at a time, and see how narrow each rule can be: one host, one HTTP method, one program.
 
 <BeforeYouStart
-  will="read pi-agent's effective policy, open GitHub's API for GET only and watch a POST refused at L7, add a plain TCP rule and test its host and program limits, then read the policy's revisions."
-  time="about fifteen minutes. Only pi-agent's network rules change; you delete it at the end, and keep the dev workspace."
+  will="watch npm get refused, read the policy file line by line and open one door with it, read pi-agent's effective policy, open GitHub's API for GET only and watch a POST refused at L7, add a plain TCP rule and test its host and program limits, then read the policy's revisions."
+  time="about twenty-two minutes. Only pi-agent's network rules change; you delete it at the end, and keep the dev workspace."
 />
 
 ## How network rules work
@@ -21,7 +21,91 @@ A few details the steps below rely on:
 - **Providers** add their own entry, such as `_provider_litellm`, when you attach them; you don't write it.
 - **Hosts are full names** (`litellm.litellm.svc.cluster.local`), because the sandbox resolves names without search domains.
 
-<Section n="1" title="Read what pi-agent may reach today">
+<Section n="1" title="Install a package from npm: refused, then one door opened with a policy file">
+
+Agents often install tools while they run, as the Module 0 pod installed pi at start. Try that in `pi-agent`: with the baseline policy the network is closed, so you'll open exactly one door, with a policy file.
+
+<Step n="1" title="Ask npm for pi: the connection is refused">
+
+The sandbox image has Node and npm. Ask the npm registry for pi's latest version (`--fetch-retries=0 --fetch-timeout=5000` makes it fail fast instead of retrying):
+
+```bash
+openshell --workspace dev sandbox exec -n pi-agent -- npm view @earendil-works/pi-coding-agent version --fetch-retries=0 --fetch-timeout=5000
+```
+<Output summary="Refused: connect EACCES. The connection never left the sandbox.">
+<ExpectedOutput>
+{`npm error code EACCES
+npm error syscall connect
+npm error errno EACCES
+npm error FetchError: request to https://registry.npmjs.org/@earendil-works%2fpi-coding-agent failed, reason: connect EACCES 198.18.0.2:443 - Local (0.0.0.0:0)
+...`}
+</ExpectedOutput>
+</Output>
+
+The supervisor wrote down why, in the sandbox's audit log:
+
+```bash
+openshell --workspace dev logs pi-agent | grep OCSF | grep registry.npmjs.org | tail -1
+```
+<Output summary="One OCSF event: node tried registry.npmjs.org:443, and no policy allows it.">
+<ExpectedOutput>
+{`[1794566012.787] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/node(0) -> registry.npmjs.org:443 [reason:transparent_tcp_policy_denied]`}
+</ExpectedOutput>
+</Output>
+
+No line yet? The sandbox sends its log to the gateway in the background, a second or two behind; run the command again.
+
+</Step>
+
+<Step n="2" title="Read the policy file, then open one door for npm">
+
+Every layer of a sandbox is set by one short YAML file: its **policy**. The baseline you created `pi-agent` with is one; here it is line by line, with what each part lets through and what it stops:
+
+<ReadScene scene="policy" />
+
+| Part | Controls | Enforced by | Changes on a running sandbox? |
+|---|---|---|---|
+| `filesystem_policy` | paths readable / writable | Landlock, in the kernel | no, fixed at creation |
+| `landlock` | how strict if the kernel lacks a Landlock feature | the sandbox runtime | no |
+| `process` | the user and group the agent runs as | the sandbox runtime | no |
+| `network_policies` | hosts, ports, methods, paths, programs | the supervisor | **yes**: `openshell policy set` / `policy update` |
+
+`manifests/policies/pi-agent.yaml` is the baseline plus one grant: the npm registry, **read-only**, for **`/usr/bin/node` only**.
+
+<YamlRead id="pi-agent-policy" />
+
+**`openshell --workspace dev policy set`** replaces the sandbox's policy with a file; `--wait` returns once the supervisor has loaded it:
+
+```bash
+cd ~/openshell-on-k8s && openshell --workspace dev policy set pi-agent --policy manifests/policies/pi-agent.yaml --wait
+```
+<Output summary="Revision 2 is loaded into the running sandbox: no restart.">
+<ExpectedOutput>
+{`✓ Policy version 2 submitted (hash: 6750e23ab498)
+✓ Policy version 2 loaded (active version: 2)`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="Install pi through the open door">
+
+The same install as in 0.4, into `/sandbox/pi` (the agent can write only `/sandbox` and `/tmp`). The image already has pi, but this is the point: a package from the internet, through one read-only door:
+
+```bash
+openshell --workspace dev sandbox exec -n pi-agent -- npm install --prefix /sandbox/pi --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2
+```
+<Output summary="The same 123 packages, now through the policy.">
+<ExpectedOutput>
+{`added 123 packages in 11s`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="2" title="Read what pi-agent may reach today">
 
 Before changing anything, read the policy `pi-agent` has now: its version, then everything it allows.
 
@@ -32,7 +116,7 @@ All commands here carry `--workspace dev`, the workspace `pi-agent` lives in. **
 ```bash
 openshell --workspace dev policy get pi-agent
 ```
-<Output summary="Version 2: the file you applied in 1.4.">
+<Output summary="Version 2: the file you applied in Section 1.">
 <ExpectedOutput>
 {`Version:      2
 Hash:         c9e67284bcc5538cf8fa68810644b136768b018e2156dbd7ec4b7918b7649712
@@ -85,7 +169,7 @@ openshell --workspace dev policy get pi-agent --full
 
 </Section>
 
-<Section n="2" title="Open GitHub's API for GET only, while it runs">
+<Section n="3" title="Open GitHub's API for GET only, while it runs">
 
 Open one HTTP API for one method only, while the sandbox keeps running, and see both sides of the rule.
 
@@ -159,7 +243,7 @@ HTTP 403`}
 
 </Section>
 
-<Section n="3" title="Open a non-HTTP door with a plain TCP rule">
+<Section n="4" title="Open a non-HTTP door with a plain TCP rule">
 
 Not everything is HTTP: a database, an MQTT broker, any raw TCP service has no methods or paths to inspect. For those the policy has a plainer endpoint: **host and port only**, an L4 allow.
 
@@ -251,7 +335,7 @@ That program check is what stops an agent from sending data out through an unexp
 
 </Section>
 
-<Section n="4" title="Read every change as a numbered revision">
+<Section n="5" title="Read every change as a numbered revision">
 
 Every `policy set` and `policy update` made a new revision. Read them back.
 
@@ -272,7 +356,7 @@ openshell --workspace dev policy list pi-agent
 </ExpectedOutput>
 </Output>
 
-`openshell --workspace dev policy get pi-agent --rev 1 --full` shows an older one. Small changes go through `policy update`; a whole policy you keep in a YAML file and apply with `policy set`, as in 1.4.
+`openshell --workspace dev policy get pi-agent --rev 1 --full` shows an older one. Small changes go through `policy update`; a whole policy you keep in a YAML file and apply with `policy set`, as in Section 1.
 
 </Step>
 
@@ -302,6 +386,7 @@ No single layer is the answer. Landlock and seccomp bound the process, the super
 <Learned next="/learn/os-check" nextLabel="Summary & knowledge check">
 
 - **The effective policy** is your file plus what providers add; anything not listed is denied.
+- **A policy file sets the starting rules.** `policy set` replaced the baseline with one read-only door for npm, for `node` only.
 - **Rules change live.** `policy update --add-endpoint` loads a new revision into the running sandbox.
 - **L7 rules filter by method and path**: GET allowed, POST refused with the reason.
 - **L4 rules** allow one host and port for the named programs only, for traffic that isn't HTTP.
