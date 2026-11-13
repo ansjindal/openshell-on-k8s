@@ -3,7 +3,6 @@ A quick look back at Module 2 before Module 3: customizing agents, then operatin
 ## What you learned
 
 - pi's persona is plain Markdown (`~/.pi/agent/AGENTS.md`), read on every run; it shapes answers, but only the policy is a boundary.
-- `./scripts/fleet task` hands a prompt to one agent or the whole fleet, each working in its own sandbox.
 - Every supervisor decision (connections, HTTP requests, refused DNS names, policy loads) is written as an OCSF event you can read with `openshell logs`.
 - Alloy ships the supervisors' logs to Loki, so the same events for every sandbox are queryable with LogQL and in Grafana Explore; agent OpenTelemetry spans go to Tempo.
 - The OpenShell Console forwards your Keycloak token to the same gateway as the CLI: it has no privileges of its own.
@@ -13,7 +12,6 @@ A quick look back at Module 2 before Module 3: customizing agents, then operatin
 
 <Quiz title="Test your knowledge: Module 2">
 <Q q="Which file gives pi its persona on every run in this lab?" options={["~/.pi/agent/models.json", "~/.pi/agent/AGENTS.md", "~/.pi/agent/settings.json", "/etc/openshell/policy.yaml"]} answer={1} why="pi reads AGENTS.md context files from its agent directory and the working directory; models.json and settings.json only choose the model." />
-<Q q="What does the target all do in ./scripts/fleet task?" options={["Brings up every agent before running the task", "Fans the prompt out to every agent in the fleet", "Sends the prompt to agent-0 and prints all logs", "Runs the task in every namespace of the cluster"]} answer={1} why="fleet task takes a prompt and an optional target; all fans it out to every agent, and each works on it independently in its own sandbox." />
 <Q q="An OCSF line shows NET:REFUSE for example.org with reason policy_dns_ineligible. What happened?" options={["The supervisor opened the connection and logged it", "example.org returned a DNS error", "example.org is in no rule, so the supervisor did not even resolve it", "The gateway was unreachable"]} answer={2} why="example.org isn't in any rule, so the supervisor didn't even resolve it: DNS is part of the seal." />
 <Q q={"In an OCSF line, what does engine:l7 tell you?"} options={["The decision was made at the connection level", "The decision was made at the request level (method and path)", "The event came from the gateway, not the supervisor", "The request was allowed"]} answer={1} why="The engine is the layer that decided: opa means the connection, l7 means the request." />
 <Q q="What ships the supervisors' logs to Loki?" options={["Alloy", "Tempo", "The OpenShell Console", "Kyverno"]} answer={0} why="The supervisors' logs are shipped to Loki by Alloy, so the events for every sandbox are queryable with LogQL." />

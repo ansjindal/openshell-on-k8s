@@ -1,7 +1,7 @@
-In Module 1 you sealed one agent. This module makes agents your own and then runs them like a platform: **first as the agent developer**, you give an agent a persona and real tasks; **then as the security reviewer**, you follow every decision into the audit trail and drive the same gateway from the web console.
+In Module 1 you sealed one agent. This module makes agents your own and then runs them like a platform: **first as the agent developer**, you give an agent a persona; **then as the security reviewer**, you follow every decision into the audit trail and drive the same gateway from the web console.
 
 <BeforeYouStart
-  learn="how an AGENTS.md shapes pi, how the fleet helper runs tasks, where OCSF events go and how to query them, and what the OpenShell Console shows."
+  learn="how an AGENTS.md shapes pi, where OCSF events go and how to query them, and what the OpenShell Console shows."
   prereq="Module 1: you know how a sandbox, its provider and its policy work. agent-0 is running. The Console and Grafana links are in the top bar."
   start="Give it a persona."
 />
@@ -12,7 +12,6 @@ Each card is one lesson of this module. Scroll through them, or click one: the p
 
 <ScrollBuild diagram="m2" items={[
   { title: "Give it a persona: AGENTS.md", text: "A Markdown file pi reads on every run sets who the agent is and how it works, and shows why a persona is not a boundary." },
-  { title: "Run a task", text: "The fleet helper creates several sandboxes at once; hand them a prompt and read what they did." },
   { title: "The audit trail", text: "Each supervisor writes one OCSF event per decision. Alloy ships them to Loki, and Grafana queries them across every workspace." },
   { title: "The OpenShell Console", text: "The web console signs you in with OIDC and talks to the same gateway as the CLI: sandboxes, logs, a terminal, policy revisions, proposals." },
 ]} />

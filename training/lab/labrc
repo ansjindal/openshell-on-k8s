@@ -37,5 +37,4 @@ PS1='\[\e[1;32m\]openshell-lab\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]$ '
 echo -e "\e[1;32m🦞 OpenShell on Kubernetes — lab shell\e[0m"
 echo -e "  \e[2mcluster:\e[0m  kubectl get pods -A"
 echo -e "  \e[2msandboxes:\e[0m openshell sandbox list       (the OpenShell gateway, NodePort 30808)"
-echo -e "  \e[2mfleet:\e[0m    ./scripts/fleet status       (bring agents up/down, run tasks, exec in)"
 echo

@@ -588,26 +588,24 @@ export const DIAGRAMS: Record<string, Diagram> = {
   // diagram fills the sticky panel beside the cards.
   m2: {
     title: "Module 2: customize agents, then operate them",
-    w: 600, h: 385,
-    layers: [{ n: 0, name: "The sandbox" }, { n: 1, name: "A persona" }, { n: 2, name: "Run a task" }, { n: 3, name: "The audit trail" }, { n: 4, name: "The Console" }],
+    w: 600, h: 300,
+    layers: [{ n: 0, name: "The sandbox" }, { n: 1, name: "A persona" }, { n: 2, name: "The audit trail" }, { n: 3, name: "The Console" }],
     nodes: [
       { id: "soul", x: 10, y: 25, w: 170, h: 62, label: "AGENTS.md", sub: "persona", layer: 1 },
       { id: "wl", x: 210, y: 20, w: 180, h: 72, label: "agent-0", sub: "pi · placeholders", layer: 0 },
       { id: "ll", x: 420, y: 20, w: 170, h: 56, label: "LiteLLM → model", sub: "provider litellm", layer: 0, kind: "ext" },
-      { id: "task", x: 10, y: 125, w: 170, h: 62, label: "a task", sub: "fleet task · all agents", layer: 2, kind: "accent" },
       { id: "sup", x: 210, y: 120, w: 180, h: 72, label: "supervisor pod", sub: "policy · real keys\nOCSF per decision", layer: 0, kind: "accent" },
-      { id: "loki", x: 10, y: 215, w: 170, h: 62, label: "Loki · Grafana", sub: "every allow and deny", layer: 3, kind: "ext" },
-      { id: "con", x: 10, y: 310, w: 170, h: 62, label: "OpenShell Console", sub: "sandboxes · proposals", layer: 4, kind: "ext" },
-      { id: "gw", x: 210, y: 310, w: 180, h: 62, label: "OpenShell gateway", sub: "one API, CLI and web", layer: 0, kind: "accent" },
+      { id: "loki", x: 10, y: 125, w: 170, h: 62, label: "Loki · Grafana", sub: "every allow and deny", layer: 2, kind: "ext" },
+      { id: "con", x: 10, y: 220, w: 170, h: 62, label: "OpenShell Console", sub: "sandboxes · proposals", layer: 3, kind: "ext" },
+      { id: "gw", x: 210, y: 220, w: 180, h: 62, label: "OpenShell gateway", sub: "one API, CLI and web", layer: 0, kind: "accent" },
     ],
     edges: [
       { from: "wl", to: "sup", layer: 0, kind: "dash" },
       { from: "gw", to: "sup", layer: 0, kind: "dash" },
       { from: "sup", to: "ll", layer: 0, kind: "ok" },
       { from: "soul", to: "wl", layer: 1, kind: "dash" },
-      { from: "task", to: "sup", layer: 2, kind: "ok" },
-      { from: "sup", to: "loki", label: "OCSF", layer: 3, kind: "ok" },
-      { from: "con", to: "gw", layer: 4, kind: "ok" },
+      { from: "sup", to: "loki", layer: 2, kind: "ok" },
+      { from: "con", to: "gw", layer: 3, kind: "ok" },
     ],
   },
 
