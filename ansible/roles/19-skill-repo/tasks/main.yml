@@ -49,9 +49,12 @@
         set -euo pipefail
         ip=$(kubectl -n {{ skill_repo_namespace }} get svc gitea -o jsonpath='{.spec.clusterIP}')
         api="http://$ip:3000/api/v1"; auth='{{ skill_repo_user }}:{{ _skill_pw.stdout }}'
-        if curl -sf -u "$auth" "$api/repos/{{ skill_repo_user }}/skills" >/dev/null; then echo "exists"; exit 0; fi
-        curl -sf -u "$auth" -H 'Content-Type: application/json' -X POST "$api/user/repos" \
-          -d '{"name":"skills","description":"Platform Agent Skills","private":false,"default_branch":"main"}' >/dev/null
+        # Seed only an empty repository: later pushes belong to the platform team.
+        if curl -sf -u "$auth" "$api/repos/{{ skill_repo_user }}/skills/contents" >/dev/null; then echo "exists"; exit 0; fi
+        if ! curl -sf -u "$auth" "$api/repos/{{ skill_repo_user }}/skills" >/dev/null; then
+          curl -sf -u "$auth" -H 'Content-Type: application/json' -X POST "$api/user/repos" \
+            -d '{"name":"skills","description":"Platform Agent Skills","private":false,"default_branch":"main"}' >/dev/null
+        fi
         tmp=$(mktemp -d); cp -r {{ playbook_dir }}/../skills/. "$tmp/"; cd "$tmp"
         git init -q -b main && git add -A
         git -c user.name=platform -c user.email=platform@skills.lab.local commit -q -m "Seed platform skills"
