@@ -1,6 +1,6 @@
 // What each box in a figure is, shown when you click it (keys are the box
 // titles in docs/*.svg, as data-node attributes).
-const sandbox = "Runs the agent (OpenClaw) as the unprivileged user sandbox. Landlock limits the filesystem, seccomp limits syscalls, and a NetworkPolicy lets it talk only to its own supervisor.";
+const sandbox = "Runs the agent (pi) as the unprivileged user sandbox. Landlock limits the filesystem, seccomp limits syscalls, and a NetworkPolicy lets it talk only to its own supervisor.";
 const supervisor = "Every sandbox has its own supervisor pod. It owns the sandbox's network: each request is checked against the policy (host, port, binary, method, path), credentials are injected on allowed calls, and every decision is an OCSF event.";
 export const FIGURE_NOTES: Record<string, Record<string, string>> = {
   architecture: {

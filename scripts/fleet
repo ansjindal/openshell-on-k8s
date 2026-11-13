@@ -13,7 +13,7 @@
 #
 # Env (from .env or shell):
 #   FLEET_SIZE   default count for `up`
-#   AGENT_CMD    agent binary run inside the sandbox for tasks (default: openclaw)
+#   (tasks run pi, which the sandbox image ships, as `pi -p "<prompt>"`)
 #   PROVIDER     provider to attach (default: litellm)
 #   OPENSHELL_WORKSPACE  workspace (default: lab, the platform's workspace); its
 #                sandboxes run in the namespace of the same name (operator mode)
@@ -26,7 +26,6 @@ ENV_FILE="${ENV_FILE:-${HERE}/.env}"
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 export NO_COLOR=1
 FLEET_SIZE="${FLEET_SIZE:-1}"
-AGENT_CMD="${AGENT_CMD:-openclaw}"
 PROVIDER="${PROVIDER:-litellm}"
 # Managed workspaces: the gateway (id "lab") creates one namespace per workspace.
 export OPENSHELL_WORKSPACE="${OPENSHELL_WORKSPACE:-lab}"
@@ -102,25 +101,14 @@ cmd_task() {
   fi
   [ "${#agents[@]}" -gt 0 ] || die "no agents — run 'fleet up' first"
 
-  # OpenClaw one-shot: `agent --local --agent main --message <text>` runs the
-  # embedded agent in this process (no OpenClaw Gateway) against LiteLLM.
-  # Other agents use the common `-p "<prompt>"` print mode.
-  local -a agent_argv
-  if [ "${AGENT_CMD}" = "openclaw" ]; then
-    agent_argv=("${AGENT_CMD}" agent --local --agent main --message "${prompt}")
-  else
-    agent_argv=("${AGENT_CMD}" -p "${prompt}")
-  fi
+  # pi one-shot: print mode, no session kept. The image's launcher points pi at
+  # LiteLLM (model "default") and closes stdin.
+  local -a agent_argv=(pi --no-session -p "${prompt}")
 
-  echo "Running '${AGENT_CMD}' on ${#agents[@]} agent(s) in parallel..."
+  echo "Running pi on ${#agents[@]} agent(s) in parallel..."
   local pids=()
   for a in "${agents[@]}"; do
-    ( out="$("${OSH[@]}" sandbox exec -n "${a}" -- "${agent_argv[@]}" 2>&1 || true)"
-      # agent-0 runs OpenClaw's own Gateway (the Control UI); then --local is
-      # refused and the turn goes through that Gateway instead.
-      if [ "${AGENT_CMD}" = "openclaw" ] && printf '%s' "${out}" | grep -q "A Gateway is running"; then
-        out="$("${OSH[@]}" sandbox exec -n "${a}" -- "${AGENT_CMD}" agent --agent main --message "${prompt}" 2>&1 || true)"
-      fi
+    ( out="$("${OSH[@]}" sandbox exec -n "${a}" -- "${agent_argv[@]}" </dev/null 2>&1 || true)"
       printf '\n── [%s] ───────────────\n%s\n' "${a}" "${out}" ) &
     pids+=("$!")
   done

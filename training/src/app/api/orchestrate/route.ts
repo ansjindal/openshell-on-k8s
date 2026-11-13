@@ -28,7 +28,7 @@ const PROBES: Record<string, { call: string; hint: string }> = {
   traces: { call: `tempo_search("{ resource.service.name = \"shop\" && status = error }", 30)`,
     hint: "recent error traces of the shop: how many, which operation, how long" },
 };
-const PI = "PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --append-system-prompt /sandbox/ROLE.md";
+const PI = "pi --no-session --append-system-prompt /sandbox/ROLE.md";
 
 // Run `openshell …` with stdin closed so `sandbox exec` gets EOF and exits.
 function openshell(args: string[], timeoutMs = 180_000, signal?: AbortSignal): Promise<string> {

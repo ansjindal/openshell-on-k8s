@@ -5,7 +5,7 @@
 # for interactive runtime ops (status / task / scale down / logs).
 sandboxes_enabled: false
 sandbox_provider: litellm       # model provider to attach (created by 10-cli_providers)
-# --memory/--cpu set the workload pod's request AND limit. 3Gi: one OpenClaw turn
+# --memory/--cpu set the workload pod's request AND limit. 3Gi: one agent turn
 # peaks near 2 GB. No CPU value: a CPU request per sandbox would fill an 8-vCPU
 # node after three or four sandboxes and leave the next ones unschedulable.
 sandbox_memory: 3Gi

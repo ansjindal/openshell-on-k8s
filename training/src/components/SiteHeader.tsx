@@ -4,15 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 
-type Links = { console: string | null; openclawUi: string | null; grafana: string | null };
+type Links = { console: string | null; grafana: string | null };
 
 export function SiteHeader() {
-  const [links, setLinks] = useState<Links>({ console: null, openclawUi: null, grafana: null });
+  const [links, setLinks] = useState<Links>({ console: null, grafana: null });
 
   useEffect(() => {
     fetch("/api/site-links")
       .then((r) => r.json())
-      .then((d) => setLinks({ console: d.console ?? null, openclawUi: d.openclawUi ?? null, grafana: d.grafana ?? null }))
+      .then((d) => setLinks({ console: d.console ?? null, grafana: d.grafana ?? null }))
       .catch(() => {});
   }, []);
 
@@ -28,7 +28,6 @@ export function SiteHeader() {
       <span className="spacer" />
       {links.console && <a href={links.console} target="_blank" rel="noreferrer" className="hbtn adminbtn">Console ↗</a>}
       {links.grafana && <a href={links.grafana} target="_blank" rel="noreferrer" className="hbtn adminbtn">Grafana ↗</a>}
-      {links.openclawUi && <a href={links.openclawUi} target="_blank" rel="noreferrer" className="hbtn adminbtn">OpenClaw UI ↗</a>}
       <Link href="/links" className="hbtn adminbtn">Links</Link>
       <ThemeToggle />
     </header>

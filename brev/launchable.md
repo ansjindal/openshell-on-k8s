@@ -1,7 +1,7 @@
 # Brev Launchable — wizard mapping
 
 How the fields in the Brev "Create Launchable" wizard map to this repo. The whole
-stack runs on ONE VM: k3s + the OpenShell gateway + Keycloak + the console + an OpenClaw agent.
+stack runs on ONE VM: k3s + the OpenShell gateway + Keycloak + the console + pi agents.
 
 ## Step 1 — Files & runtime
 
@@ -32,8 +32,7 @@ for v in MODEL_API_KEY MODEL_BASE_URL MODEL_NAME \
          ENABLE_KYVERNO ENABLE_MONITORING ENABLE_SSO ENABLE_HEADLAMP \
          PUBLIC_BASE_URL CONSOLE_URL BREV_URL_PREFIX CONSOLE_URL_PREFIX BREV_URL_DOMAIN \
          ENVOY_WEB_NODEPORT ENVOY_GRPC_NODEPORT ENVOY_HOST_PORT CONSOLE_HOST_PORT \
-         CREATE_FLEET FLEET_SIZE AGENT_CMD \
-         ENABLE_OPENCLAW_UI OPENCLAW_UI_PORT OPENCLAW_UI_URL OPENCLAW_UI_URL_PREFIX \
+         CREATE_FLEET FLEET_SIZE \
          ENABLE_TRAINING TRAINING_PORT GATEWAY_NODEPORT ANSIBLE_TAGS; do
   [ -n "${!v:-}" ] && printf '%s=%q\n' "$v" "${!v}" >> .env
 done
@@ -58,7 +57,7 @@ after editing `.env`.
 
 ## Step 3 — Networking (expose this port)
 
-**With SSO on (default)** you create **two** Secure Links (three with the OpenClaw UI). Each
+**With SSO on (default)** you create **two** Secure Links. Each
 one is its own HTTPS subdomain on Brev, mapped to one low host port; a socat forwarder on each
 port hands the traffic to the in-cluster Envoy ingress, which routes by host name:
 
@@ -66,13 +65,12 @@ port hands the traffic to the in-cluster Envoy ingress, which routes by host nam
 |---|---|---|---|
 | `openshell` | `3001` | `https://openshell-<brevid>.<domain>` | training site `/`, Keycloak `/auth`, Grafana `/grafana` |
 | `console` | `3002` | `https://console-<brevid>.<domain>` | the OpenShell Console (sign in with Keycloak) |
-| `openclaw` | `30789` | `https://openclaw-<brevid>.<domain>` | OpenClaw's own Control UI (optional, `ENABLE_OPENCLAW_UI=true`) |
 
 `scripts/setup.sh` finds the URLs by itself: Brev lists the instance's links in
 `/etc/brev/environment-context.json`, so the link on port 3001 becomes the site/Keycloak URL,
-3002 the console and 30789 the OpenClaw UI, whatever their names and domain. Without those
+3002 the console, whatever their names and domain. Without those
 entries it derives `https://<prefix>-<brevid>.<domain>`, taking the domain from any other Brev
-link (prefixes `openshell`, `console`, `openclaw`). Set `BREV_URL_DOMAIN`, or `PUBLIC_BASE_URL`
+link (prefixes `openshell`, `console`). Set `BREV_URL_DOMAIN`, or `PUBLIC_BASE_URL`
 and `CONSOLE_URL`, only to override.
 
 > Brev/launchpad only forwards **low** host ports to real sockets: pointing a link at a high
@@ -85,7 +83,7 @@ works from the VM terminal (`kubectl`, `openshell`, `./scripts/fleet`).
 
 - **GPU:** none (inference is a remote OpenAI-compatible endpoint).
 - **CPU:** 8 vCPU (tested on GCP `n2d-standard-8`).
-- **RAM:** 32 GB recommended (the full stack with monitoring uses about 12 GB before agents; one OpenClaw turn peaks near 2 GB).
+- **RAM:** 32 GB recommended (the full stack with monitoring uses about 12 GB before agents; one agent turn peaks near 2 GB).
 - **Disk:** 60 GB+ (k3s + image pulls).
 - **Kernel:** Linux 6.2+ with Landlock (Ubuntu 22.04 on GCP ships 6.8). OpenShell 0.1 sandboxes require Landlock ABI v3.
 
@@ -110,5 +108,3 @@ Set these as the Launchable's environment configuration (or in `.env`):
 | `ENABLE_TRAINING` | build + serve the training site | `true` |
 | `TRAINING_PORT` | port of the training site on the VM | `3000` |
 | `ENVOY_WEB_NODEPORT` | in-cluster Envoy NodePort (internal; not the public port) | `30080` |
-| `ENABLE_OPENCLAW_UI` | forward OpenClaw's own web UI from agent-0 to a host port | `true` |
-| `OPENCLAW_UI_PORT` | host port OpenClaw's UI is forwarded to, if enabled | `30789` |

@@ -397,7 +397,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
     layers: [{ n: 0, name: "The sandbox" }, { n: 1, name: "Your own provider" }, { n: 2, name: "Workspace files" }, { n: 3, name: "Skills" }, { n: 4, name: "Run a task" }, { n: 5, name: "The audit trail" }, { n: 6, name: "The Console" }, { n: 7, name: "Users, roles & workspaces" }],
     nodes: [
       { id: "soul", x: 10, y: 25, w: 170, h: 62, label: "SOUL.md", sub: "persona · workspace files", layer: 2 },
-      { id: "wl", x: 210, y: 20, w: 180, h: 72, label: "agent-0", sub: "OpenClaw · placeholders", layer: 0 },
+      { id: "wl", x: 210, y: 20, w: 180, h: 72, label: "agent-0", sub: "pi · placeholders", layer: 0 },
       { id: "ll", x: 420, y: 20, w: 170, h: 56, label: "LiteLLM → model", sub: "provider litellm", layer: 0, kind: "ext" },
       { id: "task", x: 10, y: 125, w: 170, h: 62, label: "a task", sub: "fleet task · all agents", layer: 4, kind: "accent" },
       { id: "sup", x: 210, y: 120, w: 180, h: 72, label: "supervisor pod", sub: "policy · real keys\nOCSF per decision", layer: 0, kind: "accent" },
@@ -427,11 +427,10 @@ export const DIAGRAMS: Record<string, Diagram> = {
   m3: {
     title: "Module 3: tools and skills, the standard way",
     w: 600, h: 400,
-    layers: [{ n: 0, name: "A sandbox" }, { n: 1, name: "An MCP server" }, { n: 2, name: "Rules per tool" }, { n: 3, name: "A skill repository" }, { n: 4, name: "Two harnesses" }],
+    layers: [{ n: 0, name: "A sandbox" }, { n: 1, name: "An MCP server" }, { n: 2, name: "Rules per tool" }, { n: 3, name: "A skill repository" }],
     nodes: [
       { id: "sb", x: 10, y: 15, w: 280, h: 230, label: "sandbox tool-agent · workspace dev", layer: 0, kind: "group" },
-      { id: "pi", icon: "i-bot", x: 25, y: 50, w: 120, h: 56, label: "pi", sub: "mcp.json", layer: 0 },
-      { id: "oc", icon: "i-bot", x: 155, y: 50, w: 120, h: 56, label: "OpenClaw", sub: "mcp add", layer: 4, dashed: true },
+      { id: "pi", icon: "i-bot", x: 25, y: 50, w: 250, h: 56, label: "pi", sub: "mcp.json · skills · the model via LiteLLM", layer: 0 },
       { id: "sk", icon: "i-doc", x: 25, y: 120, w: 250, h: 50, label: "~/.agents/skills", sub: "k8s-triage · incident-report · …", layer: 3 },
       { id: "sup", icon: "i-shield", x: 25, y: 182, w: 250, h: 52, label: "supervisor", sub: "protocol: mcp · tool rules", layer: 0, kind: "accent" },
       { id: "mcp", icon: "i-svc", x: 340, y: 30, w: 250, h: 74, label: "sre-tools MCP server", sub: "namespace tools · :8080/mcp\npod_status · prometheus · loki …", layer: 1, kind: "ext" },

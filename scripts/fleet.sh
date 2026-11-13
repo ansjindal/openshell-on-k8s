@@ -11,11 +11,10 @@
 # For each agent this creates a sandbox in the platform workspace (lab) whose
 # policy allows only: a read-only clone of the skill repository, and the
 # sre-tools MCP server for the agent's own tools (every other tool is refused,
-# scale_deployment always). pi is installed once on this machine and uploaded
-# into each sandbox (no package egress for the agents); then pi is pointed at
-# LiteLLM and at sre-tools, the platform skills are cloned into
-# ~/.agents/skills, and the agent's role is written to /sandbox/ROLE.md (from
-# manifests/fleet/roles/<name>.md).
+# scale_deployment always). pi ships in the sandbox image, already pointed at
+# LiteLLM; this adds the sre-tools MCP server to its mcp.json, clones the
+# platform skills into ~/.agents/skills, and writes the agent's role to
+# /sandbox/ROLE.md (from manifests/fleet/roles/<name>.md).
 #
 #   ./scripts/fleet.sh up fleet.txt | status | down [fleet.txt]
 set -euo pipefail
@@ -23,8 +22,6 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; REPO="$(cd "$HERE/.." && p
 export NO_COLOR=1
 PROVIDER="${OPENSHELL_PROVIDER:-litellm}"
 ROLES="$REPO/manifests/fleet/roles"
-PI_VERSION="${PI_VERSION:-1.5.2}"
-PI_BUNDLE="/tmp/fleet-pi-${PI_VERSION}.tgz"
 SKILL_REPO="http://gitea.skills.svc.cluster.local:3000/platform/skills.git"
 MCP_URL="http://sre-tools.tools.svc.cluster.local:8080/mcp"
 # The platform workspace (operator mode: namespace of the same name), unless set.
@@ -76,14 +73,12 @@ network_policies:
 YAML
 }
 
-# Inside a Ready sandbox: pi, its model and MCP config, the skills, the role.
+# Inside a Ready sandbox: pi's MCP config, the skills, the role. (pi and its
+# LiteLLM config come with the image.)
 configure() {                        # $1 = name, $2 = tools
   local name="$1" tools="$2"
-  openshell sandbox upload --no-git-ignore "$name" "$PI_BUNDLE" /sandbox/pi.tgz </dev/null >/dev/null 2>&1
-  ox "$name" "tar xzf /sandbox/pi.tgz -C /sandbox && rm -f /sandbox/pi.tgz"
-  ox "$name" "mkdir -p ~/.pi/agent && printf '%s' '{\"providers\":{\"lab\":{\"baseUrl\":\"http://litellm.litellm.svc.cluster.local:4000/v1\",\"api\":\"openai-completions\",\"apiKey\":\"\$LITELLM_API_KEY\",\"compat\":{\"supportsDeveloperRole\":false,\"supportsReasoningEffort\":false},\"models\":[{\"id\":\"default\"}]}}}' > ~/.pi/agent/models.json"
   if [[ "$tools" != "-" && -n "$tools" ]]; then
-    ox "$name" "printf '%s' '{\"mcpServers\":{\"sre-tools\":{\"url\":\"${MCP_URL}\"}}}' > ~/.pi/agent/mcp.json"
+    ox "$name" "mkdir -p ~/.pi/agent && printf '%s' '{\"mcpServers\":{\"sre-tools\":{\"url\":\"${MCP_URL}\"}}}' > ~/.pi/agent/mcp.json"
   fi
   ox "$name" "rm -rf /sandbox/skills && git clone -q ${SKILL_REPO} /sandbox/skills && mkdir -p ~/.agents/skills && for d in /sandbox/skills/*/; do ln -sfn \"\$d\" ~/.agents/skills/\$(basename \"\$d\"); done"
   [[ -f "$ROLES/$name.md" ]] && ox "$name" "echo $(b64 < "$ROLES/$name.md") | base64 -d > /sandbox/ROLE.md"
@@ -97,13 +92,6 @@ up() {
     [[ -z "$name" || "$name" == \#* ]] && continue
     NM+=("$name"); TL+=("${tools:--}")
   done 3< "$spec"
-  # pi, installed once here and uploaded into every sandbox.
-  if [[ ! -s "$PI_BUNDLE" ]]; then
-    echo "Installing pi ${PI_VERSION} once, to upload into each agent…"
-    local tmp; tmp=$(mktemp -d)
-    npm install --prefix "$tmp/pi" --no-audit --no-fund "@earendil-works/pi-coding-agent@${PI_VERSION}" >/dev/null
-    tar czf "$PI_BUNDLE" -C "$tmp" pi && rm -rf "$tmp"
-  fi
   echo "Bringing up ${#NM[@]} pi agents in workspace ${OPENSHELL_WORKSPACE}, in parallel:"
   local i name
   for i in "${!NM[@]}"; do
@@ -131,7 +119,7 @@ up() {
     if (( running >= 2 )); then wait -n 2>/dev/null || true; running=$((running - 1)); fi
   done
   wait
-  echo "   …waiting for each to be Ready, then configuring (pi, MCP, skills, role) in parallel…"
+  echo "   …waiting for each to be Ready, then configuring (MCP, skills, role) in parallel…"
   for i in "${!NM[@]}"; do
     (
       name="${NM[$i]}"; ready=false

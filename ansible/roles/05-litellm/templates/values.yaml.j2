@@ -21,7 +21,7 @@ proxy_config:
 {% endfor %}
 
   # "default" points at the lab's model (inference_model), so agents and the
-  # OpenClaw image can say model "default" and the model stays a lab setting.
+  # pi sandbox image can say model "default" and the model stays a lab setting.
   router_settings:
     model_group_alias:
       default: "{{ inference_model }}"

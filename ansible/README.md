@@ -12,8 +12,8 @@ control:    03-k3s server → 03-k3s agents
 cluster:    04-agent_sandbox → 05-litellm → 06-postgres* → 08b-cert_manager
             → 07-keycloak* → 08-apiserver_oidc* → 09-openshell_gateway
             → 10-cli_providers → 11-kyverno* → 12-monitoring*
-            → 13-headlamp* → 14-envoy_gateway* → 15-console* → 17-skill-registry*
-            → 16-sandboxes* → 18-openclaw-forward*
+            → 13-headlamp* → 14-envoy_gateway* → 15-console* → 19-skill-repo
+            → sre-tools MCP server → 16-sandboxes*
             (* optional / toggled)
 ```
 
@@ -73,9 +73,8 @@ ansible-playbook site.yml --tags monitoring -e upstream_api_key=...
 | `13-headlamp` | Kubernetes dashboard, OIDC SSO (optional) | server |
 | `14-envoy_gateway` | Gateway API ingress, host- and path-routed (optional) | server |
 | `15-console` | OpenShell Console ([ai-openshell/console](https://github.com/ai-openshell/console)), Keycloak sign-in (optional) | server |
-| `17-skill-registry` | Verdaccio, the in-cluster skill registry | server |
+| `19-skill-repo` | Gitea and the platform/skills repository (Agent Skills), seeded from `skills/` | server |
 | `16-sandboxes` | create the initial sandbox fleet via the CLI — when `sandboxes_enabled` | server |
-| `18-openclaw-forward` | OpenClaw Control UI of agent-0 on a host port (optional) | server |
 
 After it completes, drive the fleet with [`../scripts/fleet`](../scripts/fleet) (run it on the
 server node, where kubectl + the openshell CLI are configured).

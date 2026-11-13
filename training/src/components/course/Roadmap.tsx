@@ -60,5 +60,5 @@ export const STACK: [string, string][] = [
   ["k3s v1.37", "Kubernetes"], ["agent-sandbox", "controller"], ["OpenShell 0.1.7", "gateway · supervisors"],
   ["OpenShell Console", "web UI"], ["LiteLLM", "model proxy"], ["Keycloak", "sign-in"],
   ["cert-manager", "mTLS · lab CA"], ["Kyverno", "admission"], ["Prometheus · Grafana", "metrics"],
-  ["Loki · Alloy", "logs · OCSF"], ["Tempo", "traces"], ["OpenClaw", "the agent"],
+  ["Loki · Alloy", "logs · OCSF"], ["Tempo", "traces"], ["pi", "the agent"],
 ];

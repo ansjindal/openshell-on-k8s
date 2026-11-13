@@ -9,7 +9,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 // request at build or page-load time, and no late font swap between pages.
 export const metadata: Metadata = {
   title: "OpenShell on Kubernetes",
-  description: "A hands-on teaching site for running sandboxed AI agents (OpenClaw 🦞) on Kubernetes — with deny-by-default policies, credentials the agent never sees, an audit trail, and a live shell right in the page.",
+  description: "A hands-on teaching site for running sandboxed AI agents (pi) on Kubernetes — with deny-by-default policies, credentials the agent never sees, an audit trail, and a live shell right in the page.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,5 @@
 # Module 3: a sandbox that may use the sre-tools MCP server, and only some of its
 # tools. The lab baseline, plus:
-#  - npm_registry: read-only, for node, so pi can be installed (as in 1.4);
 #  - sre_tools: the MCP server, inspected as MCP (protocol: mcp): the session
 #    handshake, tool discovery, and four read-only tools; scale_deployment is
 #    denied even though the server offers it.
@@ -15,17 +14,6 @@ process:
   run_as_user: sandbox
   run_as_group: sandbox
 network_policies:
-  npm_registry:
-    name: npm_registry
-    endpoints:
-      - host: registry.npmjs.org
-        port: 443
-        protocol: rest
-        enforcement: enforce
-        access: read-only
-        allow_encoded_slash: true
-    binaries:
-      - path: /usr/bin/node
   sre_tools:
     name: sre_tools
     endpoints:
@@ -51,5 +39,4 @@ network_policies:
             tool: scale_deployment
     binaries:
       - path: /usr/bin/node                          # pi
-      - path: /usr/local/lib/openclaw/node/bin/node  # OpenClaw's own Node
       - path: /usr/bin/curl
