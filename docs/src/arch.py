@@ -3,7 +3,7 @@ from lib import *
 
 S = Svg(1600, 1090, "One VM, the whole platform",
         "OpenShell on Kubernetes lab architecture: a single Brev VM running k3s with Envoy Gateway, the OpenShell gateway and console, "
-        "one namespace per workspace, of the same name, prepared with the openshell-workspace chart (lab with agent-0 and agent-1, dev with pi-agent), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.")
+        "one namespace per workspace, of the same name, prepared with the openshell-workspace chart (lab with agent-0 and the SRE fleet, dev with pi-agent and tool-agent), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.")
 S.text(24, 38, "One VM, the whole platform", 26, True)
 S.text(24, 64, "OpenShell on Kubernetes training lab: everything below runs on a single Brev VM", 15, False, SUB)
 
@@ -72,7 +72,7 @@ S.label(62, 300, "mTLS · OU=operator = platform admin → NodePort 30808", GREE
 
 # ---- workspaces: operator mode, each workspace a namespace of the same name
 S.ns(472, 510, 660, 236, "lab", green=True, sub="· workspace lab · openshell-workspace chart")
-# agent-1 and more, compact
+# the Module 4 fleet and more, compact
 def pair(x, y, small=False):
     """A sandbox's two pods, side by side: workload (grey) and supervisor (green)."""
     w1, w2, h = (76, 76, 40)
@@ -85,12 +85,12 @@ def pair(x, y, small=False):
     S.text(x + w1 + 11, y + 25, "supervisor", 13, False, INK, check=False)
     S.raw('</g>')
 
-S.raw('<g class="dg-node" data-node="agent-1">')
+S.raw('<g class="dg-node" data-node="SRE fleet">')
 S.rect(496, 574, 172, 82, fill=GREEN_T, stroke=GREEN_L, sw=1, rx=8)
 S.rect(488, 566, 172, 82, fill="#fff", stroke=GREEN, sw=1.4, rx=8)
 S.icon("i-cube", 498, 572, 18, GREEN_D)
-S.text(522, 587, "agent-1", 14, True)
-S.text(584, 587, "· Ready", 13, True, GREEN_D)
+S.text(522, 587, "SRE fleet", 14, True)
+S.text(596, 587, "· 5 agents", 13, True, GREEN_D)
 S.raw('</g>')
 pair(496, 598)
 S.raw('<g class="dg-node" data-node="more sandboxes">')
@@ -113,14 +113,17 @@ S.box(924, 598, 180, 128, "supervisor pod", ["policy L4 / L7", "credential injec
 S.arrow("M880 676 H922", GREEN_D, both=True, flow="3")
 S.label(901, 664, "port", GREEN_D, size=12.5, flow="3")
 
-S.ns(472, 758, 660, 72, "dev", green=True, sub="· workspace dev · openshell-workspace chart")
-S.raw('<g class="dg-node" data-node="pi-agent">')
-S.rect(872, 764, 248, 60, fill="#fff", stroke=GREEN, sw=1.4, rx=8)
-S.icon("i-cube", 880, 770, 18, GREEN_D)
-S.text(902, 786, "pi-agent", 14, True)
-S.text(882, 810, "Ready", 13, True, GREEN_D)
-S.raw('</g>')
-pair(958, 774)
+S.ns(472, 758, 660, 72, "dev", green=True)
+def dev_box(x, w, name, pair_x):
+    S.raw(f'<g class="dg-node" data-node="{name}">')
+    S.rect(x, 764, w, 60, fill="#fff", stroke=GREEN, sw=1.4, rx=8)
+    S.icon("i-cube", x + 8, 770, 18, GREEN_D)
+    S.text(x + 30, 786, name, 13, True)
+    S.text(x + 10, 810, "Ready", 12.5, True, GREEN_D)
+    S.raw('</g>')
+    pair(pair_x, 774)
+dev_box(600, 272, "tool-agent", 708)
+dev_box(882, 248, "pi-agent", 968)
 
 # gateway -> workspaces (creates namespaces, sandboxes, policy)
 S.arrow("M404 710 H458 V552 H1010 V596", GREEN_D, flow="2")

@@ -9,7 +9,7 @@ what's worth pointing at when you teach it.
 ## The flow
 
 1. **Install**: Ansible runs against this VM: k3s, then the cluster components.
-2. **Ask**: you (CLI, `scripts/fleet`, the console) call the OpenShell gateway over gRPC.
+2. **Ask**: you (the CLI, the fleet scripts, the console) call the OpenShell gateway over gRPC.
    People present a Keycloak token; the VM's CLI presents an `OU=operator` client certificate.
 3. **Create**: the gateway stores the sandbox and its policy, writes an `agents.x-k8s.io`
    `Sandbox` resource and starts a **supervisor pod**; the agent-sandbox controller turns the
@@ -36,11 +36,13 @@ what's worth pointing at when you teach it.
 | `08b-cert_manager` | Certificates as a service: gateway TLS, the operator certificate, a lab CA. |
 | `07-keycloak` | One identity provider for the console, Grafana and the gateway. |
 | `09-openshell_gateway` | The **control plane**: a Kubernetes compute driver, policies, providers, identities. |
-| `10-cli_providers` | Model access as a **provider**: a profile (endpoint + L7 rules + credential contract) and a stored key. |
+| `10-cli_providers` | Workspaces in operator mode (the `lab` namespace, labelled and prepared with the `openshell-workspace` chart) and model access as a **provider**: a profile (endpoint + L7 rules + credential contract) and a stored key. |
 | `11-kyverno` | Policy-as-code guardrails on the pods OpenShell creates. |
 | `12-monitoring` | Prometheus + Grafana + Loki + Alloy + Tempo: metrics, the audit trail, traces. |
 | `14-envoy_gateway` / `15-console` | Gateway API ingress and the upstream OpenShell Console. |
-| `16-sandboxes` | Create the initial agent fleet through the CLI. |
+| `19-skill-repo` | Gitea with `platform/skills`: Agent Skills in git, cloned read-only by sandboxes. |
+| `manifests/tools` | The **sre-tools** MCP server: read-only tools over pods, events, Prometheus, Loki and Tempo, for Modules 3 and 4. |
+| `16-sandboxes` | Create the initial sandbox, `agent-0`, through the CLI. |
 
 ## The security story
 

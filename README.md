@@ -8,7 +8,7 @@ It's a teaching launchable. You get the platform (k3s, the OpenShell gateway, Ke
 the [OpenShell Console](https://github.com/ai-openshell/console), LiteLLM, Prometheus, Grafana,
 Loki and Tempo) and, separately, a **training site** with lessons and a live in-browser terminal
 that walks you through it: sandboxes, deny-by-default network policy, credentials the agent never
-sees, the audit trail, users and workspaces, and a multi-agent SRE capstone.
+sees, the audit trail, MCP tools and Agent Skills, and a multi-agent SRE capstone.
 
 ![One VM: Envoy routes the training site, Keycloak, Grafana and the OpenShell Console; the OpenShell gateway creates a workload pod and a supervisor pod per sandbox; agents reach LiteLLM through their supervisor, which injects the key; OCSF audit events go to Loki and agent traces to Tempo.](docs/architecture.svg)
 
@@ -57,8 +57,24 @@ Or drive it from the VM; the `openshell` CLI is already set up as the lab operat
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 openshell status
 openshell sandbox list
-./scripts/fleet task "Write a haiku about Kubernetes pods" all
+openshell sandbox exec -n agent-0 -- pi --no-session -p "Write a haiku about Kubernetes pods"
 ```
+
+## The course
+
+The training site (`training/`) takes about four and a half hours, end to end. Every lab step has a **Run**
+button that runs its command on your VM, next to the output recorded on a real run.
+
+![The training site: modules and lessons in the sidebar, a lesson's diagram of pi in its sandbox (the model call allowed, a curl refused, both in the audit log), and the next lab step.](docs/training-site.jpg)
+
+| Module | What you do |
+|---|---|
+| **0 · Agents** | What an agent is; deploy one on Kubernetes the usual way, and see what it can reach. |
+| **1 · OpenShell** | The platform on your cluster; add an inference provider in your own workspace; bring up a sandboxed pi agent and open its network rule by rule. |
+| **2 · Customize & operate** | Give an agent a persona; read every decision in the audit trail (OCSF, Loki, Grafana); use the OpenShell Console. |
+| **3 · Tools and skills** | An MCP server on the cluster, with a policy that decides which tools an agent may call; Agent Skills shared through git. |
+| **4 · Capstone** | An SRE copilot fleet of sealed specialists investigates a real outage, and you approve the fix. |
+| **5 · Going further** | Tear down; high availability, more nodes, a namespace per team, other agents. |
 
 ## What it deploys
 
@@ -101,15 +117,15 @@ Everything is driven by `.env` (see [.env.example](.env.example)):
 - `MODEL_API_KEY` / `MODEL_BASE_URL` / `MODEL_NAME`: the upstream model.
 - `ENABLE_SSO`: Keycloak, Envoy ingress, Grafana SSO and the console. `ENABLE_MONITORING`, `ENABLE_KYVERNO`: toggles.
 - `PUBLIC_BASE_URL`, `CONSOLE_URL`, `BREV_URL_DOMAIN`: only to override the URLs detected from the Brev links.
-- `CREATE_FLEET`, `FLEET_SIZE`, `AGENT_CMD`: the initial agent fleet.
+- `CREATE_FLEET`, `FLEET_SIZE`: the initial sandboxes, `agent-0` and up (one by default).
 - `ENABLE_TRAINING`: the training site (set `false` for the platform only).
 
 ## Layout
 
 ```
 scripts/setup.sh          # entrypoint: single-VM bring-up
-scripts/fleet             # runtime ops: up / down / status / task / shell / logs
-scripts/fleet.sh          # Part III capstone: the SRE copilot fleet from a spec (fleet.txt)
+scripts/fleet             # runtime ops for agent-0..N: up / down / status / task / shell / logs
+scripts/fleet.sh          # Module 4 capstone: the SRE copilot fleet from a spec (fleet.txt)
 scripts/lab-cli-setup.sh  # point a user's openshell CLI at the gateway as the lab operator
 ansible/                  # the platform (roles 02-18; single node by default)
 manifests/                # policies, the demo apps, the MCP server, the fleet's roles
