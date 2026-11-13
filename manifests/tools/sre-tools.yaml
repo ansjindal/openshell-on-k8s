@@ -1,0 +1,105 @@
+# Module 3: sre-tools, an MCP server (Streamable HTTP at :8080/mcp) giving agents
+# the cluster's SRE tools. An ordinary Deployment + Service in namespace `tools`.
+# Its ServiceAccount may read pods and events everywhere and scale Deployments
+# in `demo` only; which agent may call which tool is decided by each sandbox's
+# OpenShell policy (protocol: mcp), not here.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tools
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sre-tools
+  namespace: tools
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sre-tools-read
+rules:
+  - apiGroups: [""]
+    resources: [pods, events]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sre-tools-read
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: sre-tools-read }
+subjects: [{ kind: ServiceAccount, name: sre-tools, namespace: tools }]
+---
+# scale_deployment works in the demo app's namespace only (created here if the
+# app isn't deployed yet).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sre-tools-scale
+  namespace: demo
+rules:
+  - apiGroups: [apps]
+    resources: [deployments/scale]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sre-tools-scale
+  namespace: demo
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: sre-tools-scale }
+subjects: [{ kind: ServiceAccount, name: sre-tools, namespace: tools }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sre-tools
+  namespace: tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: sre-tools }
+  template:
+    metadata:
+      labels: { app: sre-tools }
+    spec:
+      serviceAccountName: sre-tools
+      containers:
+        - name: server
+          image: node:22
+          env:
+            - name: NODE_EXTRA_CA_CERTS
+              value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -e
+              mkdir -p /app && cp /src/server.mjs /app/ && cd /app
+              echo '{"type":"module"}' > package.json
+              npm install --no-audit --no-fund @modelcontextprotocol/sdk@1.32.2 zod@3.25.76
+              exec node server.mjs
+          ports: [{ name: mcp, containerPort: 8080 }]
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 3
+          resources:
+            requests: { memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts: [{ name: src, mountPath: /src }]
+      volumes:
+        - name: src
+          configMap: { name: sre-tools-src }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sre-tools
+  namespace: tools
+spec:
+  selector: { app: sre-tools }
+  ports: [{ name: mcp, port: 8080, targetPort: 8080 }]

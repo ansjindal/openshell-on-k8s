@@ -1,0 +1,9 @@
+# kubectl apply -k manifests/tools   (Module 3)
+resources:
+  - sre-tools.yaml
+configMapGenerator:
+  - name: sre-tools-src
+    namespace: tools
+    files: [sre-tools/server.mjs]
+generatorOptions:
+  disableNameSuffixHash: true

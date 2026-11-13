@@ -1,0 +1,4 @@
+# In-cluster skill repository (Gitea): platform/skills, seeded from the repo's skills/.
+skill_repo_enabled: true
+skill_repo_namespace: skills
+skill_repo_user: platform

@@ -176,6 +176,23 @@
   roles:
     - { role: "17-skill-registry", when: skill_registry_enabled | default(true) | bool }
 
+- name: Component — skill repository (Gitea, platform/skills)
+  hosts: server
+  become: true
+  tags: [skill-repo, skills]
+  roles:
+    - { role: "19-skill-repo", when: skill_repo_enabled | default(true) | bool }
+
+- name: Component — sre-tools MCP server (Module 3)
+  hosts: server
+  become: true
+  tags: [mcp, tools]
+  tasks:
+    - name: Apply manifests/tools (sre-tools MCP server)
+      ansible.builtin.command: kubectl apply -k {{ playbook_dir }}/../manifests/tools
+      environment: { KUBECONFIG: /etc/rancher/k3s/k3s.yaml }
+      changed_when: false
+
 # Sandbox fleet — runtime objects, created last (needs the gateway + provider).
 - name: Sandboxes — create the initial fleet (optional)
   hosts: server

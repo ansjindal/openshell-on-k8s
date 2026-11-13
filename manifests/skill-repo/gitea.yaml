@@ -1,0 +1,68 @@
+# The in-cluster skill repository: Gitea (rootless), one replica, SQLite on a
+# PVC. Repositories are public to read inside the cluster (no sign-in to
+# clone); only the platform user may push. Installed and seeded by
+# roles/19-skill-repo, which creates platform/skills from the repo's skills/.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: skills
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitea-data
+  namespace: skills
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 1Gi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea
+  namespace: skills
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: gitea }
+  template:
+    metadata:
+      labels: { app: gitea }
+    spec:
+      securityContext: { fsGroup: 1000, runAsUser: 1000, runAsGroup: 1000 }
+      containers:
+        - name: gitea
+          image: docker.io/gitea/gitea:28.2.0-rootless
+          env:
+            - { name: GITEA__database__DB_TYPE, value: sqlite3 }
+            - { name: GITEA__security__INSTALL_LOCK, value: "true" }
+            - { name: GITEA__server__ROOT_URL, value: "http://gitea.skills.svc.cluster.local:3000/" }
+            - { name: GITEA__server__HTTP_PORT, value: "3000" }
+            - { name: GITEA__server__DISABLE_SSH, value: "true" }
+            - { name: GITEA__service__DISABLE_REGISTRATION, value: "true" }
+            - { name: GITEA__service__REQUIRE_SIGNIN_VIEW, value: "false" }
+            - { name: GITEA__repository__DEFAULT_BRANCH, value: main }
+          ports: [{ name: http, containerPort: 3000 }]
+          readinessProbe:
+            httpGet: { path: /api/healthz, port: 3000 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/gitea }
+            - { name: data, mountPath: /etc/gitea, subPath: config }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: gitea-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea
+  namespace: skills
+spec:
+  selector: { app: gitea }
+  ports: [{ name: http, port: 3000, targetPort: 3000 }]

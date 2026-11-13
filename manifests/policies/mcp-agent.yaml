@@ -1,0 +1,54 @@
+# Module 3: a sandbox that may use the sre-tools MCP server, and only some of its
+# tools. The lab baseline, plus:
+#  - npm_registry: read-only, for node, so pi can be installed (as in 1.4);
+#  - sre_tools: the MCP server, inspected as MCP (protocol: mcp): the session
+#    handshake, tool discovery, and four read-only tools; scale_deployment is
+#    denied even though the server offers it.
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /proc, /dev/urandom, /app, /etc, /var/log]
+  read_write: [/sandbox, /tmp, /dev/null]
+landlock:
+  compatibility: best_effort
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+network_policies:
+  npm_registry:
+    name: npm_registry
+    endpoints:
+      - host: registry.npmjs.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+        allow_encoded_slash: true
+    binaries:
+      - path: /usr/bin/node
+  sre_tools:
+    name: sre_tools
+    endpoints:
+      - host: sre-tools.tools.svc.cluster.local
+        port: 8080
+        path: /mcp
+        protocol: mcp
+        enforcement: enforce
+        mcp:
+          # initialize carries no MCP-Protocol-Version header, which OpenShell
+          # reads as 2025-03-26; every later request says 2025-11-25.
+          versions: ["2025-03-26", "2025-11-25"]
+        rules:
+          - allow: { method: initialize }
+          - allow: { method: notifications/initialized }
+          - allow: { method: tools/list }
+          - allow:
+              method: tools/call
+              tool:
+                any: [pod_status, cluster_events, prometheus_query, loki_query]
+        deny_rules:
+          - method: tools/call
+            tool: scale_deployment
+    binaries:
+      - path: /usr/bin/node
+      - path: /usr/bin/curl

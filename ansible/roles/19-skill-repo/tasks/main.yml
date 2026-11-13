@@ -1,0 +1,60 @@
+---
+# The skill repository (Module 3): Gitea in namespace `skills`, a `platform`
+# user, and the public repo platform/skills seeded from the repo's skills/
+# folder (Agent Skills). Sandboxes clone it read-only; the platform user pushes.
+- name: Skill repository
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Install Gitea
+      ansible.builtin.command: kubectl apply -f {{ playbook_dir }}/../manifests/skill-repo/gitea.yaml
+      changed_when: false
+
+    - name: Wait for Gitea
+      ansible.builtin.command: kubectl -n {{ skill_repo_namespace }} rollout status deploy/gitea --timeout=300s
+      changed_when: false
+
+    # The platform user's password lives in a Secret, generated once.
+    - name: Platform user's password
+      ansible.builtin.shell: |
+        set -euo pipefail
+        ns={{ skill_repo_namespace }}
+        if ! kubectl -n "$ns" get secret skill-repo-admin >/dev/null 2>&1; then
+          kubectl -n "$ns" create secret generic skill-repo-admin \
+            --from-literal=username={{ skill_repo_user }} --from-literal=password="$(openssl rand -hex 16)"
+        fi
+        kubectl -n "$ns" get secret skill-repo-admin -o jsonpath='{.data.password}' | base64 -d
+      args: { executable: /bin/bash }
+      register: _skill_pw
+      no_log: true
+      changed_when: false
+
+    - name: Platform user
+      ansible.builtin.shell: |
+        set -euo pipefail
+        g="kubectl -n {{ skill_repo_namespace }} exec deploy/gitea -- gitea --config /etc/gitea/app.ini"
+        if ! $g admin user list 2>/dev/null | awk '{print $2}' | grep -qx '{{ skill_repo_user }}'; then
+          $g admin user create --username '{{ skill_repo_user }}' --password '{{ _skill_pw.stdout }}' \
+            --email '{{ skill_repo_user }}@skills.lab.local' --admin --must-change-password=false
+        fi
+      args: { executable: /bin/bash }
+      no_log: true
+      changed_when: false
+
+    - name: Create platform/skills and push the seed skills (first run only)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        ip=$(kubectl -n {{ skill_repo_namespace }} get svc gitea -o jsonpath='{.spec.clusterIP}')
+        api="http://$ip:3000/api/v1"; auth='{{ skill_repo_user }}:{{ _skill_pw.stdout }}'
+        if curl -sf -u "$auth" "$api/repos/{{ skill_repo_user }}/skills" >/dev/null; then echo "exists"; exit 0; fi
+        curl -sf -u "$auth" -H 'Content-Type: application/json' -X POST "$api/user/repos" \
+          -d '{"name":"skills","description":"Platform Agent Skills","private":false,"default_branch":"main"}' >/dev/null
+        tmp=$(mktemp -d); cp -r {{ playbook_dir }}/../skills/. "$tmp/"; cd "$tmp"
+        git init -q -b main && git add -A
+        git -c user.name=platform -c user.email=platform@skills.lab.local commit -q -m "Seed platform skills"
+        git push -q "http://$auth@$ip:3000/{{ skill_repo_user }}/skills.git" main
+        rm -rf "$tmp"; echo "seeded"
+      args: { executable: /bin/bash }
+      register: _seed
+      no_log: true
+      changed_when: "'seeded' in _seed.stdout"
