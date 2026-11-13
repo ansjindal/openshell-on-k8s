@@ -171,7 +171,7 @@ For that one command, the gateway:
 2. wrote a `Sandbox` resource in the workspace's namespace, `dev`, which the **agent-sandbox controller** turned into the **workload pod** `pi-agent`, where the agent runs;
 3. started the **supervisor pod** `os-supervisor-<id>`, which fetched the policy and the provider's credential and became the workload's only way out.
 
-<Step n="1" title="List the Sandbox resources">
+<Step n="1" title="List the Sandbox resources in dev">
 
 `Sandbox` is a custom resource (`agents.x-k8s.io`), so `kubectl` can list it like any other object:
 
@@ -206,7 +206,7 @@ pi-agent                                             1/1     Running   13s   wor
 
 </Step>
 
-<Step n="3" title="The NetworkPolicy that pairs them">
+<Step n="3" title="Read the NetworkPolicy that pairs them">
 
 The isolation between the two pods is ordinary Kubernetes **NetworkPolicy**: the gateway made three with the sandbox, next to the chart's SSH policy:
 
@@ -229,7 +229,7 @@ Workload pods may talk only to their own supervisor (`os-control-<id>` matches t
 
 </Section>
 
-<Section n="4" title="Test the seal from inside">
+<Section n="4" title="Test the seal from inside the sandbox">
 
 The agent runs as the unprivileged user `sandbox`. Before it starts, the sandbox runtime applies the policy's static parts:
 
@@ -243,7 +243,7 @@ Kubernetes adds two guardrails of its own: a sandbox may use a cluster resource 
 
 Now check it. **`openshell --workspace dev sandbox exec -n pi-agent -- <command>`** runs one command inside the sandbox, through the gateway and the supervisor, and returns.
 
-<Step n="1" title="Who the agent runs as">
+<Step n="1" title="Check which user the agent runs as">
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- id
@@ -256,7 +256,7 @@ openshell --workspace dev sandbox exec -n pi-agent -- id
 
 </Step>
 
-<Step n="2" title="The filesystem, enforced by Landlock">
+<Step n="2" title="Try to write outside /sandbox: Landlock refuses">
 
 Try to write in `/usr`, write in `/sandbox`, and list `/root`:
 
@@ -275,7 +275,7 @@ Exactly the policy's `filesystem_policy`.
 
 </Step>
 
-<Step n="3" title="The Kubernetes API is out of reach">
+<Step n="3" title="Try the Kubernetes API: no connection">
 
 In 0.4 the agent's pod reached the API server with its ServiceAccount token. Here `curl` gets no connection at all (`-m 6` gives up after six seconds; exit 7 means it couldn't connect):
 
@@ -290,7 +290,7 @@ openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'curl -sk -m 6 -o /d
 
 </Step>
 
-<Step n="4" title="The environment the supervisor prepared">
+<Step n="4" title="Read the environment the supervisor prepared">
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'env | grep -E "^(HOME|LITELLM_API_KEY|SSL_CERT_FILE)" | cut -c1-80'
@@ -323,7 +323,7 @@ Type those commands at the sandbox prompt, not in the Cluster shell: there they'
 
 <Section n="5" title="Install pi: refused, then one door opened">
 
-<Step n="1" title="Ask npm for pi">
+<Step n="1" title="Ask npm for pi: the connection is refused">
 
 The sandbox image has Node and npm. Ask the npm registry for pi's latest version (`--fetch-retries=0 --fetch-timeout=5000` makes it fail fast instead of retrying):
 
@@ -353,7 +353,7 @@ openshell --workspace dev logs pi-agent | grep OCSF | grep registry.npmjs.org | 
 
 </Step>
 
-<Step n="2" title="The policy file, then one door">
+<Step n="2" title="Read the policy file, then open one door for npm">
 
 Every layer of a sandbox is set by one short YAML file: its **policy**. The baseline you created `pi-agent` with is one; here it is line by line, with what each part lets through and what it stops:
 
@@ -431,7 +431,7 @@ grep apiKey ~/.pi/agent/models.json'
 
 </Step>
 
-<Step n="2" title="Ask it a question">
+<Step n="2" title="Ask pi a question through LiteLLM">
 
 The same question as in 0.4 (`PI_OFFLINE=1` stops pi's own update check, which the policy would refuse anyway):
 
@@ -446,7 +446,7 @@ openshell --workspace dev sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/
 
 </Step>
 
-<Step n="3" title="Give it the same tool">
+<Step n="3" title="Give it bash and the same curl task as in 0.4">
 
 The same task as in 0.4: use bash to reach example.com with curl.
 
@@ -474,7 +474,7 @@ openshell --workspace dev logs pi-agent | grep OCSF | grep -E "example.com|litel
 
 </Step>
 
-<Step n="4" title="Ask it for its key">
+<Step n="4" title="Ask it to print its key: only a placeholder">
 
 In 0.4 an agent with a shell could read the real key. Here:
 

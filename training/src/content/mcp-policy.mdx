@@ -11,7 +11,7 @@ On an endpoint with **`protocol: mcp`**, the supervisor parses every request as 
 
 Two limits to know: the tool's **arguments** are not inspected (an allowed tool may be called with any arguments the server accepts), and the server's **responses** are not parsed.
 
-<Section n="1" title="The MCP policy">
+<Section n="1" title="Read the policy that allows four tools">
 
 <YamlRead id="mcp-agent-policy" />
 
@@ -38,7 +38,7 @@ tool-agent  2026-11-13 11:05:06  Ready`}
 
 </Step>
 
-<Step n="2" title="An allowed tool">
+<Step n="2" title="Call an allowed tool from inside">
 
 From inside the sandbox, `curl` calls `pod_status` at the Service's full name:
 
@@ -53,7 +53,7 @@ openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'curl -s http://sr
 
 </Step>
 
-<Step n="3" title="A denied tool">
+<Step n="3" title="Call the denied tool: refused">
 
 The same request, for `scale_deployment`:
 
@@ -69,7 +69,7 @@ HTTP 403`}
 
 </Step>
 
-<Step n="4" title="Both decisions in the audit log">
+<Step n="4" title="Find both decisions in the audit log">
 
 `engine:l7-mcp` marks decisions made by reading MCP; each names the method and the tool:
 
@@ -87,7 +87,7 @@ openshell --workspace dev logs tool-agent | grep OCSF | grep l7-mcp | tail -2 | 
 
 </Section>
 
-<Section n="3" title="Let pi use the server">
+<Section n="3" title="Let pi use the MCP server">
 
 <Step n="1" title="Add the MCP server to pi">
 
@@ -112,7 +112,7 @@ Check it with: pi mcp list. If it requires sign-in: pi mcp login sre-tools
 
 </Step>
 
-<Step n="2" title="pi connects and lists the tools">
+<Step n="2" title="Check that pi connects and lists the tools">
 
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- pi mcp list

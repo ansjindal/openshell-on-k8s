@@ -15,7 +15,7 @@ An MCP client talks to a server in **JSON-RPC** messages, each one an HTTP `POST
 
 The model never talks to the server. It only sees the tool descriptions in its prompt and asks the harness to call one; the harness makes the request.
 
-<Section n="1" title="The sre-tools server on the cluster">
+<Section n="1" title="Look at the sre-tools MCP server on the cluster">
 
 The setup installed **sre-tools**, a small MCP server written for this lab with the official SDK (`manifests/tools/sre-tools/server.mjs`, about 150 lines). Its tools:
 
@@ -30,7 +30,7 @@ The setup installed **sre-tools**, a small MCP server written for this lab with 
 
 <YamlRead id="sre-tools-manifest" />
 
-<Step n="1" title="See the server and its Service">
+<Step n="1" title="List the server's Deployment and Service">
 
 ```bash
 kubectl -n tools get deploy,svc
@@ -53,7 +53,7 @@ service/sre-tools   ClusterIP   10.43.243.184   <none>        8080/TCP   24m`}
 
 The Service is only reachable inside the cluster, so open a short-lived port-forward to it, then send MCP requests with `curl`. Every request is a `POST` with a JSON-RPC body; `Accept` must allow both JSON and an event stream, as the transport requires.
 
-<Step n="1" title="Initialize a session">
+<Step n="1" title="Open a session with initialize">
 
 ```bash
 kubectl -n tools port-forward svc/sre-tools 8080:8080 >/dev/null 2>&1 & PF=$!; sleep 3
@@ -69,7 +69,7 @@ kill $PF
 
 </Step>
 
-<Step n="2" title="List its tools">
+<Step n="2" title="List the server's tools">
 
 After `initialize`, every request names the agreed revision in the `MCP-Protocol-Version` header:
 
@@ -92,7 +92,7 @@ kill $PF
 
 </Step>
 
-<Step n="3" title="Call a tool">
+<Step n="3" title="Call pod_status by hand">
 
 ```bash
 kubectl -n tools port-forward svc/sre-tools 8080:8080 >/dev/null 2>&1 & PF=$!; sleep 3

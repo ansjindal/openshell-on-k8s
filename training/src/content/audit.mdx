@@ -12,9 +12,9 @@ Every decision a supervisor makes, every connection opened or refused, every HTT
 <ReadScene scene="ocsf" />
 
 
-<Section n="1" title="From the CLI" goal="Generate denials and read them in the sandbox's log.">
+<Section n="1" title="Read audit events from the CLI" goal="Generate denials and read them in the sandbox's log.">
 
-<Step n="1" title="Make some traffic">
+<Step n="1" title="Make some denied traffic">
 
 Make some traffic first: one denied host and one denied admin call.
 
@@ -25,7 +25,7 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -m 5 https://example.org >/d
 
 </Step>
 
-<Step n="2" title="Read the OCSF events">
+<Step n="2" title="Read the OCSF events agent-0's supervisor wrote">
 
 Now read the sandbox's log:
 
@@ -56,9 +56,9 @@ Note the first line: `example.org` isn't in any rule, so the supervisor didn't e
 
 </Section>
 
-<Section n="2" title="In Loki, across every sandbox" goal="Query the same events for every sandbox with LogQL.">
+<Section n="2" title="Query the same events in Loki, across every sandbox" goal="Query the same events for every sandbox with LogQL.">
 
-<Step n="1" title="Query the denials">
+<Step n="1" title="Query the denials with LogQL">
 
 The supervisors' logs are shipped to **Loki** by Alloy. The same events, for every sandbox, queryable with LogQL. Find the Loki service and ask for the denials of the last 15 minutes:
 
@@ -73,9 +73,9 @@ Each line carries the supervisor pod, so you know which sandbox it was. (The gat
 
 </Section>
 
-<Section n="3" title="In Grafana" goal="Explore and live-tail the denials in Grafana.">
+<Section n="3" title="Explore the audit trail in Grafana" goal="Explore and live-tail the denials in Grafana.">
 
-<Step n="1" title="Open Explore on Loki">
+<Step n="1" title="Open Grafana's Explore on Loki">
 
 Open Grafana from the site's **Links** page (`<your site>/grafana`, sign in with Keycloak as `demo`), go to **Explore**, pick **Loki**, and run:
 
@@ -95,7 +95,7 @@ Try `|= "HTTP:"` for every inspected request, or `|= "CONFIG:PUBLISHED"` to see 
 
 </Section>
 
-<Section n="4" title="Agent traces in Tempo" goal="Find the agent's own OpenTelemetry spans.">
+<Section n="4" title="Follow agent traces in Tempo" goal="Find the agent's own OpenTelemetry spans.">
 
 The supervisor also relays the agent's own **OpenTelemetry** spans: every sandbox process gets `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the supervisor, which tags each span with the sandbox id and forwards it to **Tempo**. An agent instrumented with OpenTelemetry (send `application/x-protobuf`) shows up in Grafana → Explore → **Tempo**, searchable by `resource.openshell.sandbox.id`. The gateway's own spans (every RPC, every sandbox create) are there too, under service `openshell-gateway`.
 

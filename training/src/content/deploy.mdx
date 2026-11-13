@@ -142,9 +142,9 @@ openshell-dashboard-7689bc4dcb-2s72t   2/2     Running   0          11m`}
 
 </Section>
 
-<Section n="2" title="The gateway answers" goal="Confirm the CLI is connected, and see who you are.">
+<Section n="2" title="Check that the CLI reaches the gateway, and who you are to it" goal="Confirm the CLI is connected, and see who you are.">
 
-<Step n="1" title="Check the gateway status">
+<Step n="1" title="Ask the gateway for its status">
 
 The CLI reaches the gateway on NodePort `30808`:
 
@@ -165,7 +165,7 @@ openshell status
 
 </Step>
 
-<Step n="2" title="Ask who you are">
+<Step n="2" title="Ask the gateway who you are">
 
 The gateway accepts no anonymous calls. Ask it who you are:
 
@@ -189,9 +189,9 @@ This shell presents a client certificate with `OU=operator`, which cert-manager 
 
 </Section>
 
-<Section n="3" title="A sandbox is already running" goal="Find agent-0, created at provisioning time.">
+<Section n="3" title="Find agent-0, the sandbox the setup created" goal="Find agent-0, created at provisioning time.">
 
-<Step n="1" title="List the sandboxes">
+<Step n="1" title="List the sandboxes in the lab workspace">
 
 ```bash
 openshell sandbox list
@@ -209,7 +209,17 @@ agent-0  2026-11-10 15:26:24  Ready`}
 
 </Section>
 
-<Section n="4" title="The model path and sign-in are up" goal="Confirm LiteLLM and Keycloak are Running.">
+<Section n="4" title="Check that LiteLLM and Keycloak are running">
+
+LiteLLM is the model gateway you met in 0.3. **Keycloak** is the lab's sign-in for **people**: it holds the users (`demo`, `learner`), their passwords and their roles. OpenShell never sees a password: the Console sends you to Keycloak, Keycloak gives you a signed token, and the gateway checks that token on every call. The lab's own CLI doesn't use Keycloak at all: it presents a client certificate.
+
+<Diagram id="keycloak-flow" n="1.3" caption="People sign in with Keycloak through the Console, and the gateway checks their token and role on every call. The VM's CLI uses a client certificate instead." />
+
+The connection is a small overlay on the gateway's `values.yaml`:
+
+<YamlRead id="gateway-oidc" />
+
+You'll sign in as these users in [2.6 The OpenShell Console](/learn/console) and give them workspaces in [2.7](/learn/access-control).
 
 <Step n="1" title="List the LiteLLM and Keycloak pods">
 

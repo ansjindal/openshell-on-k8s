@@ -23,7 +23,7 @@ A few details the steps below rely on:
 
 <Section n="1" title="Read what pi-agent may reach today">
 
-<Step n="1" title="The policy's version and status">
+<Step n="1" title="Show the policy's version and status">
 
 All commands here carry `--workspace dev`, the workspace `pi-agent` lives in. **`openshell policy get`** asks the gateway for a sandbox's current policy:
 
@@ -42,7 +42,7 @@ Config rev:   5640519166585926973`}
 
 </Step>
 
-<Step n="2" title="The full effective policy">
+<Step n="2" title="Print the full effective policy">
 
 `--full` prints the **effective** policy: your file plus what attached providers added. Under `network_policies` there are two entries: `_provider_litellm`, merged in from the provider (LiteLLM, model calls only, for any program), and your `npm_registry`. Anything not listed is denied.
 
@@ -85,7 +85,7 @@ openshell --workspace dev policy get pi-agent --full
 
 <Section n="2" title="Open GitHub's API for GET only, while it runs">
 
-<Step n="1" title="Try GitHub first">
+<Step n="1" title="Try GitHub first: no response">
 
 `-w 'HTTP %{http_code}'` makes curl print the status code; `000` means there was no HTTP response at all:
 
@@ -122,7 +122,7 @@ The parts of the rule:
 
 </Step>
 
-<Step n="3" title="GET now works">
+<Step n="3" title="Call GitHub with GET: it works">
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
@@ -153,7 +153,7 @@ HTTP 403`}
 
 </Section>
 
-<Section n="3" title="A non-HTTP door: a plain TCP rule">
+<Section n="3" title="Open a non-HTTP door with a plain TCP rule">
 
 Not everything is HTTP: a database, an MQTT broker, any raw TCP service has no methods or paths to inspect. For those the policy has a plainer endpoint: **host and port only**, an L4 allow.
 
@@ -180,7 +180,7 @@ Compare it with the GitHub rule: no `protocol`, `enforcement` or `access`. No re
 
 </Step>
 
-<Step n="2" title="Apply it">
+<Step n="2" title="Apply the TCP rule">
 
 ```bash
 openshell --workspace dev policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/bin/curl --wait
@@ -194,7 +194,7 @@ openshell --workspace dev policy update pi-agent --add-endpoint 'example.com:443
 
 </Step>
 
-<Step n="3" title="curl reaches example.com">
+<Step n="3" title="Check that curl reaches example.com">
 
 The same request pi's tool made in 1.4, which got `000` then:
 
@@ -209,7 +209,7 @@ openshell --workspace dev sandbox exec -n pi-agent -- curl -s -o /dev/null -w 'H
 
 </Step>
 
-<Step n="4" title="Every other host is still closed">
+<Step n="4" title="Check that every other host is still closed">
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'curl -s -m 8 -o /dev/null https://example.org/ || echo "blocked (curl exit $?)"'
@@ -222,7 +222,7 @@ openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'curl -s -m 8 -o /de
 
 </Step>
 
-<Step n="5" title="Another program is refused">
+<Step n="5" title="Try the same host from Python: refused">
 
 The rule is **per program**: Python, going to the very same host, is refused:
 
@@ -241,7 +241,7 @@ That program check is what stops an agent from sending data out through an unexp
 
 </Section>
 
-<Section n="4" title="Every change is a numbered revision">
+<Section n="4" title="Read every change as a numbered revision">
 
 <Step n="1" title="List the policy history">
 
@@ -262,7 +262,7 @@ openshell --workspace dev policy list pi-agent
 
 </Step>
 
-<Step n="2" title="Clean up">
+<Step n="2" title="Delete pi-agent">
 
 `pi-agent` has done its job. Delete it; the gateway removes both pods, the Sandbox resource and its NetworkPolicies. The `dev` workspace stays, empty, for later modules:
 

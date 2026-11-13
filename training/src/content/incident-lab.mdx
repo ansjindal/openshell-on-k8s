@@ -5,7 +5,7 @@ Now we put the fleet to work on a real incident — one you cause on purpose —
   time="about fifteen minutes. Everything runs from the panel on this page."
 />
 
-<Section n="1" title="The conductor" goal="See how the in-page orchestrator combines the specialists.">
+<Section n="1" title="How the conductor runs an investigation" goal="See how the in-page orchestrator combines the specialists.">
 
 A fleet of specialists isn't useful until something *combines* them. That's a small **orchestrator** built into this page — no separate app. When you hit **Investigate**, it:
 
@@ -21,7 +21,7 @@ The agents never get a URL to Loki or Prometheus, and no network rule to reach t
 
 </Section>
 
-<Section n="2" title="The demo, deployed" goal="Know what the sample app emits and where it lands.">
+<Section n="2" title="The demo shop you will break" goal="Know what the sample app emits and where it lands.">
 
 <DemoArchitecture />
 
@@ -29,29 +29,29 @@ A continuous **loadgen** drives the instrumented **shop-app**, which on every ch
 
 </Section>
 
-<Section n="3" title="The loop: break, investigate, fix" goal="Cause a real outage, let the fleet diagnose it, and approve the fix.">
+<Section n="3" title="Break the shop, let the fleet investigate, approve the fix" goal="Cause a real outage, let the fleet diagnose it, and approve the fix.">
 
 <IncidentLab />
 
-<Step n="1" title="Deploy">
+<Step n="1" title="Deploy the demo shop">
 
 **Deploy** stands up `shop-app` (a small instrumented service) plus a **loadgen** that drives it continuously — so the **live traffic numbers** (success/s, errors/s, error rate) and the logs/metrics/traces are always real.
 
 </Step>
 
-<Step n="2" title="Inject fault">
+<Step n="2" title="Inject a fault: take payments down">
 
 **Inject fault** takes a **real dependency down**: `kubectl scale deploy/payments --replicas=0`. shop-app's checkout makes a real HTTP call to `payments` on every request — with payments gone, those calls genuinely fail (connection refused) and checkout returns **503**. Nothing artificial; watch the payments pod terminate and the **error rate climb to 100%**.
 
 </Step>
 
-<Step n="3" title="Investigate">
+<Step n="3" title="Let the fleet investigate">
 
 **Investigate** runs the fleet against the live telemetry: `metrics` sees the 5xx spike, `logs` sees the `checkout failed: payment call failed…` lines, `traces` sees the failing `charge-payment` span, and **`events` sees the smoking gun** — `payments` was scaled to 0 right as the errors began. The analyst asks *"what changed?"* and pins it on the dependency outage.
 
 </Step>
 
-<Step n="4" title="Apply your fix">
+<Step n="4" title="Approve and apply the fix">
 
 **Your fix** is the human-approved remediation — a **real fix**: `kubectl scale deploy/payments --replicas=1`, bringing the dependency back. Watch the error rate fall to 0. Applying it is the one step a human owns.
 

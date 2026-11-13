@@ -5,9 +5,9 @@ You've driven the gateway from the CLI. The same gateway has a web UI: the **Ope
   time="about ten minutes."
 />
 
-<Section n="1" title="Open it" goal="Sign in to the console as demo.">
+<Section n="1" title="Sign in to the OpenShell Console" goal="Sign in to the console as demo.">
 
-<Step n="1" title="Get the passwords">
+<Step n="1" title="Get the demo users' passwords">
 
 The passwords are generated per box:
 
@@ -17,7 +17,7 @@ grep -E 'KC_(DEMO|LEARNER)_PASSWORD' .sso-secrets.env
 
 </Step>
 
-<Step n="2" title="Sign in">
+<Step n="2" title="Sign in as demo">
 
 Use the **OpenShell Console ↗** link in the site header, or open `https://console-<brevid>.<domain>`. You're sent to Keycloak; sign in as **`demo`**.
 
@@ -29,7 +29,7 @@ The top bar shows **Gateway status: Healthy** and **Role: Platform admin**: the 
 
 </Section>
 
-<Section n="2" title="Around the console" goal="Know the main areas of the console.">
+<Section n="2" title="Find your way around the console" goal="Know the main areas of the console.">
 
 - **Workspaces**: tenants, their members, sandboxes, providers and templates ([next lesson](/learn/access-control)).
 - **Sandboxes**: every sandbox you may see, across workspaces, with status and image.
@@ -38,9 +38,9 @@ The top bar shows **Gateway status: Healthy** and **Role: Platform admin**: the 
 
 </Section>
 
-<Section n="3" title="One sandbox, every angle" goal="Map each sandbox tab to the CLI you already used.">
+<Section n="3" title="Look at one sandbox from every tab" goal="Map each sandbox tab to the CLI you already used.">
 
-<Step n="1" title="Open agent-0">
+<Step n="1" title="Open agent-0's page">
 
 Open **Sandboxes → agent-0**. The tabs map one-to-one to what you did in the shell:
 

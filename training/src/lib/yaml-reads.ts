@@ -150,4 +150,36 @@ export const YAML_READS: Record<string, YamlReadSpec> = {
         text: "`workspaceResources` off: the gateway chart doesn't create anything inside workspace namespaces. The `openshell-workspace` chart does that, in each namespace, as in step 6." },
     ],
   },
+
+  "gateway-oidc": {
+    title: "Keycloak in the gateway's values",
+    label: "values.oidc.yaml (the overlay, rendered for this lab)",
+    code: `# OIDC overlay, applied when Keycloak is enabled. The gateway validates
+# Bearer tokens from the Keycloak realm; roles come from realm_access.roles.
+server:
+  oidc:
+    caConfigMapName: lab-ca-bundle
+
+gatewayConfig:
+  openshell.gateway.oidc:
+    issuer: "https://<your lab host>/auth/realms/openshell"
+    audience: "openshell-cli"
+    roles_claim: realm_access.roles
+    admin_role: "openshell-admin"
+    user_role: "openshell-user"
+    jwks_ttl_secs: 3600`,
+    intro: "Applied on top of values.yaml when Keycloak is on. Scroll down: each part lights up as you read about it.",
+    parts: [
+      { title: "Trust Keycloak's certificate", at: [["=server:", "caConfigMapName"]],
+        text: "Keycloak serves HTTPS with a certificate from the lab CA. `lab-ca-bundle` (the public roots plus the lab CA) lets the gateway trust it." },
+      { title: "Which Keycloak", at: [["issuer:"]],
+        text: "The **issuer** is Keycloak's realm `openshell`, at the lab's public address: the same URL your browser signs in at, and what Keycloak writes into every token's `iss`. Tokens from anywhere else are refused." },
+      { title: "Tokens meant for OpenShell", at: [["audience:"]],
+        text: "A token must name `openshell-cli` as its **audience**: a token Keycloak issued for another app (Grafana, say) can't be replayed against the gateway." },
+      { title: "Roles become permissions", at: [["roles_claim:", "user_role:"]],
+        text: "The gateway reads the user's realm roles from the token: `openshell-admin` makes you a platform admin across every workspace, `openshell-user` lets you work in the workspaces you are a member of. No role, no access." },
+      { title: "Checking signatures", at: [["jwks_ttl_secs"]],
+        text: "The gateway checks each token's signature against Keycloak's public keys (its JWKS), fetched and cached for an hour. Keycloak is asked nothing per request." },
+    ],
+  },
 };

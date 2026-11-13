@@ -5,9 +5,9 @@ So far you've been the **operator**: this shell's client certificate makes you a
   time="about fifteen minutes."
 />
 
-<Section n="1" title="Two people, two roles" goal="Meet the two Keycloak users and their roles.">
+<Section n="1" title="Meet two people with two different roles" goal="Meet the two Keycloak users and their roles.">
 
-<Step n="1" title="Get the passwords">
+<Step n="1" title="Get demo's and learner's passwords">
 
 The realm `openshell` has two users. Their passwords were generated at provisioning:
 
@@ -26,7 +26,7 @@ The gateway reads the roles from the token's `realm_access.roles` claim.
 
 </Section>
 
-<Section n="2" title="Sign in as learner" goal="See that a user with no workspace sees nothing.">
+<Section n="2" title="Sign in as learner and see what a user can do" goal="See that a user with no workspace sees nothing.">
 
 <Step n="1" title="Open the console as learner">
 
@@ -41,17 +41,17 @@ Workspaces: No workspaces. Ask a platform admin to add you to a workspace.
 
 </Step>
 
-<Step n="2" title="Try the default workspace">
+<Step n="2" title="Try the lab workspace as learner: refused">
 
-Try opening `…/workspaces/default` directly; the gateway refuses with *not a member of workspace 'default'*. The console only displays what the gateway allows.
+Try opening `…/workspaces/lab` directly; the gateway refuses with *not a member of workspace 'lab'*. The console only displays what the gateway allows.
 
 </Step>
 
 </Section>
 
-<Section n="3" title="Create a workspace and add learner" goal="Create team-a and make learner a member.">
+<Section n="3" title="Create the team-a workspace and add learner to it" goal="Create team-a and make learner a member.">
 
-<Step n="1" title="Create the workspace">
+<Step n="1" title="Create team-a: namespace, chart and workspace">
 
 A **workspace** is a tenant: its own sandboxes, providers and members. Make `team-a` the way you made `dev` in [1.4](/learn/build-an-agent): a namespace labelled as a workspace, the `openshell-workspace` chart in it, then the workspace in the gateway:
 
@@ -69,7 +69,7 @@ STATUS: deployed
 
 </Step>
 
-<Step n="2" title="Add learner by subject">
+<Step n="2" title="Add learner as a member, by subject">
 
 Members are identified by their OIDC **subject** (the token's `sub`, Keycloak's user id), not their name. Look it up and add `learner` as a user:
 
@@ -90,9 +90,9 @@ fadec839-948e-4ab0-913c-0c64ca8f3f12  user`}
 
 </Section>
 
-<Section n="4" title="Give the workspace model access" goal="Create team-a's own litellm provider.">
+<Section n="4" title="Give team-a its own model provider" goal="Create team-a's own litellm provider.">
 
-<Step n="1" title="Create the provider">
+<Step n="1" title="Create team-a's litellm provider">
 
 Providers belong to a workspace. `team-a` needs its own `litellm` provider (the profile is platform-wide, so it can be reused):
 
@@ -109,7 +109,7 @@ LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.
 
 </Section>
 
-<Section n="5" title="learner works in team-a" goal="Give learner a sandbox and see the tenant boundary.">
+<Section n="5" title="Let learner work in team-a" goal="Give learner a sandbox and see the tenant boundary.">
 
 <Step n="1" title="Create a sandbox in team-a">
 
@@ -129,7 +129,7 @@ lab-a  2026-11-13 10:35:47  Ready`}
 
 </Step>
 
-<Step n="2" title="One namespace per workspace">
+<Step n="2" title="See one namespace per workspace">
 
 ```bash
 kubectl get namespaces -l openshell.ai/workspace=true && kubectl -n team-a get pods
@@ -152,9 +152,9 @@ Each workspace is its own namespace, of the same name (`workspaceMode: operator`
 
 </Section>
 
-<Section n="6" title="Clean up" goal="Remove the sandbox, provider and workspace.">
+<Section n="6" title="Remove team-a again" goal="Remove the sandbox, provider and workspace.">
 
-<Step n="1" title="Delete team-a">
+<Step n="1" title="Delete team-a's sandbox, provider, workspace and namespace">
 
 ```bash
 openshell --workspace team-a sandbox delete lab-a && openshell --workspace team-a provider delete litellm && openshell workspace delete team-a && helm uninstall openshell-workspace -n team-a && kubectl delete namespace team-a

@@ -7,9 +7,9 @@ The service is a tiny **echo API** (`manifests/demo-echo/echo.yaml`): it answers
   time="about fifteen minutes. Each step has a Run button that runs its command on your lab VM."
 />
 
-<Section n="1" title="Deploy the echo API" goal="Run a service that shows what it receives.">
+<Section n="1" title="Deploy the echo API the provider will call" goal="Run a service that shows what it receives.">
 
-<Step n="1" title="Apply the manifest">
+<Step n="1" title="Apply the echo API's manifest">
 
 ```bash
 kubectl apply -f manifests/demo-echo/echo.yaml && kubectl -n lab-demo rollout status deploy/echo --timeout=120s
@@ -20,9 +20,9 @@ kubectl apply -f manifests/demo-echo/echo.yaml && kubectl -n lab-demo rollout st
 
 </Section>
 
-<Section n="2" title="Write the profile" goal="Define where the token may go and for which requests.">
+<Section n="2" title="Write a provider profile for the echo API" goal="Define where the token may go and for which requests.">
 
-<Step n="1" title="Read the profile">
+<Step n="1" title="Read the profile, field by field">
 
 A **provider profile** is the contract for one kind of credential. Read `manifests/demo-echo/echo-api.profile.yaml`:
 
@@ -49,7 +49,7 @@ endpoints:
 
 </Step>
 
-<Step n="2" title="Lint and import it">
+<Step n="2" title="Lint the profile and import it into the gateway">
 
 Lint it, then import it into the gateway:
 
@@ -67,9 +67,9 @@ Imported 1 provider profile.`}
 
 </Section>
 
-<Section n="3" title="Create the provider" goal="Give the real token to the gateway, not the sandbox.">
+<Section n="3" title="Create a provider from the profile" goal="Give the real token to the gateway, not the sandbox.">
 
-<Step n="1" title="Create it from the environment">
+<Step n="1" title="Create it, with the token read from the environment">
 
 A **provider** is an instance of a profile holding a real credential. Pass the value through the environment, so it never appears in your shell history or the process list:
 
@@ -86,9 +86,9 @@ ECHO_TOKEN=lab-secret-123 openshell provider create --name echo --type echo-api 
 
 </Section>
 
-<Section n="4" title="Attach it to a running sandbox" goal="Add the credential and its policy to agent-0 live.">
+<Section n="4" title="Attach the provider to agent-0 while it runs" goal="Add the credential and its policy to agent-0 live.">
 
-<Step n="1" title="Attach the provider">
+<Step n="1" title="Attach the echo provider">
 
 ```bash
 openshell sandbox provider attach agent-0 echo --wait
@@ -105,7 +105,7 @@ No restart: the sandbox applied the new credential and the profile's policy.
 
 </Step>
 
-<Step n="2" title="Check the variable">
+<Step n="2" title="Check the placeholder the sandbox got">
 
 New processes see the variable:
 
@@ -122,7 +122,7 @@ openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
 
 </Section>
 
-<Section n="5" title="Call the API" goal="See what actually arrives at the service.">
+<Section n="5" title="Call the echo API from the sandbox" goal="See what actually arrives at the service.">
 
 <Step n="1" title="A GET carries the real token">
 
@@ -157,9 +157,9 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -o /dev/null -w "HTTP %{http
 
 </Section>
 
-<Section n="6" title="Rotate the token" goal="Change the credential without touching the sandbox.">
+<Section n="6" title="Rotate the token without touching the sandbox" goal="Change the credential without touching the sandbox.">
 
-<Step n="1" title="Update the provider">
+<Step n="1" title="Update the provider's token">
 
 Change the credential in the gateway; every sandbox with the provider attached picks it up, still without a restart:
 
@@ -187,9 +187,9 @@ The agent's placeholder didn't change; only the value behind it did.
 
 </Section>
 
-<Section n="7" title="Detach it" goal="Revoke the credential and its policy.">
+<Section n="7" title="Detach the provider again" goal="Revoke the credential and its policy.">
 
-<Step n="1" title="Detach the provider">
+<Step n="1" title="Detach echo from agent-0">
 
 Detaching revokes both the credential and the policy entry the profile added:
 

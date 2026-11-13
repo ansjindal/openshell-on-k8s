@@ -288,6 +288,28 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
   // ---- 0.3 Your Kubernetes cluster and LiteLLM: one layer per command
+  // ---- 1.2 sign-in: Keycloak for people, a certificate for the lab's CLI
+  "keycloak-flow": {
+    title: "Who may call the gateway",
+    w: 900, h: 320,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "you", icon: "i-user", x: 0, y: 30, w: 170, h: 62, label: "You, in a browser", sub: "demo or learner", layer: 0 },
+      { id: "con", icon: "i-portal", x: 240, y: 30, w: 200, h: 62, label: "OpenShell Console", sub: "oauth2-proxy + backend", layer: 0 },
+      { id: "kc", icon: "i-people", x: 240, y: 200, w: 200, h: 80, label: "Keycloak", sub: "realm openshell\nusers, realm roles", layer: 0, kind: "ext" },
+      { id: "gw", icon: "i-shield", x: 510, y: 100, w: 190, h: 80, label: "OpenShell gateway", sub: "checks every call:\nwho, which role", layer: 0, kind: "accent" },
+      { id: "cli", icon: "i-term", x: 510, y: 240, w: 190, h: 62, label: "openshell CLI on the VM", sub: "client cert, OU=operator", layer: 0 },
+      { id: "role", icon: "i-key", x: 740, y: 70, w: 160, h: 140, label: "What you may do", sub: "openshell-admin:\nevery workspace\nopenshell-user:\nyour workspaces", layer: 0 },
+    ],
+    edges: [
+      { from: "you", to: "con", label: "open", layer: 0, kind: "ok" },
+      { from: "con", to: "kc", label: "sign in (OIDC)", layer: 0, kind: "ok" },
+      { from: "con", to: "gw", label: "your token", layer: 0, kind: "ok" },
+      { from: "gw", to: "kc", label: "verify", layer: 0, kind: "dash" },
+      { from: "cli", to: "gw", label: "mTLS", layer: 0, kind: "ok" },
+      { from: "gw", to: "role", layer: 0, kind: "ok" },
+    ],
+  },
   // ---- 1.2 how the lab was installed: one pipeline, left to right
   "install-flow": {
     title: "How the lab was installed",

@@ -40,7 +40,7 @@ openshell provider create --name litellm --type litellm --global-profile --crede
 
 
 
-<Section n="1" title="The litellm provider and its profile">
+<Section n="1" title="Look at the litellm provider and the profile behind it">
 
 What the gateway hands a sandbox for model access.
 
@@ -134,7 +134,7 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s http://litellm.litellm.svc.c
 
 </Section>
 
-<Section n="3" title="What the sandbox can't do with it">
+<Section n="3" title="See what the placeholder can't be used for">
 
 <Step n="1" title="Try LiteLLM's admin API: refused at L7">
 
@@ -153,7 +153,7 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -X POST -H "Authorization: B
 
 </Section>
 
-<Section n="4" title="Change the model later">
+<Section n="4" title="Change the model later, in one place">
 
 Every sandbox reaches the model through LiteLLM, so the model is one setting, not something each agent knows. The values you gave the Launchable ([0.3.2](/learn/cluster-and-model)) live in `~/openshell-on-k8s/.env`. Edit `MODEL_NAME` (or `MODEL_BASE_URL` and `MODEL_API_KEY`) there, then apply it with the LiteLLM tag only, from the Cluster shell:
 

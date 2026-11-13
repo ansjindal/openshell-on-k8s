@@ -23,11 +23,11 @@ Use the sre-tools MCP tools in this order …
 
 Harnesses load skills in three stages: at start only each skill's **name and description** (so many skills cost little), the full `SKILL.md` when a task matches the description, and the files it references only when needed. The folder most clients scan is **`~/.agents/skills/<name>/`**. Spec: [agentskills.io/specification](https://agentskills.io/specification).
 
-<Section n="1" title="The platform's skill repository">
+<Section n="1" title="Look at the platform's skill repository">
 
 The setup installed **Gitea**, a small git server, in namespace `skills`, and created the public repository **`platform/skills`** from the repo's `skills/` folder (`ansible/roles/19-skill-repo`). Anyone in the cluster may clone it; only the `platform` user may push.
 
-<Step n="1" title="See the git server">
+<Step n="1" title="List the git server's Deployment and Service">
 
 ```bash
 kubectl -n skills get deploy,svc
@@ -44,7 +44,7 @@ service/gitea   ClusterIP   10.43.4.17   <none>        3000/TCP   19m`}
 
 </Step>
 
-<Step n="2" title="Clone it in the Cluster shell">
+<Step n="2" title="Clone the repository in the Cluster shell">
 
 Through a port-forward (on 3300: the training site already uses 3000 on the VM):
 
@@ -68,9 +68,9 @@ Read them: `cat ~/skills/k8s-triage/SKILL.md ~/skills/incident-report/SKILL.md`.
 
 </Section>
 
-<Section n="2" title="Add a skill">
+<Section n="2" title="Add a skill to the repository">
 
-<Step n="1" title="Write demo-app-map">
+<Step n="1" title="Write the demo-app-map skill">
 
 A skill can be pure knowledge. This one tells an agent how the demo shop's services depend on each other:
 
@@ -96,7 +96,7 @@ SKILL
 
 </Step>
 
-<Step n="2" title="Check it against the standard">
+<Step n="2" title="Check the skills against the standard">
 
 **`./scripts/skill-lint`** checks what every client relies on: a `SKILL.md` with frontmatter, a valid `name` matching the folder, a `description` of at most 1024 characters, and known fields only:
 
@@ -174,7 +174,7 @@ To update, `git -C /sandbox/skills pull` and link again: every sandbox gets a ne
 
 </Step>
 
-<Step n="3" title="pi finds them">
+<Step n="3" title="Check that pi finds the skills">
 
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session --no-mcp -p "List the names of the skills available to you, one per line, nothing else."
@@ -194,7 +194,7 @@ k8s-triage`}
 
 <Section n="4" title="Put it together: an outage, investigated">
 
-<Step n="1" title="Break the shop">
+<Step n="1" title="Break the shop: scale payments to zero">
 
 Scale `payments` to zero, as a careless change might, and wait until its pod is gone:
 
@@ -204,7 +204,7 @@ kubectl -n demo scale deploy/payments --replicas=0 && kubectl -n demo wait --for
 
 </Step>
 
-<Step n="2" title="Ask the agent">
+<Step n="2" title="Ask the agent what is wrong">
 
 A plain question, no hints. The skills tell pi how to investigate and how to report; the MCP tools give it the evidence; the policy keeps it read-only:
 

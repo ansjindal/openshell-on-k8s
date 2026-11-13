@@ -160,7 +160,7 @@ That is the startup script's `npm install`, and nothing else. Your `pi` runs cam
 
 Look at the agent's pod the way an attacker would: what could anything running in it use?
 
-<Step n="1" title="The real key in its environment, and the Kubernetes API from its pod">
+<Step n="1" title="Check the key in its environment and its access to the Kubernetes API">
 
 One shell command run inside the agent's pod (`bash -c '…'`) checks the two things anything running there can use:
 

@@ -5,7 +5,7 @@ You have sealed an agent, given it credentials it never sees and a persona. Time
   time="about five minutes. Each step has a Run button that runs its command on your lab VM."
 />
 
-<Section n="1" title="Meet the fleet helper, and make sure you have agents">
+<Section n="1" title="Meet the fleet helper and bring up two agents">
 
 <Step n="1" title="What the fleet helper does">
 
@@ -24,7 +24,7 @@ fleet logs <agent-i>                  # OpenShell logs for one sandbox
 
 </Step>
 
-<Step n="2" title="Check the fleet">
+<Step n="2" title="Check which agents are running">
 
 ```bash
 ./scripts/fleet status
@@ -70,9 +70,9 @@ A new sandbox is `Ready` in about fifteen seconds: the same pair of pods as `pi-
 
 </Section>
 
-<Section n="2" title="Hand the fleet a task" goal="Fan one prompt out to every agent.">
+<Section n="2" title="Send one task to every agent" goal="Fan one prompt out to every agent.">
 
-<Step n="1" title="Send to all">
+<Step n="1" title="Send a haiku task to all agents">
 
 `fleet task` takes a prompt and an optional target. `all` fans it out to every agent:
 
@@ -103,9 +103,9 @@ Each agent receives the prompt, calls LiteLLM through its `litellm` provider (th
 
 </Section>
 
-<Section n="3" title="Target a single agent" goal="Send a task to just one agent.">
+<Section n="3" title="Send a task to one agent" goal="Send a task to just one agent.">
 
-<Step n="1" title="Send to agent-0">
+<Step n="1" title="Ask agent-0 alone">
 
 Drop `all` (or name an agent) to send the task to just one:
 
@@ -131,9 +131,9 @@ All agents finished.`}
 
 </Section>
 
-<Section n="4" title="Read the logs" goal="See the output and the agent's reasoning.">
+<Section n="4" title="Read what the logs recorded" goal="See the output and the agent's reasoning.">
 
-<Step n="1" title="Fleet logs">
+<Step n="1" title="Follow the sandbox's OpenShell log">
 
 `fleet logs` follows the sandbox's OpenShell log (press **Ctrl-C** to stop). Each task shows up as the model call its supervisor allowed:
 
@@ -148,7 +148,7 @@ All agents finished.`}
 
 </Step>
 
-<Step n="2" title="The raw pod logs">
+<Step n="2" title="Read the workload pod's own log">
 
 The workload pod's own log is the sandbox runtime's: its network broker and seccomp notices, not the agent's answers (those came back through `fleet task`):
 
@@ -166,9 +166,9 @@ kubectl -n lab logs agent-0
 
 </Section>
 
-<Section n="5" title="Watch the whole fleet work" goal="Get the bird's-eye view while agents run.">
+<Section n="5" title="Watch the whole fleet with status" goal="Get the bird's-eye view while agents run.">
 
-<Step n="1" title="Fleet status">
+<Step n="1" title="Show the fleet's status">
 
 With multiple agents on one prompt, `status` gives you the bird's-eye view while they run:
 

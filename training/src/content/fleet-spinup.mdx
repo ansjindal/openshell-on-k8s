@@ -5,7 +5,7 @@ You don't want to repeat 1.4 and Module 3 by hand for every specialist: workspac
   time="about ten minutes, most of it waiting for the sandboxes to be Ready."
 />
 
-<Section n="1" title="The spec: one agent per line">
+<Section n="1" title="Describe the fleet in one spec, one agent per line">
 
 `fleet.txt` is the whole fleet: **one agent per line, two whitespace-separated columns**, the agent's name and the sre-tools MCP tools it may call:
 
@@ -22,7 +22,7 @@ analyst   -
 
 </Section>
 
-<Section n="2" title="Bring the fleet up">
+<Section n="2" title="Bring the fleet up with one command">
 
 For each line, `scripts/fleet.sh`:
 
@@ -32,7 +32,7 @@ For each line, `scripts/fleet.sh`:
 
 The agents need no package egress at all: everything they run comes with the image.
 
-<Step n="1" title="Run the helper">
+<Step n="1" title="Run fleet.sh with the spec">
 
 ```bash
 ./scripts/fleet.sh up fleet.txt
@@ -57,7 +57,7 @@ Done. Run './scripts/fleet.sh status', or open the Fleet page in the training si
 
 </Step>
 
-<Step n="2" title="See them Ready">
+<Step n="2" title="Check that every agent is Ready">
 
 ```bash
 ./scripts/fleet.sh status
@@ -78,9 +78,9 @@ analyst  2026-11-13 11:32:24  Ready`}
 
 </Section>
 
-<Section n="3" title="Look at what's running">
+<Section n="3" title="Look at what the helper created">
 
-<Step n="1" title="The pods">
+<Step n="1" title="List the fleet's pods">
 
 Every agent is a pair of pods in the workspace's namespace, `lab`:
 
@@ -104,7 +104,7 @@ traces                                               1/1     Running   0        
 
 </Step>
 
-<Step n="2" title="One agent's MCP rule">
+<Step n="2" title="Read one agent's MCP rule">
 
 The policy is where each agent becomes a specialist. Read the `metrics` agent's MCP rule from its effective policy:
 
@@ -149,7 +149,7 @@ The other entries are `_provider_litellm` (the model) and `skill_repo` (the skil
 
 </Step>
 
-<Step n="3" title="One agent's role">
+<Step n="3" title="Read one agent's role">
 
 The role is plain Markdown, handed to pi with `--append-system-prompt /sandbox/ROLE.md`:
 
@@ -175,7 +175,7 @@ numbers that matter. Never invent numbers. The analyst concludes.`}
 
 </Step>
 
-<Step n="4" title="Tearing down (later)">
+<Step n="4" title="Tear the fleet down (later, not now)">
 
 When you're **done with the course**, this removes the fleet. Don't run it now:
 

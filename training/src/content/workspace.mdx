@@ -5,7 +5,7 @@ An agent's personality isn't a settings panel: for pi it's **Markdown files** it
   time="about five minutes. Each step has a Run button that runs its command on your lab VM."
 />
 
-<Section n="1" title="The files pi reads">
+<Section n="1" title="Know which files pi reads">
 
 The sandbox image ships pi already pointed at LiteLLM: on first run it writes `~/.pi/agent/models.json` (the `lab` provider, with the placeholder key) and `settings.json` (`defaultProvider: lab`, `defaultModel: default`), so `pi -p "…"` just works. Its instructions come from **context files**:
 
@@ -23,7 +23,7 @@ The sandbox image ships pi already pointed at LiteLLM: on first run it writes `~
 
 <Section n="2" title="Give agent-0 a persona">
 
-<Step n="1" title="Ask it who it is, before">
+<Step n="1" title="Ask agent-0 who it is, before">
 
 ```bash
 openshell sandbox exec -n agent-0 -- pi --no-session -p "Who are you? Answer in one sentence."
@@ -36,7 +36,7 @@ openshell sandbox exec -n agent-0 -- pi --no-session -p "Who are you? Answer in 
 
 </Step>
 
-<Step n="2" title="Write AGENTS.md">
+<Step n="2" title="Write its AGENTS.md">
 
 `openshell sandbox exec` rejects multi-line arguments, so write the file from **one line** with `printf`, one argument per line of the file:
 
@@ -55,7 +55,7 @@ settings.json`}
 
 </Step>
 
-<Step n="3" title="Ask again">
+<Step n="3" title="Ask again: the persona applies">
 
 ```bash
 openshell sandbox exec -n agent-0 -- pi --no-session -p "Who are you? Answer in one sentence."
@@ -68,7 +68,7 @@ openshell sandbox exec -n agent-0 -- pi --no-session -p "Who are you? Answer in 
 
 </Step>
 
-<Step n="4" title="Test a boundary">
+<Step n="4" title="Test a boundary: the persona is not one">
 
 The persona says to ask before anything destructive. Ask for something destructive, directly:
 
