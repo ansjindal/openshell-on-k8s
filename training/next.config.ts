@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
       ["os-architecture", "/learn/openshell#t-3"], ["os-kernel", "/learn/build-an-agent"],
       ["security", "/learn/build-an-agent"], ["policy-file", "/learn/build-an-agent"],
       ["request-flow", "/learn/inference"], ["audit-signals", "/learn/audit"],
-      ["big-picture", "/learn/deploy"], ["sentry", "/learn/openshell#t-4"],
+      ["big-picture", "/learn/deploy"], ["sentry", "/learn/next-steps"],
       ["create-sandbox", "/learn/build-an-agent"], ["into-the-sandbox", "/learn/build-an-agent"],
       ["tcp-egress", "/learn/policy"], ["lab-keys", "/learn/inference"], ["lab-audit", "/learn/audit"],
       ["m3-overview", "/learn/m2-overview"], ["m3-check", "/learn/m2-check"],

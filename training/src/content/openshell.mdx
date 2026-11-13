@@ -1,9 +1,9 @@
-OpenShell is the runtime that puts the boundary **outside** the agent. This overview introduces it in four short parts; the rest of OpenShell is explained in the lab where you use it. Read down the page: in each part the picture beside the text follows the step you are reading. Parts with a **Try it** link have a lab later in this module, where you do it on your VM; the labs follow in order, starting with a check of your environment.
+OpenShell is the runtime that puts the boundary **outside** the agent. This overview introduces it in three short parts; the rest of OpenShell is explained in the lab where you use it. Read down the page: in each part the picture beside the text follows the step you are reading. Parts with a **Try it** link have a lab later in this module, where you do it on your VM; the labs follow in order, starting with a check of your environment.
 
 <BeforeYouStart
-  learn="what OpenShell is, the same agent inside it, how it is built (gateway, supervisor and the sandbox), and NVIDIA Sentry for when the host itself is in scope."
+  learn="what OpenShell is, the same agent inside it, and how it is built: gateway, supervisor and the sandbox."
   prereq="Module 0: what an agent is, and why the guardrail has to sit outside it."
-  start="part 1, and read down. About fifteen minutes for all four; no commands."
+  start="part 1, and read down. About ten minutes for all three; no commands."
 />
 
 <div id="t-1" className="scroll-mt-20" />
@@ -22,7 +22,7 @@ The same agent, the same poisoned issue. The model is still misled, but every ha
 
 <ReadScene scene="contained" />
 
-**Try it:** [1.4 Seal the agent](/learn/build-an-agent).
+**Try it:** [1.4 Bring up a sandboxed agent](/learn/build-an-agent).
 
 <div id="t-3" className="scroll-mt-20" />
 
@@ -30,17 +30,7 @@ The same agent, the same poisoned issue. The model is still misled, but every ha
 
 **OpenShell** is what makes "run an autonomous agent *safely*" practical. In one line: **to be useful, agents need access; to be safe, they need zero trust**, and OpenShell is the runtime that gives you both. It is a gateway plus guardrails, built on the open-source `agent-sandbox` Kubernetes primitive.
 
-Read down: first the whole architecture, then one sandbox up close.
-
 <ReadScene scene="arch" />
-
-<ReadScene scene="halves" />
-
-<Optional title="Why the supervisor moved out (0.0.x to 0.1)">
-
-<ReadScene scene="versions" />
-
-</Optional>
 
 ### The pieces
 
@@ -79,34 +69,7 @@ openshell sandbox list
 Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; each workspace's sandboxes live in a namespace the gateway creates for it, such as <code>openshell-lab-default</code>. You can always drop to <code>kubectl -n openshell-lab-default get sandboxes,pods</code> to see what the gateway did.
 </Callout>
 
-**Try it:** [1.2 Verify OpenShell](/learn/deploy) and [1.4 Seal the agent](/learn/build-an-agent).
-
-<div id="t-4" className="scroll-mt-20" />
-
-<Part n="4">NVIDIA Sentry: beyond the host</Part>
-
-<ReadScene scene="pwn" />
-
-<ReadScene scene="sentry" />
-
-### Two layers, one policy
-
-**NVIDIA OpenShell** is open-source software: the secure runtime boundary around every agent. It sits outside the model and the harness, so it works with open and closed models, and it runs on any Linux host (x86 or Arm), on bare metal, Docker or Kubernetes. This course is all OpenShell.
-
-**NVIDIA Sentry** is a reference system design on **NVIDIA BlueField-4**. It moves the network decision off the host, onto a processor with its own CPU and operating system:
-
-- **DOCA Tower** enforces the same OpenShell policy file.
-- **DOCA Argus** tells it which program on the host sent each request.
-- Root on the host can't rewrite either, and can't wipe what they record.
-
-Together the two are the **NVIDIA Open Agent Safety Platform**. You deploy the layers your risk calls for:
-
-| Outcome | No boundary | OpenShell | OpenShell + Sentry |
-|---|---|---|---|
-| Agent stays on approved sites and APIs | ✕ | ✓ | ✓ |
-| Every request checked against your policy | ✕ | ✓ | ✓ |
-| Survives a compromised host | ✕ | ✕ | ✓ |
-| Enforced in hardware, outside the host | ✕ | ✕ | ✓ |
+**Try it:** [1.2 Verify OpenShell](/learn/deploy) and [1.4 Bring up a sandboxed agent](/learn/build-an-agent).
 
 ## Where the rest is explained
 
@@ -115,8 +78,8 @@ Each remaining part of OpenShell is explained in the lab where you use it, right
 | Topic | Explained in |
 |---|---|
 | OpenShell on Kubernetes, and every part of this lab's platform | [1.2 Verify OpenShell](/learn/deploy) |
-| One request end to end, and why the agent never holds the key | [1.3 Give agents a model](/learn/inference) |
-| `openshell sandbox create`, the kernel (Landlock, seccomp), Kubernetes guardrails, and the policy file line by line | [1.4 Seal the agent](/learn/build-an-agent) |
+| One request end to end, and why the agent never holds the key | [1.3 Add an inference provider](/learn/inference) |
+| `openshell sandbox create`, the kernel (Landlock, seccomp), Kubernetes guardrails, and the policy file line by line | [1.4 Bring up a sandboxed agent](/learn/build-an-agent) |
 | Network rules: live updates, L7 methods and paths, L4 TCP, revisions | [1.5 Open its network, rule by rule](/learn/policy) |
 | Signals and audit events | [2.6 The audit trail](/learn/audit) |
 
@@ -126,7 +89,6 @@ Each remaining part of OpenShell is explained in the lab where you use it, right
 
 - **The boundary sits outside the agent.** OpenShell sandboxes the whole agent process; the agent can only ask.
 - **Gateway and supervisor.** The gateway governs sandboxes, policies and keys; a supervisor per sandbox decides every connection, and fails closed.
-- **Beyond the host.** NVIDIA Sentry enforces the same policy on a BlueField-4, outside a host that may itself be compromised.
 - **The rest is in the labs.** Kubernetes, the kernel, the policy file, keys and audit events are each explained where you use them.
 
 </Learned>

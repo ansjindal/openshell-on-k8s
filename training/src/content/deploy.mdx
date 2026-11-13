@@ -1,4 +1,4 @@
-You met the cluster in Module 0. **OpenShell is already installed on it too:** Ansible (`./scripts/setup.sh`) installed k3s, the agent-sandbox controller, LiteLLM, cert-manager, Keycloak, the OpenShell gateway, the console and the monitoring stack when the machine came up. You don't stand anything up here; you **confirm it's healthy**.
+You met the cluster in Module 0. **OpenShell is already installed on it too**: everything was set up when the Launchable came up, so in this lab you don't install anything. You see how it was installed, then **confirm it's healthy**.
 
 **Concept:** [Part 3 in the Overview: how OpenShell is built](/learn/openshell#t-3). This lab adds how it runs on Kubernetes, and every part of this lab's platform.
 
@@ -6,6 +6,25 @@ You met the cluster in Module 0. **OpenShell is already installed on it too:** A
   will="check the OpenShell control plane, the gateway and who you are to it, the first sandbox, LiteLLM and Keycloak."
   time="about five minutes. Every command only reads; nothing changes."
 />
+
+## How it was installed
+
+When the VM first booted, Brev ran the Launchable's setup script. It wrote your values to `.env` and ran **`./scripts/setup.sh`**, which installs Ansible and runs one playbook, `ansible/site.yml`. Each **role** in `ansible/roles/` installs one piece, in order. The OpenShell parts:
+
+| Role | Installs | How |
+|---|---|---|
+| `03-k3s` | Kubernetes (k3s v1.37), one node | the k3s installer |
+| `04-agent_sandbox` | the **agent-sandbox controller** and its `Sandbox` CRD (`agents.x-k8s.io`), v1.0.10 | `kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/v1.0.10/sandbox.yaml` |
+| `05-litellm` | LiteLLM, with your model values ([0.3.2](/learn/cluster-and-model)) | Helm chart `oci://ghcr.io/berriai/litellm-helm` |
+| `08b-cert_manager` | cert-manager and the lab CA, for the gateway's mTLS certificates | Helm chart `oci://quay.io/jetstack/charts/cert-manager` |
+| `09-openshell_gateway` | the **OpenShell gateway** 0.1.7 in namespace `openshell`, published on NodePort 30808, and the lab operator's client certificate (`OU=operator`) | `helm upgrade --install openshell oci://ghcr.io/nvidia/openshell/helm-chart --version 0.1.7 -n openshell -f values.yaml …` |
+| `10-cli_providers` | the **`openshell` CLI** v0.1.7, signed in to the gateway as the operator, and the `litellm` provider ([1.3](/learn/inference)) | the release binary, then `openshell provider create` |
+| `15-console` | the **OpenShell Console** | its Helm chart, from the console's repository |
+| `17-skill-registry` | a private npm registry (Verdaccio) for skills | a Deployment and Service |
+
+Keycloak, Kyverno, Envoy Gateway and the monitoring stack have roles of their own. The gateway's Helm values (`ansible/roles/09-openshell_gateway/files/values.yaml`) choose how workspaces map to namespaces: **managed** mode, where the gateway creates one namespace per workspace, `openshell-lab-<workspace>`.
+
+To change a setting later, edit `.env` and re-run one role by its tag, for example `ANSIBLE_TAGS=litellm ./scripts/setup.sh`.
 
 ## OpenShell on Kubernetes
 
@@ -169,7 +188,7 @@ One <code>Ready</code> node; <code>openshell-0</code>, the console, LiteLLM and 
 
 ## What you learned
 
-<Learned next="/learn/inference" nextLabel="Give agents a model: the litellm provider">
+<Learned next="/learn/inference" nextLabel="Add an inference provider">
 
 - **The node is up.** Confirm the single k3s node is Ready.
 - **The control plane is running.** See the gateway, console and registry pods.

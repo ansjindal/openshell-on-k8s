@@ -1,11 +1,34 @@
-In [0.3](/learn/cluster-and-model) you met LiteLLM, the model gateway, and called it with its master key. An agent in an OpenShell sandbox needs the model too, but it must **never hold that key**: anything the agent runs could read it and send it anywhere, as you saw in [0.4](/learn/agent-on-k8s).
-
-OpenShell solves this with a **provider**: a credential the gateway stores, attached to a sandbox by name. The sandbox only gets a placeholder; its supervisor puts the real key on the request, and only on the calls the provider allows. The platform created one provider for you, `litellm`. Every sandbox in this course uses it, starting with the one you build in the next lab.
+In [0.3](/learn/cluster-and-model) you met LiteLLM, the model gateway, and called it with its master key. An agent in an OpenShell sandbox needs the model too, but it must **never hold that key**: anything the agent runs could read it and send it anywhere, as you saw in [0.4](/learn/agent-on-k8s). OpenShell's answer is an **inference provider**: the key stays in the gateway, and the sandbox gets a placeholder.
 
 <BeforeYouStart
-  will="read the litellm provider and its profile, call the model from agent-0 with a placeholder key, and watch an admin call get refused."
+  will="learn what a provider is, read the litellm provider and its profile, call the model from agent-0 with a placeholder key, and watch an admin call get refused."
   time="about eight minutes. Each step has a Run button that runs its command on your lab VM."
 />
+
+## What a provider is
+
+A **provider** is a credential the OpenShell gateway stores and hands to sandboxes **by reference**. It has three parts:
+
+| Part | What it is | For `litellm` |
+|---|---|---|
+| **Profile** (the provider's *type*) | The access contract, written once in YAML: which credentials the provider has, which environment variable each becomes in a sandbox, how it is sent (here a bearer token in `Authorization`), and which endpoints and requests it may be sent to. | `ansible/roles/10-cli_providers/files/litellm-profile.yaml`: one credential, `LITELLM_API_KEY`, for `litellm.litellm.svc.cluster.local:4000`, model calls only. |
+| **Provider** | An instance of a profile, with the real credential values, stored by the gateway. | `litellm`, holding LiteLLM's master key. |
+| **Attachment** | A sandbox gets a provider with `--provider <name>` when it's created, or `openshell sandbox provider attach` later. | Every sandbox in this course. |
+
+Once attached:
+
+1. the sandbox's environment gets each credential as a **placeholder**, such as `LITELLM_API_KEY=openshell:resolve:env:…`;
+2. the provider's endpoints and rules are merged into the sandbox's policy as `_provider_litellm`;
+3. when the agent sends a request with the placeholder, the **supervisor** checks it against those rules and, only if it matches, swaps in the real key on the way out. Anything else is refused before a key is ever attached.
+
+The provider was created when the machine was set up, by Ansible (`ansible/roles/10-cli_providers`), with LiteLLM's master key in the environment:
+
+```bash-ref
+openshell profile import -f litellm-profile.yaml --global
+openshell provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY
+```
+
+`--credential LITELLM_API_KEY` reads the value from that environment variable, so the key never appears on a command line. `--global-profile` uses the profile imported for every workspace.
 
 ## One request, end to end
 
@@ -15,7 +38,6 @@ OpenShell solves this with a **provider**: a credential the gateway stores, atta
 
 <ReadScene scene="creds" />
 
-<Fig id="credential-flow" n="1.2" caption="The key the agent never sees: the supervisor adds it only to requests its rules allow." />
 
 
 <Section n="1" title="The litellm provider and its profile">
@@ -149,9 +171,9 @@ Earlier releases routed every sandbox through a managed endpoint, <code>inferenc
 
 ## What you learned
 
-<Learned next="/learn/build-an-agent" nextLabel="Seal the agent">
+<Learned next="/learn/build-an-agent" nextLabel="Bring up a sandboxed agent">
 
-- **A provider is a credential the gateway keeps.** `litellm` holds LiteLLM's key; its profile says which variable a sandbox gets and which requests may carry the key.
+- **A provider is a credential the gateway keeps**, an instance of a profile. `litellm` holds LiteLLM's key; its profile says which variable a sandbox gets and which requests may carry the key.
 - **The sandbox holds a placeholder.** It still works: the supervisor puts the real key on allowed calls on the way out.
 - **Everything else is refused at L7**, before any key is attached: the admin API never sees a request.
 - **The model is one setting**, in LiteLLM, not in any agent.
