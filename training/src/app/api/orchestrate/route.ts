@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
 
-// Module 5 capstone, in the website: an orchestrator that gives each sealed specialist agent
-// an investigation step (in parallel, via `openclaw agent --local`), then a writer agent
-// synthesizes their findings. The website never calls a model directly: each agent reaches
-// LiteLLM through its attached `litellm` provider (the supervisor injects the key), so the
-// site needs no model credentials. Streams a live timeline.
+// Module 4 capstone, in the website: an orchestrator that gives each sealed specialist agent
+// an investigation step (in parallel, via pi in its sandbox), then the analyst agent
+// synthesizes their findings. The website never calls a model or a tool directly: each agent
+// reaches LiteLLM through its `litellm` provider (the supervisor injects the key) and the
+// sre-tools MCP server through its policy, which allows only that agent's tools. Streams a
+// live timeline.
 
 const HOME = process.env.HOME ?? "/home/ubuntu";
 const KUBECONFIG = process.env.KUBECONFIG || `${HOME}/.kube/config`;
@@ -14,33 +14,21 @@ const { OPENSHELL_GATEWAY_ENDPOINT: _oge, OPENSHELL_GATEWAY_TLS: _ogt, ...envRes
 const env = { ...envRest, NODE_NO_WARNINGS: "1", KUBECONFIG, PATH: `${process.env.PATH ?? ""}:${HOME}/.local/bin:/usr/local/bin:/usr/bin` };
 const FLEET = (process.env.FLEET || "logs,metrics,traces,events,analyst").split(",").map((s) => s.trim()).filter(Boolean);
 
-// Prescribed probe per specialist. Free-form ReAct overflows the model's context (the agent
-// wanders — reads files, hunts for the skill, calls dir_list — and times out), so the
-// orchestrator hands each sealed agent the EXACT query its cluster-telemetry skill should run.
-// The agent runs it (real data from its real backend, via curl under its egress policy) and
-// interprets the result; the writer synthesizes. Backends are env-overridable.
+// What each specialist should ask its tool. Free-form investigation wanders and runs long, so
+// the orchestrator names the tool call; the agent makes it (through the supervisor, which
+// allows only that agent's tools) and interprets the result; the analyst synthesizes.
 const NS = process.env.INCIDENT_NS || "demo";
-const PROM = process.env.PROM_HOST || "kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090";
-const LOKI = process.env.LOKI_HOST || "loki.monitoring.svc.cluster.local:3100";
-const TEMPO = process.env.TEMPO_HOST || "tempo.monitoring.svc.cluster.local:3200";
-const TQ = "node /sandbox/.agents/skills/cluster-telemetry/tq.js";
-// Built per-request: Loki query_range needs an explicit [start,end] window (ns), so we stamp
-// the last hour here. metrics uses an instant query (no window). `events` reads the k8s events
-// that kubernetes-event-exporter ships into Loki.
-function buildProbes(): Record<string, { url: string; hint: string }> {
-  const ms = Date.now();
-  const range = `&start=${ms - 3600000}000000&end=${ms}000000&limit=15`;
-  return {
-    metrics: { url: `http://${PROM}/api/v1/query?query=sum%20by%20(code)%20(rate(shop_requests_total%5B2m%5D))' 'http://${PROM}/api/v1/query?query=sum(rate(shop_request_duration_ms_sum%5B2m%5D))%2Fsum(rate(shop_request_duration_ms_count%5B2m%5D))`,
-      hint: "first the request rate by HTTP code (a spike in 5xx is the error rate vs 200s), then the average request latency in ms" },
-    logs: { url: `http://${LOKI}/loki/api/v1/query_range?query=%7Bapp%3D%22shop-app%22%7D%20%7C%3D%20%22error%22${range}`,
-      hint: "the app's recent ERROR log lines (e.g. 'checkout failed: payment provider returned 503') — what the app itself says is wrong" },
-    events: { url: `http://${LOKI}/loki/api/v1/query_range?query=%7Bjob%3D%22kubernetes-event-exporter%22%7D%20%7C%3D%20%22${NS}%22${range}`,
-      hint: "recent Kubernetes events for the namespace — ESPECIALLY any recent CHANGE: a Deployment scaled down or up (e.g. 'Scaled down replica set payments-… to 0', pods Killing/Created). Report the most recent such change and its time — a dependency scaled to 0 (or a deploy) that coincides with when the errors began is the prime suspect ('what changed?'). Name the specific workload that changed." },
-    traces: { url: `http://${TEMPO}/api/search?q=${encodeURIComponent('{ resource.service.name = "shop" && status = error }')}&limit=10`,
-      hint: "recent ERROR traces for the shop service — the failing span (e.g. charge-payment) shows WHERE in the request path it breaks" },
-  };
-}
+const PROBES: Record<string, { call: string; hint: string }> = {
+  metrics: { call: `prometheus_query("sum by (code) (rate(shop_requests_total{namespace=\"${NS}\"}[2m]))") and prometheus_query("kube_deployment_status_replicas_available{namespace=\"${NS}\"}")`,
+    hint: "the shop's request rate by HTTP code (5xx is the error rate) and each Deployment's available replicas" },
+  logs: { call: `loki_query("{namespace=\"${NS}\", app=\"shop-app\"} |= \"error\"", 30)`,
+    hint: "the shop's recent error lines: what failed and which dependency" },
+  events: { call: `cluster_events("${NS}") and pod_status("${NS}")`,
+    hint: "what Kubernetes changed recently (a Deployment scaled, pods killed or failing) and which pods are missing or not ready" },
+  traces: { call: `tempo_search("{ resource.service.name = \"shop\" && status = error }", 30)`,
+    hint: "recent error traces of the shop: how many, which operation, how long" },
+};
+const PI = "PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --append-system-prompt /sandbox/ROLE.md";
 
 // Run `openshell …` with stdin closed so `sandbox exec` gets EOF and exits.
 function openshell(args: string[], timeoutMs = 180_000, signal?: AbortSignal): Promise<string> {
@@ -56,26 +44,13 @@ function openshell(args: string[], timeoutMs = 180_000, signal?: AbortSignal): P
   });
 }
 
-async function runAgent(agent: string, subtask: string, signal?: AbortSignal): Promise<string> {
-  // `openshell sandbox exec` rejects args containing newlines, and findings are multi-line —
-  // so pass the message base64-encoded and decode it inside the sandbox via the shell.
+async function runAgent(agent: string, subtask: string, signal?: AbortSignal, tools = true): Promise<string> {
+  // `openshell sandbox exec` rejects args containing newlines, and prompts are multi-line,
+  // so pass the prompt base64-encoded and decode it inside the sandbox.
   const b64 = Buffer.from(subtask, "utf8").toString("base64");
   const out = await openshell(["sandbox", "exec", "-n", agent, "--", "sh", "-c",
-    `NODE_NO_WARNINGS=1 openclaw agent --local --json --session-id ${randomUUID()} -m "$(printf %s ${b64} | base64 -d)"`], 180_000, signal);
-  const raw = out.split("\n").filter((l) => !/UNDICI|trace-warn/.test(l)).join("\n");
-  // openclaw --json prints a (multi-line) JSON object, e.g. {"payloads":[{"text":"…"}]},
-  // amid log lines — pull the JSON blob and extract the agent's text.
-  const a = raw.indexOf("{"), b = raw.lastIndexOf("}");
-  if (a >= 0 && b > a) {
-    try {
-      const o = JSON.parse(raw.slice(a, b + 1));
-      const txt = Array.isArray(o.payloads) ? o.payloads.map((p: { text?: string }) => p?.text).filter(Boolean).join("\n").trim() : (o.reply ?? o.text);
-      if (txt && String(txt).trim()) return String(txt).trim();
-    } catch { /* fall through */ }
-  }
-  const tm = /"text"\s*:\s*"([\s\S]*?)"\s*[},]/.exec(raw);
-  if (tm) { try { return JSON.parse(`"${tm[1]}"`); } catch { return tm[1]; } }
-  return raw.trim().slice(0, 4000);
+    `${PI}${tools ? "" : " --no-mcp --no-tools"} -p "$(printf %s ${b64} | base64 -d)"`], 180_000, signal);
+  return out.split("\n").filter((l) => !/UNDICI|trace-warn/.test(l)).join("\n").trim().slice(0, 4000);
 }
 
 // Streams the run as newline-delimited JSON events so the UI shows a LIVE TIMELINE of each
@@ -105,17 +80,13 @@ export async function POST(req: Request) {
         // Fixed plan: one investigation step per specialist. No host-side model call to plan —
         // the intelligence is in each agent's investigation + the writer's synthesis (both reach
         // the model through their own `litellm` provider, so the website holds no model key).
-        const PROBES = buildProbes();
         const steps: { agent: string; subtask: string; request: string }[] = investigators.map((a) => {
           const p = PROBES[a];
-          // `request` is the exact command the agent will run — surfaced to the UI so you can
-          // SEE what each agent is doing (the real backend call), not just a spinner.
-          const request = p ? `${TQ} '${p.url}'` : "(no backend probe)";
-          // Directive subtask: inline the EXACT command. This keeps the tool loop to ~2 calls
-          // (run probe → answer), so it finishes in ~30s instead of overflowing context.
+          // `request` is the tool call the agent will make, shown in the UI.
+          const request = p ? p.call : "(no tool)";
           const subtask = p
-            ? `You are the ${a} specialist of an SRE fleet — read-only, sealed to your one backend. Use ONLY the exec tool. Run this EXACT command and report its output verbatim as your finding (it returns ${p.hint}), then briefly state what it means for the incident and STOP. Do not read files, do not use web_fetch or dir_list, and do NOT generate any image.\n\nCommand:\n${TQ} '${p.url}'\n\nIncident: ${task}`
-            : `You are the ${a} specialist of an SRE fleet. You have no configured backend probe for this incident — report that plainly in one line. Do not use any tool and do NOT generate any image.\n\nIncident: ${task}`;
+            ? `Incident: ${task}\n\nInvestigate it in your role. Call your sre-tools tool exactly like this: ${p.call}. It returns ${p.hint}. Then report at most five bullets of concrete findings, each naming the tool and the values it returned, and STOP. No proposals, no greeting.`
+            : `Incident: ${task}\n\nYou have no tool for this incident: say so in one line.`;
           return { agent: a, subtask, request };
         });
         emit({ type: "plan", steps });
@@ -136,11 +107,11 @@ export async function POST(req: Request) {
         const ws = Date.now();
         let answer = ""; let synthesizedBy = "analyst";
         if (FLEET.includes(SYNTH)) {
-          const analystPrompt = `You are the incident analyst synthesizing an SRE fleet's findings. Reason ONLY over the findings below — do NOT use any tool, read any file, or generate any image, and do NOT greet, ask questions, or describe yourself. Begin your reply directly with "ROOT CAUSE:". In 2-4 sentences give the ROOT CAUSE citing the evidence (error rate, error logs naming the failing dependency, the failing span). CRITICAL: ask "what changed?" — the events findings name a recent change (a dependency scaled to 0, or a recent deploy) that coincides with when the errors began; THAT change is the root cause, and the fix is to REVERSE it specifically. If logs show calls to a dependency failing AND events show that dependency was scaled to 0, the cause is the dependency being down — recommend scaling it back up. Then, on a FINAL separate line, output exactly:\nRECOMMENDED_ACTION: <the specific reversal, e.g. "scale the payments deployment back up to restore the dependency" or "roll back the recent deploy">\n\nIncident: ${task}\n\nFindings:\n${findings}`;
+          const analystPrompt = `You are the incident analyst synthesizing an SRE fleet's findings. Reason ONLY over the findings below: do NOT use any tool, and do NOT greet, ask questions, or describe yourself. Begin your reply directly with "ROOT CAUSE:". In 2-4 sentences give the ROOT CAUSE citing the evidence (error rate, error logs naming the failing dependency, the failing span). CRITICAL: ask "what changed?" — the events findings name a recent change (a dependency scaled to 0, or a recent deploy) that coincides with when the errors began; THAT change is the root cause, and the fix is to REVERSE it specifically. If logs show calls to a dependency failing AND events show that dependency was scaled to 0, the cause is the dependency being down — recommend scaling it back up. Then, on a FINAL separate line, output exactly:\nRECOMMENDED_ACTION: <the specific reversal, e.g. "scale the payments deployment back up to restore the dependency" or "roll back the recent deploy">\n\nIncident: ${task}\n\nFindings:\n${findings}`;
           // the model occasionally emits a non-answer (a greeting / "who am I?"); accept only a
           // real synthesis (must carry the RECOMMENDED_ACTION line) and retry once otherwise.
           for (let attempt = 0; attempt < 2 && !answer && !req.signal?.aborted; attempt++) {
-            const w = (await runAgent(SYNTH, analystPrompt, req.signal)).trim();
+            const w = (await runAgent(SYNTH, analystPrompt, req.signal, false)).trim();
             if (w && !/^\(.*(failed|error)/i.test(w) && /RECOMMENDED_ACTION:/i.test(w)) answer = w;
           }
         }

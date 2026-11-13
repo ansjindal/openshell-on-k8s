@@ -9,12 +9,13 @@
 #        analyst   -
 #
 # For each agent this creates a sandbox in the platform workspace (lab) whose
-# policy allows only: the in-cluster npm registry (to install pi), a read-only
-# clone of the skill repository, and the sre-tools MCP server for the agent's
-# own tools (every other tool is refused, scale_deployment always). Then it
-# installs pi, points it at LiteLLM and at sre-tools, clones the platform
-# skills into ~/.agents/skills, and writes the agent's role to /sandbox/ROLE.md
-# (from manifests/fleet/roles/<name>.md).
+# policy allows only: a read-only clone of the skill repository, and the
+# sre-tools MCP server for the agent's own tools (every other tool is refused,
+# scale_deployment always). pi is installed once on this machine and uploaded
+# into each sandbox (no package egress for the agents); then pi is pointed at
+# LiteLLM and at sre-tools, the platform skills are cloned into
+# ~/.agents/skills, and the agent's role is written to /sandbox/ROLE.md (from
+# manifests/fleet/roles/<name>.md).
 #
 #   ./scripts/fleet.sh up fleet.txt | status | down [fleet.txt]
 set -euo pipefail
@@ -23,7 +24,7 @@ export NO_COLOR=1
 PROVIDER="${OPENSHELL_PROVIDER:-litellm}"
 ROLES="$REPO/manifests/fleet/roles"
 PI_VERSION="${PI_VERSION:-1.5.2}"
-REGISTRY="registry.openshell.svc.cluster.local:4873"
+PI_BUNDLE="/tmp/fleet-pi-${PI_VERSION}.tgz"
 SKILL_REPO="http://gitea.skills.svc.cluster.local:3000/platform/skills.git"
 MCP_URL="http://sre-tools.tools.svc.cluster.local:8080/mcp"
 # The platform workspace (operator mode: namespace of the same name), unless set.
@@ -61,11 +62,6 @@ filesystem_policy: { include_workdir: true, read_only: [/usr,/lib,/proc,/dev/ura
 landlock: { compatibility: best_effort }
 process: { run_as_user: sandbox, run_as_group: sandbox }
 network_policies:
-  npm_registry:
-    name: npm_registry
-    endpoints:
-      - { host: registry.openshell.svc.cluster.local, port: 4873, protocol: rest, access: read-only, enforcement: enforce, allow_encoded_slash: true }
-    binaries: [ {path: /usr/bin/node} ]
   skill_repo:
     name: skill_repo
     endpoints:
@@ -83,9 +79,8 @@ YAML
 # Inside a Ready sandbox: pi, its model and MCP config, the skills, the role.
 configure() {                        # $1 = name, $2 = tools
   local name="$1" tools="$2"
-  # One socket: many parallel connections to the same in-cluster name race the
-  # supervisor's DNS mappings (OpenShell 0.1.7) and get denied; one at a time is fine.
-  ox "$name" "npm install --prefix /sandbox/pi --registry http://${REGISTRY}/ --maxsockets 1 --no-audit --no-fund @earendil-works/pi-coding-agent@${PI_VERSION} | tail -1"
+  openshell sandbox upload --no-git-ignore "$name" "$PI_BUNDLE" /sandbox/pi.tgz </dev/null >/dev/null 2>&1
+  ox "$name" "tar xzf /sandbox/pi.tgz -C /sandbox && rm -f /sandbox/pi.tgz"
   ox "$name" "mkdir -p ~/.pi/agent && printf '%s' '{\"providers\":{\"lab\":{\"baseUrl\":\"http://litellm.litellm.svc.cluster.local:4000/v1\",\"api\":\"openai-completions\",\"apiKey\":\"\$LITELLM_API_KEY\",\"compat\":{\"supportsDeveloperRole\":false,\"supportsReasoningEffort\":false},\"models\":[{\"id\":\"default\"}]}}}' > ~/.pi/agent/models.json"
   if [[ "$tools" != "-" && -n "$tools" ]]; then
     ox "$name" "printf '%s' '{\"mcpServers\":{\"sre-tools\":{\"url\":\"${MCP_URL}\"}}}' > ~/.pi/agent/mcp.json"
@@ -102,6 +97,13 @@ up() {
     [[ -z "$name" || "$name" == \#* ]] && continue
     NM+=("$name"); TL+=("${tools:--}")
   done 3< "$spec"
+  # pi, installed once here and uploaded into every sandbox.
+  if [[ ! -s "$PI_BUNDLE" ]]; then
+    echo "Installing pi ${PI_VERSION} once, to upload into each agent…"
+    local tmp; tmp=$(mktemp -d)
+    npm install --prefix "$tmp/pi" --no-audit --no-fund "@earendil-works/pi-coding-agent@${PI_VERSION}" >/dev/null
+    tar czf "$PI_BUNDLE" -C "$tmp" pi && rm -rf "$tmp"
+  fi
   echo "Bringing up ${#NM[@]} pi agents in workspace ${OPENSHELL_WORKSPACE}, in parallel:"
   local i name
   for i in "${!NM[@]}"; do
