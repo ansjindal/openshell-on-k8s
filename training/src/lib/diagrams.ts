@@ -20,7 +20,7 @@ export type DNode = {
   info?: string;
 };
 export type DEdge = {
-  from: string; to: string; label?: string; layer: number; until?: number; kind?: "ok" | "deny" | "dash"; dx?: number; dy?: number;
+  from: string; to: string; label?: string; layer: number; until?: number; kind?: "ok" | "deny" | "dash" | "risk"; dx?: number; dy?: number;
   dyn?: (out: Out) => string | undefined;
 };
 export type Diagram = {
@@ -288,6 +288,29 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
   // ---- 0.3 Your Kubernetes cluster and LiteLLM: one layer per command
+  // ---- 0.4 summary: what the agent reached, and what saw it
+  "agent-unbounded": {
+    title: "The agent as an ordinary Kubernetes workload",
+    w: 860, h: 300,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "k8s", icon: "i-wheel", x: 10, y: 10, w: 610, h: 280, label: "Kubernetes cluster", layer: 0, kind: "group" },
+      { id: "ns", x: 26, y: 44, w: 278, h: 232, label: "namespace agents", layer: 0, kind: "group" },
+      { id: "pod", icon: "i-bot", x: 42, y: 76, w: 246, h: 92, label: "pi-agent pod", sub: "pi · bash · curl · npm\nLITELLM_API_KEY: the real key\nServiceAccount token", layer: 0, kind: "deny" },
+      { id: "logs", icon: "i-doc", x: 42, y: 206, w: 246, h: 56, label: "kubectl logs", sub: "the npm install, nothing else", layer: 0, dashed: true },
+      { id: "ll", icon: "i-route", x: 360, y: 40, w: 240, h: 62, label: "LiteLLM", sub: "logs the model calls only", layer: 0, kind: "accent" },
+      { id: "api", icon: "i-svc", x: 360, y: 178, w: 240, h: 62, label: "Kubernetes API", sub: "answers the pod's token", layer: 0 },
+      { id: "model", icon: "i-cloud", x: 656, y: 40, w: 194, h: 62, label: "Your model", sub: "LiteLLM's upstream key", layer: 0, kind: "ext" },
+      { id: "net", icon: "i-globe", x: 656, y: 112, w: 194, h: 70, label: "Any host", sub: "example.com or anywhere\nno rule, no log", layer: 0, kind: "deny" },
+    ],
+    edges: [
+      { from: "pod", to: "ll", label: "model calls", layer: 0, kind: "ok", dy: -4 },
+      { from: "ll", to: "model", layer: 0, kind: "ok" },
+      { from: "pod", to: "net", label: "anything it runs", layer: 0, kind: "risk", dx: 40 },
+      { from: "pod", to: "api", label: "token", layer: 0, kind: "risk", dy: 14 },
+      { from: "pod", to: "logs", layer: 0, kind: "dash" },
+    ],
+  },
   // ---- 0.3.2 where a model gateway sits: drawn whole (<Diagram>), no layers
   "gateway-place": {
     title: "Where LiteLLM sits: between every agent and every model",

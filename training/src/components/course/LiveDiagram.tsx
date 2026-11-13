@@ -82,7 +82,7 @@ export function EdgeView({ e, nodes, st, uid = "" }: { e: DEdge; nodes: Record<s
   if (!a || !b) return null;
   const [x1, y1, x2, y2] = anchor(a, b);
   const ghost = st === "ghost";
-  const col = ghost ? C.mut : e.kind === "deny" ? C.red : e.kind === "ok" || st === "new" ? C.nv : C.mut;
+  const col = ghost ? C.mut : e.kind === "deny" || e.kind === "risk" ? C.red : e.kind === "ok" || st === "new" ? C.nv : C.mut;
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
   const id = `ah${uid}-${e.kind ?? "n"}-${st}`;
   return (
@@ -96,7 +96,7 @@ export function EdgeView({ e, nodes, st, uid = "" }: { e: DEdge; nodes: Record<s
         strokeDasharray={ghost || e.kind === "dash" ? "5 4" : undefined} markerEnd={`url(#${id})`} />
       {e.kind === "deny" && <text x={mx} y={my + 5} fontSize={15} fontWeight={700} fill={C.red} textAnchor="middle">✕</text>}
       {e.label && (
-        <text x={mx + (e.dx ?? 0)} y={my - 6 + (e.dy ?? 0)} fontSize={10.5} fontWeight={700} fill={e.kind === "ok" ? C.nv : C.text} textAnchor="middle" fontFamily={SANS}
+        <text x={mx + (e.dx ?? 0)} y={my - 6 + (e.dy ?? 0)} fontSize={10.5} fontWeight={700} fill={e.kind === "ok" ? C.nv : e.kind === "risk" ? C.red : C.text} textAnchor="middle" fontFamily={SANS}
           stroke="var(--color-bg)" strokeWidth={4} paintOrder="stroke">{e.label}</text>
       )}
     </g>
