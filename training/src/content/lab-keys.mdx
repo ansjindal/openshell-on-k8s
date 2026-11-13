@@ -1,11 +1,20 @@
 agent-0 has the `litellm` provider attached. See what it holds, use it to call the model, and watch the supervisor refuse the one call the provider doesn't allow.
 
-**Concept:** [Parts 8 and 9 in the Overview](/learn/openshell#t-8): one request, end to end, and why the agent never holds the key.
-
 <BeforeYouStart
   will="read the placeholder agent-0 holds, call the model with it, and see the admin API refused at L7."
   time="about six minutes."
 />
+
+## One request, end to end
+
+<ReadScene scene="request" />
+
+## The agent never holds the key
+
+<ReadScene scene="creds" />
+
+<Fig id="credential-flow" n="1.2" caption="The key the agent never sees: the supervisor adds it only to requests its rules allow." />
+
 
 <Section n="1" title="What the agent sees" goal="Call the model from agent-0 with a key it doesn't hold.">
 

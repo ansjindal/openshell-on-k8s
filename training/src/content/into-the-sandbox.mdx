@@ -1,11 +1,27 @@
 You created `agent-0` and saw it become two pods. The agent lives in the **workload** pod. To poke at it directly you go **into the sandbox**, through the gateway and the supervisor, with an ordinary `exec`.
 
-**Concept:** [Part 6 in the Overview: inside the sandbox, the kernel](/learn/openshell#t-6).
-
 <BeforeYouStart
   will="open a shell inside agent-0, test its user and filesystem limits, prove its network seal, and read the NetworkPolicy behind it."
   time="about ten minutes. Nothing outside agent-0 changes."
 />
+
+## Inside the sandbox: the kernel
+
+### The workload pod: what the agent process can touch
+
+The agent runs as the unprivileged user `sandbox`. The sandbox runtime applies the policy's static parts before the agent starts:
+
+- **Landlock** (a Linux security module) limits the filesystem: here `/usr`, `/lib`, `/etc` are read-only, `/sandbox` and `/tmp` are writable, everything else is invisible. OpenShell 0.1 requires Landlock ABI v3, so the node needs Linux 6.2 or newer.
+- **seccomp** filters dangerous system calls, and the process cannot regain root.
+- These are **static**: fixed when the sandbox is created.
+
+<ReadScene scene="kernel" />
+
+### Kubernetes guardrails
+
+- **Resource admission**: a sandbox may use a cluster resource (a RuntimeClass, a PriorityClass, a volume) only if the operator labelled it `openshell.ai/sandbox-attachable=true`.
+- **Kyverno** rejects any sandbox pod that asks for the host's network, PID or IPC namespace.
+
 
 <Section n="1" title="Confirm it's there" goal="Find the workload pod and its supervisor.">
 

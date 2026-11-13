@@ -1,6 +1,6 @@
 [The Seal](/learn/policy) covered REST endpoints, where the supervisor inspects every request and filters by method and path. Not everything is HTTP: a database connection, an MQTT broker, any raw TCP service. For those the policy has a plainer endpoint: **host and port, no request inspection**, an L4 allow.
 
-**Concept:** [Part 7 in the Overview: the policy file](/learn/openshell#t-7).
+**Concept:** the policy file, explained in [1.6 Egress policy, rule by rule](/learn/policy).
 
 <BeforeYouStart
   will="compare a REST rule with a bare host:port rule, apply the bare one, and see that it is limited to one host and one binary."
