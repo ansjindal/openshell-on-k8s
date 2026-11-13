@@ -61,9 +61,7 @@ No line yet? The sandbox sends its log to the gateway in the background, a secon
 
 <Step n="2" title="Read the policy file, then open one door for npm">
 
-Every layer of a sandbox is set by one short YAML file: its **policy**. The baseline you created `pi-agent` with is one; here it is line by line, with what each part lets through and what it stops:
-
-<ReadScene scene="policy" />
+Every layer of a sandbox is set by one short YAML file: its **policy**. It has four parts, and only the network part can change while the sandbox runs:
 
 | Part | Controls | Enforced by | Changes on a running sandbox? |
 |---|---|---|---|
@@ -72,7 +70,7 @@ Every layer of a sandbox is set by one short YAML file: its **policy**. The base
 | `process` | the user and group the agent runs as | the sandbox runtime | no |
 | `network_policies` | hosts, ports, methods, paths, programs | the supervisor | **yes**: `openshell policy set` / `policy update` |
 
-`manifests/policies/pi-agent.yaml` is the baseline plus one grant: the npm registry, **read-only**, for **`/usr/bin/node` only**.
+The file you'll apply, `manifests/policies/pi-agent.yaml`, is the baseline you created `pi-agent` with plus one grant: the npm registry, **read-only**, for **`/usr/bin/node` only**. Scroll through it, part by part:
 
 <YamlRead id="pi-agent-policy" />
 
