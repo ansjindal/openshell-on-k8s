@@ -53,7 +53,8 @@ network_policies:
           - method: tools/call
             tool: scale_deployment
     binaries:
-      - path: /usr/bin/node
+      - path: /usr/bin/node                          # pi
+      - path: /usr/local/lib/openclaw/node/bin/node  # OpenClaw's own Node
       - path: /usr/bin/curl
   skill_repo:
     name: skill_repo

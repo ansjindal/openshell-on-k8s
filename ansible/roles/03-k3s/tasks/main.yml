@@ -11,6 +11,23 @@
     mesh_present: "{{ (mesh_iface in ansible_facts) and (ansible_facts[mesh_iface].ipv4 is defined) }}"
   when: mesh_ip is not defined
 
+# Every pod that watches files (log shippers, Node apps, OpenClaw) takes inotify
+# instances; the kernel default (128 per user) runs out on a busy single node,
+# and pods then log "failed to create fsnotify watcher: too many open files".
+- name: Raise inotify limits
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/90-inotify.conf
+    mode: "0644"
+    content: |
+      fs.inotify.max_user_instances = 1024
+      fs.inotify.max_user_watches = 524288
+  register: _inotify
+
+- name: Apply sysctl settings
+  ansible.builtin.command: sysctl --system
+  when: _inotify.changed
+  changed_when: true
+
 - name: Ensure k3s config dir
   ansible.builtin.file:
     path: /etc/rancher/k3s
