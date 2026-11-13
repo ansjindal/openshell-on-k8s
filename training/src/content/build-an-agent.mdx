@@ -1,118 +1,13 @@
-In [0.4](/learn/agent-on-k8s) you ran pi as an ordinary pod: it reached any host, held the real LiteLLM key and could talk to the Kubernetes API. Now bring up the **same agent** as a sandboxed agent, from the ground up: a workspace of your own, its model provider, the sandbox, then pi inside it, with exactly one door opened so pi can be installed.
+In [0.4](/learn/agent-on-k8s) you ran pi as an ordinary pod: it reached any host, held the real LiteLLM key and could talk to the Kubernetes API. Now bring up the **same agent** as a sandboxed agent, in the workspace `dev` you made in [1.3](/learn/inference) and with the `litellm` provider you added there: the sandbox first, then pi inside it, with exactly one door opened so pi can be installed.
 
 **Concept:** [Parts 2 and 3 in the Overview](/learn/openshell#t-2): the same agent inside OpenShell, and how OpenShell is built.
 
 <BeforeYouStart
-  will="create your own workspace with the openshell-workspace Helm chart and give it the litellm provider, create a sandbox for pi, see what the gateway made on the cluster, test the seal from inside, watch npm get refused, open one door with a policy file, then install pi and run it sealed."
-  time="about twenty-five minutes. The workspace dev and the sandbox pi-agent stay for the next lab."
+  will="create a sandbox for pi in your workspace dev, see what the gateway made on the cluster, test the seal from inside, watch npm get refused, open one door with a policy file, then install pi and run it sealed."
+  time="about twenty minutes. Do 1.3 first: it creates the workspace dev and its litellm provider. The sandbox pi-agent stays for the next lab."
 />
 
-<Section n="1" title="Create a workspace for your agent">
-
-A **workspace** is OpenShell's tenant: its own sandboxes, providers and members. On this cluster each workspace is a Kubernetes **namespace of the same name**: the gateway runs in *operator mode*, so it doesn't create namespaces; you prepare one, and the gateway uses it. The platform's own workspace, `lab` (where `agent-0` runs), was made this way at setup. Now make yours, `dev`.
-
-<Step n="1" title="Create the namespace and label it as a workspace">
-
-The gateway watches for namespaces labelled `openshell.ai/workspace=true` (its `operatorNamespaceLabel` setting). `--dry-run=client -o yaml | kubectl apply` makes this safe to run twice:
-
-```bash
-kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f - && kubectl label namespace dev openshell.ai/workspace=true --overwrite
-```
-<Output>
-<ExpectedOutput>
-{`namespace/dev created
-namespace/dev labeled`}
-</ExpectedOutput>
-</Output>
-
-</Step>
-
-<Step n="2" title="Install the openshell-workspace chart into it">
-
-NVIDIA's **`openshell-workspace`** Helm chart, the same version as the gateway, puts what sandboxes need into the namespace:
-
-```bash
-helm upgrade --install openshell-workspace oci://ghcr.io/nvidia/openshell/openshell-workspace --version 0.1.7 --namespace dev --wait
-```
-<Output summary="One Helm release in dev.">
-<ExpectedOutput>
-{`Release "openshell-workspace" does not exist. Installing it now.
-NAME: openshell-workspace
-NAMESPACE: dev
-STATUS: deployed
-REVISION: 1`}
-</ExpectedOutput>
-</Output>
-
-List what it made:
-
-```bash
-kubectl -n dev get serviceaccount,role,rolebinding,networkpolicy
-```
-<Output>
-<ExpectedOutput>
-{`NAME                               AGE
-serviceaccount/default             2s
-serviceaccount/openshell-sandbox   0s
-
-NAME                                                         CREATED AT
-role.rbac.authorization.k8s.io/openshell-workspace-sandbox   2026-11-13T10:33:06Z
-
-NAME                                                                ROLE                               AGE
-rolebinding.rbac.authorization.k8s.io/openshell-workspace-sandbox   Role/openshell-workspace-sandbox   0s
-
-NAME                                                              POD-SELECTOR                        AGE
-networkpolicy.networking.k8s.io/openshell-workspace-sandbox-ssh   openshell.ai/managed-by=openshell   0s`}
-</ExpectedOutput>
-</Output>
-
-- **`openshell-sandbox`**: the ServiceAccount sandbox pods run as. It has no Kubernetes permissions of its own.
-- **Role and RoleBinding `openshell-workspace-sandbox`**: let the **gateway's** ServiceAccount (in `openshell`) create and manage `Sandbox` resources, pods and Secrets in **this** namespace only.
-- **NetworkPolicy `openshell-workspace-sandbox-ssh`**: only the gateway's pods may reach sandboxes for `exec` and `connect`.
-
-</Step>
-
-<Step n="3" title="Create the workspace in the gateway">
-
-The namespace is ready; now tell the gateway about it. The workspace name is the namespace name:
-
-```bash
-openshell workspace create --name dev && openshell workspace list
-```
-<Output>
-<ExpectedOutput>
-{`✓ Created workspace dev
-NAME     STATUS        CREATED               LABELS
-default  Active        2026-11-11 11:41:33
-lab      Active        2026-11-13 10:31:49
-dev      Active        2026-11-13 10:33:06`}
-</ExpectedOutput>
-</Output>
-
-From now on, `--workspace dev` on an `openshell` command acts on your workspace. Without it, commands act on `lab`, the default set for this shell (`OPENSHELL_WORKSPACE=lab`).
-
-</Step>
-
-<Step n="4" title="Give the workspace the litellm provider">
-
-Providers belong to a workspace, so `dev` has none yet. Create one exactly the way the platform created `lab`'s ([1.3](/learn/inference)): LiteLLM's key goes from its Secret into the `LITELLM_API_KEY` variable of this one command, and `--credential LITELLM_API_KEY` reads it from there, so it is never printed:
-
-```bash
-LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)" openshell --workspace dev provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY && openshell --workspace dev provider list
-```
-<Output>
-<ExpectedOutput>
-{`✓ Created provider litellm
-NAME     TYPE     CREDENTIAL_KEYS   CONFIG_KEYS
-litellm  litellm  1                 0`}
-</ExpectedOutput>
-</Output>
-
-</Step>
-
-</Section>
-
-<Section n="2" title="Create the sandbox with openshell sandbox create">
+<Section n="1" title="Create the sandbox with openshell sandbox create">
 
 You don't write Kubernetes objects for a sandbox: you ask the **gateway** for one with the `openshell` CLI, and it does the rest.
 
@@ -123,7 +18,7 @@ You don't write Kubernetes objects for a sandbox: you ask the **gateway** for on
 | `openshell sandbox create` | Asks the gateway for a new sandbox. The CLI talks only to the gateway (with the lab operator's certificate), never to Kubernetes. |
 | `--workspace dev` | Which workspace the sandbox belongs to, so which namespace it runs in: `dev`. |
 | `--name pi-agent` | The sandbox's name: you use it in every later command (`exec`, `policy`, `logs`, `delete`). |
-| `--provider litellm` | Attaches the workspace's `litellm` provider (step 1.4.1.4): the sandbox gets a placeholder `LITELLM_API_KEY`, and the provider's rule for LiteLLM is merged into its policy. |
+| `--provider litellm` | Attaches the `litellm` provider you added to `dev` in [1.3](/learn/inference): the sandbox gets a placeholder `LITELLM_API_KEY`, and the provider's rule for LiteLLM is merged into its policy. |
 | `--policy manifests/policies/baseline.yaml` | The policy it starts with: the lab's baseline, which lets the agent write only `/sandbox` and `/tmp` and opens **no network at all**. |
 | `--memory 2Gi` | The workload pod's memory request and limit. (`--cpu` would become a request too; on an 8-vCPU VM a few of those fill the node.) |
 | `--no-tty --detach` | Don't attach a terminal, and return as soon as the sandbox is requested. |
@@ -163,7 +58,7 @@ pi-agent  2026-11-13 10:33:06  Ready`}
 
 </Section>
 
-<Section n="3" title="See what the gateway made on the cluster">
+<Section n="2" title="See what the gateway made on the cluster">
 
 For that one command, the gateway:
 
@@ -229,7 +124,7 @@ Workload pods may talk only to their own supervisor (`os-control-<id>` matches t
 
 </Section>
 
-<Section n="4" title="Test the seal from inside the sandbox">
+<Section n="3" title="Test the seal from inside the sandbox">
 
 The agent runs as the unprivileged user `sandbox`. Before it starts, the sandbox runtime applies the policy's static parts:
 
@@ -325,7 +220,7 @@ Type those commands at the sandbox prompt, not in the Cluster shell: there they'
 
 </Section>
 
-<Section n="5" title="Install pi: refused, then one door opened">
+<Section n="4" title="Install pi: refused, then one door opened">
 
 Now try to install pi inside the sandbox, as the Module 0 pod did at start. With the baseline policy the network is closed, so you'll open exactly one door.
 
@@ -407,7 +302,7 @@ openshell --workspace dev sandbox exec -n pi-agent -- npm install --prefix /sand
 
 </Section>
 
-<Section n="6" title="Run pi sealed: the model works, nothing else does">
+<Section n="5" title="Run pi sealed: the model works, nothing else does">
 
 pi is installed. Point it at LiteLLM and repeat what it did in 0.4: the model call goes through, everything else stops at the boundary.
 

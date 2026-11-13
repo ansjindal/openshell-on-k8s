@@ -26,8 +26,8 @@ export const CURRICULUM: Part[] = [
     lessons: [
       L("openshell", "Overview", "What OpenShell is, the same agent inside it, and how it is built: gateway, supervisor, sandbox.", 15),
       L("deploy", "OpenShell on your cluster", "OpenShell on Kubernetes and this lab's platform: the control plane, the gateway and who you are to it, the first sandbox.", 8, "lab"),
-      L("inference", "Add an inference provider", "What a provider is; the litellm provider holds LiteLLM's key, a sandbox gets a placeholder, and the real key goes only on allowed calls.", 10, "lab"),
-      L("build-an-agent", "Bring up a sandboxed agent", "openshell sandbox create, flag by flag; the pods and NetworkPolicy it makes; the seal tested from inside; one door opened for npm; pi run sealed.", 20, "lab"),
+      L("inference", "Add an inference provider", "What a provider is; create your own workspace and add the litellm provider to it; a sandbox gets a placeholder, and the real key goes only on allowed calls.", 12, "lab"),
+      L("build-an-agent", "Bring up a sandboxed agent", "openshell sandbox create in your workspace, flag by flag; the pods and NetworkPolicy it makes; the seal tested from inside; one door opened for npm; pi run sealed.", 20, "lab"),
       L("policy", "Open its network, rule by rule", "Live rules on the running sandbox: GET allowed and POST refused at L7, a plain TCP rule for one host and one program, revisions.", 15, "lab"),
       L("os-check", "Summary & knowledge check", "Agents, OpenShell, providers, sandboxes and policies.", 8, "check"),
     ],

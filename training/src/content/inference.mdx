@@ -1,8 +1,8 @@
 In [0.3](/learn/cluster-and-model) you met LiteLLM, the model gateway, and called it with its master key. An agent in an OpenShell sandbox needs the model too, but it must **never hold that key**: anything the agent runs could read it and send it anywhere, as you saw in [0.4](/learn/agent-on-k8s). OpenShell's answer is an **inference provider**: the key stays in the gateway, and the sandbox gets a placeholder.
 
 <BeforeYouStart
-  will="learn what a provider is, read the litellm provider and its profile, call the model from agent-0 with a placeholder key, and watch an admin call get refused."
-  time="about eight minutes. Each step has a Run button that runs its command on your lab VM."
+  will="learn what a provider is, read the litellm profile, create your own workspace and add the litellm provider to it, call the model from agent-0 with a placeholder key, and watch an admin call get refused."
+  time="about twelve minutes. Each step has a Run button that runs its command on your lab VM. The workspace dev and its provider stay for 1.4."
 />
 
 ## What a provider is
@@ -21,7 +21,7 @@ Once attached:
 2. the provider's endpoints and rules are merged into the sandbox's policy as `_provider_litellm`;
 3. when the agent sends a request with the placeholder, the **supervisor** checks it against those rules and, only if it matches, swaps in the real key on the way out. Anything else is refused before a key is ever attached.
 
-The provider was created when the machine was set up, by Ansible (`ansible/roles/10-cli_providers`), with LiteLLM's master key in the environment:
+For the platform's workspace `lab`, these two commands ran at setup (`ansible/roles/10-cli_providers`), with LiteLLM's master key in the environment. You run the second one yourself in Section 2, for your own workspace:
 
 ```bash-ref
 openshell profile import -f litellm-profile.yaml --global
@@ -87,9 +87,116 @@ The six rules are model calls only: `GET /v1/models`, `POST /v1/chat/completions
 
 </Section>
 
-<Section n="2" title="What a sandbox sees: a placeholder that still works">
+<Section n="2" title="Create your own workspace and add the litellm provider to it">
 
-`agent-0` was created with the `litellm` provider. See what that gave it, and use it.
+Providers belong to a **workspace**, OpenShell's tenant: its own sandboxes, providers and members. So to add a provider of your own, first make a workspace of your own. On this cluster each workspace is a Kubernetes **namespace of the same name**: the gateway runs in *operator mode*, so it doesn't create namespaces; you prepare one, and the gateway uses it. The platform's own workspace, `lab` (where `agent-0` runs), was made this way at setup. Now make yours, `dev`: your agent will run there in [1.4](/learn/build-an-agent).
+
+<Step n="1" title="Create the namespace and label it as a workspace">
+
+The gateway watches for namespaces labelled `openshell.ai/workspace=true` (its `operatorNamespaceLabel` setting). `--dry-run=client -o yaml | kubectl apply` makes this safe to run twice:
+
+```bash
+kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f - && kubectl label namespace dev openshell.ai/workspace=true --overwrite
+```
+<Output>
+<ExpectedOutput>
+{`namespace/dev created
+namespace/dev labeled`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Install the openshell-workspace chart into it">
+
+NVIDIA's **`openshell-workspace`** Helm chart, the same version as the gateway, puts what sandboxes need into the namespace:
+
+```bash
+helm upgrade --install openshell-workspace oci://ghcr.io/nvidia/openshell/openshell-workspace --version 0.1.7 --namespace dev --wait
+```
+<Output summary="One Helm release in dev.">
+<ExpectedOutput>
+{`Release "openshell-workspace" does not exist. Installing it now.
+NAME: openshell-workspace
+NAMESPACE: dev
+STATUS: deployed
+REVISION: 1`}
+</ExpectedOutput>
+</Output>
+
+List what it made:
+
+```bash
+kubectl -n dev get serviceaccount,role,rolebinding,networkpolicy
+```
+<Output>
+<ExpectedOutput>
+{`NAME                               AGE
+serviceaccount/default             2s
+serviceaccount/openshell-sandbox   0s
+
+NAME                                                         CREATED AT
+role.rbac.authorization.k8s.io/openshell-workspace-sandbox   2026-11-13T10:33:06Z
+
+NAME                                                                ROLE                               AGE
+rolebinding.rbac.authorization.k8s.io/openshell-workspace-sandbox   Role/openshell-workspace-sandbox   0s
+
+NAME                                                              POD-SELECTOR                        AGE
+networkpolicy.networking.k8s.io/openshell-workspace-sandbox-ssh   openshell.ai/managed-by=openshell   0s`}
+</ExpectedOutput>
+</Output>
+
+- **`openshell-sandbox`**: the ServiceAccount sandbox pods run as. It has no Kubernetes permissions of its own.
+- **Role and RoleBinding `openshell-workspace-sandbox`**: let the **gateway's** ServiceAccount (in `openshell`) create and manage `Sandbox` resources, pods and Secrets in **this** namespace only.
+- **NetworkPolicy `openshell-workspace-sandbox-ssh`**: only the gateway's pods may reach sandboxes for `exec` and `connect`.
+
+</Step>
+
+<Step n="3" title="Create the workspace in the gateway">
+
+The namespace is ready; now tell the gateway about it. The workspace name is the namespace name:
+
+```bash
+openshell workspace create --name dev && openshell workspace list
+```
+<Output>
+<ExpectedOutput>
+{`✓ Created workspace dev
+NAME     STATUS        CREATED               LABELS
+default  Active        2026-11-11 11:41:33
+lab      Active        2026-11-13 10:31:49
+dev      Active        2026-11-13 10:33:06`}
+</ExpectedOutput>
+</Output>
+
+From now on, `--workspace dev` on an `openshell` command acts on your workspace. Without it, commands act on `lab`, the default set for this shell (`OPENSHELL_WORKSPACE=lab`).
+
+</Step>
+
+<Step n="4" title="Add the litellm provider to your workspace">
+
+`dev` has no providers yet. Create one with the same command the platform ran for `lab` (above), from the `litellm` profile already imported for every workspace: LiteLLM's key goes from its Secret into the `LITELLM_API_KEY` variable of this one command, and `--credential LITELLM_API_KEY` reads it from there, so it is never printed:
+
+```bash
+LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)" openshell --workspace dev provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY && openshell --workspace dev provider list
+```
+<Output>
+<ExpectedOutput>
+{`✓ Created provider litellm
+NAME     TYPE     CREDENTIAL_KEYS   CONFIG_KEYS
+litellm  litellm  1                 0`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+Now `dev` has its own `litellm` provider, stored by the gateway. Any sandbox you create in `dev` with `--provider litellm` gets a placeholder for it, as `agent-0` does in `lab`; the next sections show what that looks like.
+
+</Section>
+
+<Section n="3" title="What a sandbox sees: a placeholder that still works">
+
+Your `dev` has no sandbox yet (that's 1.4), so look at `agent-0`, which `lab`'s `litellm` provider is attached to. See what that gave it, and use it.
 
 <Step n="1" title="Read the key in agent-0's environment">
 
@@ -132,7 +239,7 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s http://litellm.litellm.svc.c
 
 </Section>
 
-<Section n="3" title="See what the placeholder can't be used for">
+<Section n="4" title="See what the placeholder can't be used for">
 
 The provider's profile allows model calls only. Try something else with the same key.
 
@@ -153,7 +260,7 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -X POST -H "Authorization: B
 
 </Section>
 
-<Section n="4" title="Change the model later, in one place">
+<Section n="5" title="Change the model later, in one place">
 
 Every sandbox reaches the model through LiteLLM, so the model is one setting, not something each agent knows. The values you gave the Launchable ([0.3.2](/learn/cluster-and-model)) live in `~/openshell-on-k8s/.env`. Edit `MODEL_NAME` (or `MODEL_BASE_URL` and `MODEL_API_KEY`) there, then apply it with the LiteLLM tag only, from the Cluster shell:
 
@@ -173,6 +280,7 @@ Earlier releases routed every sandbox through a managed endpoint, <code>inferenc
 
 <Learned next="/learn/build-an-agent" nextLabel="Bring up a sandboxed agent">
 
+- **You add a provider per workspace** with `openshell provider create`, from a profile; the key goes in through an environment variable and is never printed.
 - **A provider is a credential the gateway keeps**, an instance of a profile. `litellm` holds LiteLLM's key; its profile says which variable a sandbox gets and which requests may carry the key.
 - **The sandbox holds a placeholder.** It still works: the supervisor puts the real key on allowed calls on the way out.
 - **Everything else is refused at L7**, before any key is attached: the admin API never sees a request.
