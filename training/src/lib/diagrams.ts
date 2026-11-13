@@ -287,7 +287,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { from: "kc", to: "con", label: "sign-in", layer: 5, kind: "ok" },
     ],
   },
-  // ---- 0.3 Your cluster and the model: one layer per command
+  // ---- 0.3 Your Kubernetes cluster and LiteLLM: one layer per command
   "cluster-tour": {
     title: "Your cluster, as your commands find it",
     w: 960, h: 500,

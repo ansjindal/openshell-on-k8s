@@ -15,7 +15,7 @@ export const CURRICULUM: Part[] = [
     lessons: [
       L("welcome", "Overview", "What you'll learn, how the labs work, and the one command that builds the stack.", 5),
       L("what-is-an-agent", "What is an agent?", "A model in a ReAct loop, plus the knowledge it reads, the tools it calls, the skills it loads and the harness that runs it all.", 6),
-      L("cluster-and-model", "Your cluster and the model", "The Kubernetes cluster on your VM, and LiteLLM configured with your inference endpoint.", 8, "lab"),
+      L("cluster-and-model", "Your Kubernetes cluster and LiteLLM", "The Kubernetes cluster on your VM, and LiteLLM configured with your inference endpoint.", 8, "lab"),
       L("agent-on-k8s", "Deploy an agent on Kubernetes", "An agent built with pi, as an ordinary Deployment with the LiteLLM key in a Secret, and what it can reach from inside the cluster.", 12, "lab"),
       L("agent-misled", "When an agent is misled", "One poisoned issue, what it touches, and where the guardrail should live.", 6),
     ],

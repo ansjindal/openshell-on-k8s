@@ -68,7 +68,6 @@ export function Section({ n, title, goal, children }: { n: string | number; titl
   const { number } = useLesson();
   const id = `${number}.${n}`;
   const [open, setOpen] = useState(true);
-  const progress = useProgress();
   // Steps register themselves (children of a server-rendered MDX page arrive
   // as lazy client references, so their types can't be inspected here).
   const [stepIds, setStepIds] = useState<string[]>([]);
@@ -76,7 +75,6 @@ export function Section({ n, title, goal, children }: { n: string | number; titl
     setStepIds((a) => (a.includes(k) ? a : [...a, k]));
     return () => setStepIds((a) => a.filter((x) => x !== k));
   }, []);
-  const done = stepIds.filter((k) => progress.steps[k]).length;
   useEffect(() => {
     const on = (e: Event) => setOpen((e as CustomEvent<{ open: boolean }>).detail.open);
     window.addEventListener("osk8s:sections", on);
@@ -85,12 +83,7 @@ export function Section({ n, title, goal, children }: { n: string | number; titl
   return (
     <>
       <h2 id={`s-${id}`} className={`foldable${open ? "" : " folded"}`} title="Collapse or expand this section" onClick={() => setOpen(!open)}>{id} · {title}</h2>
-      {goal && (
-        <div className="rl-secmap">
-          <span className="rl-smlabel">Goal</span><span className="rl-smgoal">{goal}</span>
-          {stepIds.length > 0 && <span className="rl-smprog"> · {done} of {stepIds.length} steps done</span>}
-        </div>
-      )}
+      {goal && open && <p>{goal}</p>}
       <SectionContext.Provider value={{ id, register }}>
         <div className="sec-steps" style={open ? undefined : { display: "none" }}>{children}</div>
       </SectionContext.Provider>

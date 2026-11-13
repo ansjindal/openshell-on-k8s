@@ -9,9 +9,11 @@ Before you build an agent, look at what it will run on: a Kubernetes cluster on 
 
 **Open the Cluster shell** at the bottom of the page if you want to type along: it's a real bash shell on the VM, with `kubectl` pointed at the cluster.
 
-<Section n="1" title="The cluster" goal="See the node, and what runs on it.">
+<Section n="1" title="The cluster">
 
 <Step n="1" title="The node">
+
+Start with the machine itself. `kubectl get nodes` lists the nodes of the cluster, and `-o wide` adds their address, operating system, Kubernetes version and container runtime. There is one: your VM, running both the control plane and the worker.
 
 ```bash
 kubectl get nodes -o wide
@@ -27,7 +29,7 @@ brev-abc123xyz   Ready    control-plane   22h   v1.37.2+k3s1   10.160.1.113   <n
 
 </Section>
 
-<Section n="2" title="LiteLLM: one gateway to your model" goal="See where the inference endpoint is configured.">
+<Section n="2" title="LiteLLM: one gateway to your model">
 
 An agent needs a model, and a cluster usually has more than one agent. Rather than hand each one the inference endpoint and its key, the cluster runs one **model gateway** in front of it. Agents call the gateway with a key of its own; the gateway knows the real endpoint and key, maps model names and aliases, and can add budgets, rate limits and logging in one place.
 
@@ -41,6 +43,8 @@ This lab uses **[LiteLLM](https://www.litellm.ai/)**, an open-source gateway tha
 
 
 <Step n="1" title="The LiteLLM service">
+
+LiteLLM runs like any other app on Kubernetes: a Deployment that keeps its pod running, and a Service in front of it, so other pods reach it by name on port 4000.
 
 ```bash
 kubectl -n litellm get deploy,svc
@@ -59,7 +63,7 @@ service/litellm   ClusterIP   10.43.190.70   <none>        4000/TCP   22h`}
 
 <Step n="2" title="Its configuration">
 
-LiteLLM's configuration is a ConfigMap. Read the model list:
+LiteLLM reads its configuration from a ConfigMap. Its `model_list` is where your inference endpoint is set: it maps the model names agents ask for to the real model, its base URL and its key. Read it:
 
 ```bash
 kubectl -n litellm get configmap litellm-config -o jsonpath='{.data.config\.yaml}' | sed -n '/^model_list/,$p'
@@ -89,7 +93,7 @@ router_settings:
 
 </Section>
 
-<Section n="3" title="Talk to the model through LiteLLM" goal="List the models and ask one question.">
+<Section n="3" title="Talk to the model through LiteLLM">
 
 <Step n="1" title="Call LiteLLM from the VM">
 
