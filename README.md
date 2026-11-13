@@ -1,6 +1,6 @@
 # OpenShell on Kubernetes — a Brev Launchable
 
-Stand up **[NVIDIA OpenShell](https://docs.nvidia.com/openshell/) 0.1** on a real Kubernetes
+Stand up **[NVIDIA OpenShell](https://docs.nvidia.com/openshell/) 0.1.7** on a real Kubernetes
 cluster and run **agents** ([pi](https://github.com/earendil-works/pi)) inside isolated, policy-controlled sandboxes —
 on a **single VM**, with **one command**.
 
@@ -95,7 +95,7 @@ button that runs its command on your VM, next to the output recorded on a real r
 | **sre-tools** | `tools` | MCP SDK 1.32 | the MCP server agents call for pods, events, Prometheus, Loki and Tempo |
 | **Training site** | host (systemd) | — | `training/`: Next.js lessons + live terminal *(toggle)* |
 
-## What changed in OpenShell 0.1 (and in this lab)
+## What changed in OpenShell 0.1.x (and in this lab)
 
 - **No managed inference route.** `inference.local` and `openshell inference` are gone. Models are
   a provider attached to each sandbox (`--provider litellm`); see the *Add an Inference Provider*

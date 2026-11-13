@@ -1,6 +1,6 @@
 # Architecture & teaching points
 
-A single Brev VM, one `./scripts/setup.sh`, and you have OpenShell 0.1 running agents on
+A single Brev VM, one `./scripts/setup.sh`, and you have OpenShell 0.1.7 running agents on
 Kubernetes, with people signing in through Keycloak. This doc explains what's underneath and
 what's worth pointing at when you teach it.
 

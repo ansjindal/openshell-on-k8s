@@ -209,7 +209,11 @@ if ! command -v ansible-playbook >/dev/null 2>&1; then
   log "Installing Ansible + deps (apt)"
   export DEBIAN_FRONTEND=noninteractive
   $SUDO apt-get update -y
-  $SUDO apt-get install -y ansible python3 python3-pip curl git ca-certificates socat \
+  # --no-install-recommends: python3-pip recommends build-essential, whose
+  # libc6-dev pulls a newer libc6, and upgrading libc6 re-executes systemd. That
+  # cuts off Brev's wait on this setup (its badge then says "Failed" while setup
+  # runs on). Nothing here needs a compiler.
+  $SUDO apt-get install -y --no-install-recommends ansible python3 python3-pip curl git ca-certificates socat \
     || { warn "apt install of ansible failed; trying pip"; $SUDO python3 -m pip install --upgrade ansible-core; }
 else
   log "Ansible already present: $(ansible-playbook --version | head -1)"
@@ -328,12 +332,14 @@ deploy_training() {
   [[ -d "$site" ]] || { warn "training/ not present — skipping the training site."; return 0; }
 
   if ! command -v node >/dev/null 2>&1 || [[ "$(node -v 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')" -lt 22 ]]; then
-    log "Installing Node.js 22 + build tools (for the training site)"
+    log "Installing Node.js 22 (for the training site)"
     $SUDO install -d -m 0755 /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | $SUDO gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | $SUDO tee /etc/apt/sources.list.d/nodesource.list >/dev/null
     $SUDO apt-get update -y >/dev/null
-    $SUDO apt-get install -y nodejs build-essential python3
+    # No build tools: the terminal uses a prebuilt pty (see the Ansible install
+    # above for why upgrading libc6 during setup is avoided).
+    $SUDO apt-get install -y --no-install-recommends nodejs python3
   fi
 
   log "Building the training site (npm ci + next build)"
@@ -482,14 +488,13 @@ cat <<EOF
     kubectl get ns -l openshell.ai/workspace=true   # one namespace per workspace
     kubectl -n lab get pods                   # workspace "lab": sandboxes + supervisors
 
-  OpenShell (the CLI is set up for $(id -un) and ${LAB_USER} as the lab operator)
+  OpenShell (the CLI is set up for $( [[ "$(id -un)" == "${LAB_USER}" ]] && echo "${LAB_USER}" || echo "$(id -un) and ${LAB_USER}") as the lab operator)
     openshell status
     openshell sandbox list
     openshell provider list                   # litellm: model access for sandboxes
 
-  Agent fleet
-    ./scripts/fleet status
-    ./scripts/fleet task "Write a haiku about Kubernetes pods" all
+  Agent
+    openshell sandbox exec -n agent-0 -- pi --no-session -p "Write a haiku about Kubernetes pods"
 
   Models: agent -> LiteLLM (provider litellm, key injected by the supervisor) -> ${MODEL_BASE_URL}
           model ${MODEL_NAME} (alias "default")

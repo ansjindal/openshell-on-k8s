@@ -1,5 +1,5 @@
 // Custom Next.js server that also bridges a browser terminal to a real shell
-// (node-pty) over WebSocket. Runs as ONE process on the VM, next to the live
+// (a prebuilt node-pty) over WebSocket. Runs as ONE process on the VM, next to the live
 // k3s cluster + OpenShell gateway. The shell starts with KUBECONFIG pre-pointed
 // at the k3s cluster and helpers (./scripts/fleet, openshell) — so learners run
 // `kubectl ...` and `openshell sandbox ...` against the real fleet.
@@ -8,7 +8,7 @@ import { parse } from "node:url";
 import { spawn } from "node:child_process";
 import next from "next";
 import { WebSocketServer } from "ws";
-import pty from "node-pty";
+import pty from "@homebridge/node-pty-prebuilt-multiarch";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOST || "0.0.0.0";
