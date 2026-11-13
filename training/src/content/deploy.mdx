@@ -124,6 +124,8 @@ OpenShell's control plane lives in namespace `openshell`: the gateway and the Co
 
 <Step n="1" title="List the pods in namespace openshell">
 
+List the pods in namespace `openshell`, where the control plane runs:
+
 ```bash
 kubectl -n openshell get pods
 ```
@@ -148,7 +150,7 @@ The `openshell` CLI talks only to the gateway. Check that it's connected, and as
 
 <Step n="1" title="Ask the gateway for its status">
 
-The CLI reaches the gateway on NodePort `30808`:
+The CLI reaches the gateway on NodePort `30808`. Ask it for its status:
 
 ```bash
 openshell status
@@ -169,7 +171,7 @@ openshell status
 
 <Step n="2" title="Ask the gateway who you are">
 
-The gateway accepts no anonymous calls. Ask it who you are:
+The gateway accepts no anonymous calls. Ask it who it thinks you are:
 
 ```bash
 openshell whoami
@@ -196,6 +198,8 @@ This shell presents a client certificate with `OU=operator`, which cert-manager 
 The setup created one sandbox, `agent-0`, in the platform's workspace `lab`. Find it.
 
 <Step n="1" title="List the sandboxes in the lab workspace">
+
+`openshell sandbox list` shows the sandboxes in your current workspace, `lab`:
 
 ```bash
 openshell sandbox list
@@ -226,6 +230,8 @@ The connection is a small overlay on the gateway's `values.yaml`:
 You'll sign in as these users in [2.6 The OpenShell Console](/learn/console) and give them workspaces in [2.7](/learn/access-control).
 
 <Step n="1" title="List the LiteLLM and Keycloak pods">
+
+List the pods of LiteLLM and Keycloak, each in its own namespace:
 
 ```bash
 kubectl -n litellm get pods && kubectl -n keycloak get pods

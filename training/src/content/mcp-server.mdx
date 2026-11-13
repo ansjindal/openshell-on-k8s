@@ -32,6 +32,8 @@ The setup installed **sre-tools**, a small MCP server written for this lab with 
 
 <Step n="1" title="List the server's Deployment and Service">
 
+The server is a Deployment with one pod and a Service in namespace `tools`. List them:
+
 ```bash
 kubectl -n tools get deploy,svc
 ```
@@ -54,6 +56,8 @@ service/sre-tools   ClusterIP   10.43.243.184   <none>        8080/TCP   24m`}
 The Service is only reachable inside the cluster, so open a short-lived port-forward to it, then send MCP requests with `curl`. Every request is a `POST` with a JSON-RPC body; `Accept` must allow both JSON and an event stream, as the transport requires.
 
 <Step n="1" title="Open a session with initialize">
+
+Open a short-lived port-forward to the Service and send `initialize`, the first request of every MCP session:
 
 ```bash
 kubectl -n tools port-forward svc/sre-tools 8080:8080 >/dev/null 2>&1 & PF=$!; sleep 3
@@ -93,6 +97,8 @@ kill $PF
 </Step>
 
 <Step n="3" title="Call pod_status by hand">
+
+Call one tool, `pod_status`, for namespace `demo`:
 
 ```bash
 kubectl -n tools port-forward svc/sre-tools 8080:8080 >/dev/null 2>&1 & PF=$!; sleep 3

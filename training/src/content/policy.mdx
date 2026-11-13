@@ -23,6 +23,8 @@ A few details the steps below rely on:
 
 <Section n="1" title="Read what pi-agent may reach today">
 
+Before changing anything, read the policy `pi-agent` has now: its version, then everything it allows.
+
 <Step n="1" title="Show the policy's version and status">
 
 All commands here carry `--workspace dev`, the workspace `pi-agent` lives in. **`openshell policy get`** asks the gateway for a sandbox's current policy:
@@ -85,6 +87,8 @@ openshell --workspace dev policy get pi-agent --full
 
 <Section n="2" title="Open GitHub's API for GET only, while it runs">
 
+Open one HTTP API for one method only, while the sandbox keeps running, and see both sides of the rule.
+
 <Step n="1" title="Try GitHub first: no response">
 
 `-w 'HTTP %{http_code}'` makes curl print the status code; `000` means there was no HTTP response at all:
@@ -123,6 +127,8 @@ The parts of the rule:
 </Step>
 
 <Step n="3" title="Call GitHub with GET: it works">
+
+Repeat the GET that got no response a minute ago:
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
@@ -182,6 +188,8 @@ Compare it with the GitHub rule: no `protocol`, `enforcement` or `access`. No re
 
 <Step n="2" title="Apply the TCP rule">
 
+Apply the same rule for real; `--wait` returns once the supervisor has loaded it:
+
 ```bash
 openshell --workspace dev policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/bin/curl --wait
 ```
@@ -196,7 +204,7 @@ openshell --workspace dev policy update pi-agent --add-endpoint 'example.com:443
 
 <Step n="3" title="Check that curl reaches example.com">
 
-The same request pi's tool made in 1.4, which got `000` then:
+Repeat the request pi's tool made in 1.4, which got `000` then:
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://example.com/
@@ -210,6 +218,8 @@ openshell --workspace dev sandbox exec -n pi-agent -- curl -s -o /dev/null -w 'H
 </Step>
 
 <Step n="4" title="Check that every other host is still closed">
+
+The rule opened one host. Try a different one, `example.org`:
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'curl -s -m 8 -o /dev/null https://example.org/ || echo "blocked (curl exit $?)"'
@@ -243,7 +253,11 @@ That program check is what stops an agent from sending data out through an unexp
 
 <Section n="4" title="Read every change as a numbered revision">
 
+Every `policy set` and `policy update` made a new revision. Read them back.
+
 <Step n="1" title="List the policy history">
+
+`openshell policy list` shows every revision of `pi-agent`'s policy, newest first:
 
 ```bash
 openshell --workspace dev policy list pi-agent

@@ -18,7 +18,7 @@ Make an agent hit a few closed doors, then read each decision its supervisor wro
 
 <Step n="1" title="Make some denied traffic">
 
-Make some traffic first: one denied host and one denied admin call.
+Give the supervisor something to record: from `agent-0`, try one host its policy doesn't allow and one LiteLLM admin call its provider doesn't allow:
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -m 5 https://example.org >/dev/null; curl -s -X POST http://litellm.litellm.svc.cluster.local:4000/key/generate >/dev/null; echo done'
@@ -29,7 +29,7 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -m 5 https://example.org >/d
 
 <Step n="2" title="Read the OCSF events agent-0's supervisor wrote">
 
-Now read the sandbox's log:
+Every decision the supervisor made is an OCSF line in the sandbox's log. Read the latest ones:
 
 ```bash
 openshell logs agent-0 -n 200 --source sandbox --since 5m | grep OCSF

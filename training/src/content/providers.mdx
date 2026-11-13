@@ -13,6 +13,8 @@ First, a service to call: the echo API answers every request with what it receiv
 
 <Step n="1" title="Apply the echo API's manifest">
 
+Deploy the echo API in its own namespace, `lab-demo`, and wait for it to be ready:
+
 ```bash
 kubectl apply -f manifests/demo-echo/echo.yaml && kubectl -n lab-demo rollout status deploy/echo --timeout=120s
 ```
@@ -55,7 +57,7 @@ endpoints:
 
 <Step n="2" title="Lint the profile and import it into the gateway">
 
-Lint it, then import it into the gateway:
+Check the profile against the schema, then import it into the gateway, where every workspace can use it:
 
 ```bash
 openshell profile lint -f manifests/demo-echo/echo-api.profile.yaml && openshell profile import -f manifests/demo-echo/echo-api.profile.yaml
@@ -98,6 +100,8 @@ Attach the provider to `agent-0` while it runs: it gets a placeholder variable a
 
 <Step n="1" title="Attach the echo provider">
 
+Attach the `echo` provider to `agent-0` while it runs; `--wait` returns once the supervisor has the new policy:
+
 ```bash
 openshell sandbox provider attach agent-0 echo --wait
 ```
@@ -115,7 +119,7 @@ No restart: the sandbox applied the new credential and the profile's policy.
 
 <Step n="2" title="Check the placeholder the sandbox got">
 
-New processes see the variable:
+New processes in the sandbox see a new variable, `ECHO_TOKEN`. Print it:
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
@@ -136,6 +140,8 @@ Call the echo API from inside the sandbox and see what arrives: the real token, 
 
 <Step n="1" title="A GET carries the real token">
 
+Call the echo API with the placeholder in `Authorization`. The echo shows what really arrived:
+
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/whoami' | grep -E '"path"|authorization'
 ```
@@ -152,7 +158,7 @@ The agent sent the placeholder; the echo service received `lab-secret-123`. The 
 
 <Step n="2" title="A POST never leaves">
 
-A `POST` doesn't match, so it never leaves:
+The profile allows `GET` only. Send a `POST` with the same placeholder:
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -o /dev/null -w "HTTP %{http_code}\n" -X POST -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/x'
@@ -183,6 +189,8 @@ ECHO_TOKEN=lab-secret-456 openshell provider update echo --credential ECHO_TOKEN
 </Step>
 
 <Step n="2" title="See the new value arrive">
+
+Call the echo API again. Nothing in the sandbox changed:
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s -H "Authorization: Bearer $ECHO_TOKEN" http://echo.lab-demo.svc.cluster.local:8080/api/whoami' | grep authorization

@@ -23,7 +23,11 @@ The sandbox image ships pi already pointed at LiteLLM: on first run it writes `~
 
 <Section n="2" title="Give agent-0 a persona">
 
+See the difference a persona makes: ask `agent-0` who it is, give it an `AGENTS.md`, ask again, then test one of its rules.
+
 <Step n="1" title="Ask agent-0 who it is, before">
+
+Without a persona, pi describes itself:
 
 ```bash
 openshell sandbox exec -n agent-0 -- pi --no-session -p "Who are you? Answer in one sentence."
@@ -56,6 +60,8 @@ settings.json`}
 </Step>
 
 <Step n="3" title="Ask again: the persona applies">
+
+Ask the same question again. pi reads `AGENTS.md` at the start of every run:
 
 ```bash
 openshell sandbox exec -n agent-0 -- pi --no-session -p "Who are you? Answer in one sentence."

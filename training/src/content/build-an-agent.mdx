@@ -245,6 +245,8 @@ Now check it. **`openshell --workspace dev sandbox exec -n pi-agent -- <command>
 
 <Step n="1" title="Check which user the agent runs as">
 
+Run `id` inside the sandbox to see which user the agent runs as:
+
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- id
 ```
@@ -258,7 +260,7 @@ openshell --workspace dev sandbox exec -n pi-agent -- id
 
 <Step n="2" title="Try to write outside /sandbox: Landlock refuses">
 
-Try to write in `/usr`, write in `/sandbox`, and list `/root`:
+Landlock decides which paths the agent may read and write. Try to write in `/usr`, write in `/sandbox`, and list `/root`:
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'touch /usr/x; touch /sandbox/x && echo "/sandbox is writable"; ls /root'
@@ -292,6 +294,8 @@ openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'curl -sk -m 6 -o /d
 
 <Step n="4" title="Read the environment the supervisor prepared">
 
+The supervisor prepares the agent's environment before it starts. Print the three variables that matter here:
+
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'env | grep -E "^(HOME|LITELLM_API_KEY|SSL_CERT_FILE)" | cut -c1-80'
 ```
@@ -322,6 +326,8 @@ Type those commands at the sandbox prompt, not in the Cluster shell: there they'
 </Section>
 
 <Section n="5" title="Install pi: refused, then one door opened">
+
+Now try to install pi inside the sandbox, as the Module 0 pod did at start. With the baseline policy the network is closed, so you'll open exactly one door.
 
 <Step n="1" title="Ask npm for pi: the connection is refused">
 
@@ -403,6 +409,8 @@ openshell --workspace dev sandbox exec -n pi-agent -- npm install --prefix /sand
 
 <Section n="6" title="Run pi sealed: the model works, nothing else does">
 
+pi is installed. Point it at LiteLLM and repeat what it did in 0.4: the model call goes through, everything else stops at the boundary.
+
 <Step n="1" title="Point pi at LiteLLM, with the placeholder">
 
 The same `models.json` as in 0.4: LiteLLM's address, and `apiKey: "$LITELLM_API_KEY"`, a reference pi resolves from its environment. Here that variable holds the placeholder:
@@ -448,7 +456,7 @@ openshell --workspace dev sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/
 
 <Step n="3" title="Give it bash and the same curl task as in 0.4">
 
-The same task as in 0.4: use bash to reach example.com with curl.
+Give pi its `bash` tool and the same task as in 0.4: fetch example.com with curl and report the status code:
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --tools bash -p "Use bash to run curl -s -m 8 -o /dev/null -w %{http_code} https://example.com and reply with one line: the HTTP status it printed."
@@ -476,7 +484,7 @@ openshell --workspace dev logs pi-agent | grep OCSF | grep -E "example.com|litel
 
 <Step n="4" title="Ask it to print its key: only a placeholder">
 
-In 0.4 an agent with a shell could read the real key. Here:
+In 0.4 an agent with a shell could read the real key. Ask this one to print its key:
 
 ```bash
 openshell --workspace dev sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --tools bash -p "Use bash to print the environment variable LITELLM_API_KEY and reply with only its value." | cut -c1-40

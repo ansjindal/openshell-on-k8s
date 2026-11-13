@@ -141,6 +141,8 @@ lab-a  2026-11-13 10:35:47  Ready`}
 
 <Step n="2" title="See one namespace per workspace">
 
+Each workspace is its own namespace. List the workspace namespaces, then the pods in `team-a`:
+
 ```bash
 kubectl get namespaces -l openshell.ai/workspace=true && kubectl -n team-a get pods
 ```
@@ -167,6 +169,8 @@ Each workspace is its own namespace, of the same name (`workspaceMode: operator`
 Delete everything `team-a` used, so the lab is back to where it started.
 
 <Step n="1" title="Delete team-a's sandbox, provider, workspace and namespace">
+
+Remove everything `team-a` used, in the reverse order you created it:
 
 ```bash
 openshell --workspace team-a sandbox delete lab-a && openshell --workspace team-a provider delete litellm && openshell workspace delete team-a && helm uninstall openshell-workspace -n team-a && kubectl delete namespace team-a

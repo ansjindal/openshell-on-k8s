@@ -11,6 +11,8 @@ Before you build an agent, look at what it will run on: a Kubernetes cluster on 
 
 <Section n="1" title="Look at the cluster's node">
 
+Start with the machine under everything: the cluster's one node.
+
 <Step n="1" title="List the node: your VM, control plane and worker in one">
 
 Start with the machine itself. `kubectl get nodes` lists the nodes of the cluster, and `-o wide` adds their address, operating system, Kubernetes version and container runtime. There is one: your VM, running both the control plane and the worker.
@@ -104,6 +106,8 @@ router_settings:
 </Section>
 
 <Section n="3" title="Talk to the model through LiteLLM">
+
+Finally, call the model the way an agent will: through LiteLLM's API, with LiteLLM's own key.
 
 <Step n="1" title="List the models and ask one question through LiteLLM">
 

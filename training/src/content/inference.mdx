@@ -42,7 +42,7 @@ openshell provider create --name litellm --type litellm --global-profile --crede
 
 <Section n="1" title="Look at the litellm provider and the profile behind it">
 
-What the gateway hands a sandbox for model access.
+Start with what the gateway stores: the provider, and the profile that says how it may be used.
 
 <Step n="1" title="List the providers the gateway stores">
 
@@ -93,6 +93,8 @@ The six rules are model calls only: `GET /v1/models`, `POST /v1/chat/completions
 
 <Section n="2" title="What a sandbox sees: a placeholder that still works">
 
+`agent-0` was created with the `litellm` provider. See what that gave it, and use it.
+
 <Step n="1" title="Read the key in agent-0's environment">
 
 `agent-0` is the sandbox the platform created at setup (you listed it in [1.2](/learn/deploy)), with `--provider litellm`. `openshell sandbox exec -n agent-0 -- …` runs one command inside it. Print the variable the provider gave it:
@@ -124,7 +126,7 @@ LiteLLM answers with its model list, so it received the **real** key: the superv
 
 <Step n="3" title="Ask the model one question">
 
-And a one-line chat completion with the same placeholder:
+Now ask the model one question, with the same placeholder in the `Authorization` header:
 
 ```bash
 openshell sandbox exec -n agent-0 -- sh -c 'curl -s http://litellm.litellm.svc.cluster.local:4000/v1/chat/completions -H "Authorization: Bearer $LITELLM_API_KEY" -H "Content-Type: application/json" -d "{\"model\":\"default\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in five words.\"}]}" | grep -o "\"content\":\"[^\"]*\""'
@@ -135,6 +137,8 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s http://litellm.litellm.svc.c
 </Section>
 
 <Section n="3" title="See what the placeholder can't be used for">
+
+The provider's profile allows model calls only. Try something else with the same key.
 
 <Step n="1" title="Try LiteLLM's admin API: refused at L7">
 

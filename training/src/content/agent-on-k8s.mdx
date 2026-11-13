@@ -47,6 +47,8 @@ This lab uses pi because it is small, scriptable and easy to point at any model.
 
 <Section n="1" title="Deploy pi as an ordinary Kubernetes Deployment">
 
+First, deploy pi the way most agents reach production today: a namespace, a Secret with an API key, and a Deployment.
+
 <Step n="1" title="Create the agents namespace and a Secret with the LiteLLM key">
 
 The agent gets its own namespace, `agents`, and a key for LiteLLM in a Secret there, the usual way to hand a workload an API key. Line by line:
@@ -73,6 +75,8 @@ secret/litellm-key created`}
 
 <Step n="2" title="Read the Deployment manifest, then apply it">
 
+`manifests/agents/pi-agent.yaml` describes the agent. Read it part by part, then apply it.
+
 <YamlRead id="pi-agent-deployment" />
 
 Apply it and wait for it. **`kubectl apply -f`** sends the manifest to the API server, which creates the Deployment; the scheduler places its pod on the node, and the kubelet starts it. **`kubectl rollout status`** waits until the pod is Ready, which here means pi is installed (about half a minute), or gives up after four minutes:
@@ -93,6 +97,8 @@ deployment "pi-agent" successfully rolled out`}
 </Section>
 
 <Section n="2" title="Use the agent: a question, a shell command, and what its logs show">
+
+With the agent running, use it the way a person would: ask it something, give it a tool, then see what the cluster recorded.
 
 <Step n="1" title="Ask a question: text only, no tools">
 

@@ -13,11 +13,15 @@ Two limits to know: the tool's **arguments** are not inspected (an allowed tool 
 
 <Section n="1" title="Read the policy that allows four tools">
 
+`manifests/policies/mcp-agent.yaml` is the baseline plus one MCP rule. Read it part by part.
+
 <YamlRead id="mcp-agent-policy" />
 
 </Section>
 
 <Section n="2" title="Create tool-agent and test the rules from inside">
+
+Create a sandbox with this policy, then call the MCP server from inside it with plain `curl`, so you can see each request and its answer.
 
 <Step n="1" title="Create the sandbox with this policy">
 
@@ -55,7 +59,7 @@ openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'curl -s http://sr
 
 <Step n="3" title="Call the denied tool: refused">
 
-The same request, for `scale_deployment`:
+Send the same request, this time for `scale_deployment`:
 
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'curl -s -w "\nHTTP %{http_code}\n" http://sre-tools.tools.svc.cluster.local:8080/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -H "MCP-Protocol-Version: 2025-11-25" -d "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"scale_deployment\",\"arguments\":{\"namespace\":\"demo\",\"name\":\"payments\",\"replicas\":0}}}"'
@@ -89,6 +93,8 @@ openshell --workspace dev logs tool-agent | grep OCSF | grep l7-mcp | tail -2 | 
 
 <Section n="3" title="Let pi use the MCP server">
 
+Now let an agent do it: add the server to pi, see what it finds, and ask it for an allowed tool and the denied one.
+
 <Step n="1" title="Add the MCP server to pi">
 
 pi ships in the sandbox image, already pointed at LiteLLM, and has MCP built in. **`pi mcp add`** writes the server into `~/.pi/agent/mcp.json`, in the `mcpServers` format most harnesses share:
@@ -114,6 +120,8 @@ Check it with: pi mcp list. If it requires sign-in: pi mcp login sre-tools
 
 <Step n="2" title="Check that pi connects and lists the tools">
 
+`pi mcp list` connects to each configured server through the supervisor and lists its tools:
+
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- pi mcp list
 ```
@@ -128,6 +136,8 @@ openshell --workspace dev sandbox exec -n tool-agent -- pi mcp list
 </Step>
 
 <Step n="3" title="Ask pi to use an allowed tool">
+
+Ask pi for something only an allowed tool can answer:
 
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session -p "Use the sre-tools pod_status tool for namespace demo and list each pod with its status, one per line."
@@ -145,6 +155,8 @@ shop-app-7bb978d6c8-xhx69  Running  ready 1/1  restarts 0`}
 </Step>
 
 <Step n="4" title="Ask pi to use the denied tool">
+
+Now ask pi for the tool its policy denies:
 
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session -p "Use the sre-tools scale_deployment tool to scale deployment payments in namespace demo to 0 replicas, then report exactly what the tool returned."

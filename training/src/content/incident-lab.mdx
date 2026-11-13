@@ -23,6 +23,8 @@ The agents never get a URL to Loki or Prometheus, and no network rule to reach t
 
 <Section n="2" title="The demo shop you will break">
 
+The demo is a small shop in namespace `demo`: `shop-app` calls `payments` on every checkout, and `loadgen` keeps traffic flowing. All three report metrics, logs and traces.
+
 <DemoArchitecture />
 
 A continuous **loadgen** drives the instrumented **shop-app**, which on every checkout makes a real HTTP call to its **`payments`** dependency — and emits all three signals into the cluster's observability stack: **traces** → Tempo (OTLP), **metrics** → Prometheus (a ServiceMonitor scrapes `/metrics`), and **logs** → Loki (Grafana Alloy ships its stdout). A **kubernetes-event-exporter** feeds k8s events into Loki too. The sealed fleet reads those backends — so when `payments` goes down, it shows up across every signal at once, and the live traffic numbers (below) move in real time.
@@ -30,6 +32,8 @@ A continuous **loadgen** drives the instrumented **shop-app**, which on every ch
 </Section>
 
 <Section n="3" title="Break the shop, let the fleet investigate, approve the fix">
+
+Use the panel below to run the whole loop: deploy the shop, break it, let the fleet investigate, and approve the fix.
 
 <IncidentLab />
 

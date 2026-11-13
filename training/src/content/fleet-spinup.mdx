@@ -34,6 +34,8 @@ The agents need no package egress at all: everything they run comes with the ima
 
 <Step n="1" title="Run fleet.sh with the spec">
 
+Run the helper with the spec. It prints each agent as it creates it, then as it configures it:
+
 ```bash
 ./scripts/fleet.sh up fleet.txt
 ```
@@ -59,6 +61,8 @@ Done. Run './scripts/fleet.sh status', or open the Fleet page in the training si
 
 <Step n="2" title="Check that every agent is Ready">
 
+`fleet.sh status` lists the sandboxes and their phase. Every fleet agent should be `Ready`:
+
 ```bash
 ./scripts/fleet.sh status
 ```
@@ -80,9 +84,11 @@ analyst  2026-11-13 11:32:24  Ready`}
 
 <Section n="3" title="Look at what the helper created">
 
+Now look at the fleet from Kubernetes and from the gateway: the pods, one agent's MCP rule and one agent's role.
+
 <Step n="1" title="List the fleet's pods">
 
-Every agent is a pair of pods in the workspace's namespace, `lab`:
+Every agent is a pair of pods in the platform workspace's namespace, `lab`. List them:
 
 ```bash
 kubectl get pods -n lab

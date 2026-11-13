@@ -29,6 +29,8 @@ The setup installed **Gitea**, a small git server, in namespace `skills`, and cr
 
 <Step n="1" title="List the git server's Deployment and Service">
 
+Gitea runs as a Deployment with one pod and a Service in namespace `skills`. List them:
+
 ```bash
 kubectl -n skills get deploy,svc
 ```
@@ -69,6 +71,8 @@ Read them: `cat ~/skills/k8s-triage/SKILL.md ~/skills/incident-report/SKILL.md`.
 </Section>
 
 <Section n="2" title="Add a skill to the repository">
+
+Skills are just folders, so adding one is writing a file, checking it, and pushing it, like any change to a repository.
 
 <Step n="1" title="Write the demo-app-map skill">
 
@@ -138,7 +142,11 @@ In a real platform this would be a pull request, reviewed and merged, with `skil
 
 <Section n="3" title="Deliver the skills into tool-agent">
 
+The skills are in the repository; now get them into the sandbox, with a policy that allows a read-only clone and nothing more.
+
 <Step n="1" title="Open the sandbox to the repository, read-only">
+
+`tools-agent.yaml` is the MCP policy from 3.3 plus one entry for the skill repository. Read the new part, then apply the file:
 
 <YamlRead id="skill-repo-policy" />
 
@@ -176,6 +184,8 @@ To update, `git -C /sandbox/skills pull` and link again: every sandbox gets a ne
 
 <Step n="3" title="Check that pi finds the skills">
 
+Ask pi which skills it has. It reads only each skill's name and description at start:
+
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session --no-mcp -p "List the names of the skills available to you, one per line, nothing else."
 ```
@@ -193,6 +203,8 @@ k8s-triage`}
 </Section>
 
 <Section n="4" title="Put it together: an outage, investigated">
+
+Now use everything at once: break the demo shop, then ask the agent a plain question and let the tools and skills do the work.
 
 <Step n="1" title="Break the shop: scale payments to zero">
 
@@ -234,7 +246,7 @@ Models vary: your report may word things differently, but it should name `paymen
 
 <Step n="3" title="Approve the fix yourself">
 
-The agent proposed; you decide:
+The agent only proposed the fix. Apply it yourself, and wait for `payments` to be back:
 
 ```bash
 kubectl -n demo scale deploy/payments --replicas=1 && kubectl -n demo rollout status deploy/payments --timeout=90s
