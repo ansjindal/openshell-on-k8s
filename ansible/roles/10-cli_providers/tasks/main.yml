@@ -79,9 +79,43 @@
       register: _profile
       changed_when: true
 
-    - name: Create (or update) the litellm provider
+    # The platform workspace, the way the lessons create one: a labelled
+    # namespace, the openshell-workspace chart in it, then the gateway record.
+    - name: Namespace for the {{ openshell_workspace }} workspace
       ansible.builtin.shell: |
         set -euo pipefail
+        kubectl create namespace {{ openshell_workspace }} --dry-run=client -o yaml | kubectl apply -f -
+        kubectl label namespace {{ openshell_workspace }} {{ openshell_workspace_label }} --overwrite
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: openshell-workspace chart in {{ openshell_workspace }}
+      ansible.builtin.shell: |
+        helm upgrade --install openshell-workspace {{ openshell_workspace_chart }} \
+          --version {{ openshell_chart_version }} --namespace {{ openshell_workspace }} --wait
+      args: { executable: /bin/bash }
+      changed_when: true
+
+    - name: Workspace record {{ openshell_workspace }}
+      ansible.builtin.shell: |
+        openshell workspace get {{ openshell_workspace }} >/dev/null 2>&1 || openshell workspace create --name {{ openshell_workspace }}
+      args: { executable: /bin/bash }
+      changed_when: false
+
+    - name: Make {{ openshell_workspace }} the CLI's default workspace
+      ansible.builtin.copy:
+        dest: /etc/profile.d/openshell-workspace.sh
+        mode: "0644"
+        content: |
+          # Set by roles/10-cli_providers: openshell commands act on this workspace
+          # unless --workspace says otherwise.
+          export OPENSHELL_WORKSPACE={{ openshell_workspace }}
+
+    # Providers belong to a workspace: this is the platform workspace's.
+    - name: Create (or update) the litellm provider in {{ openshell_workspace }}
+      ansible.builtin.shell: |
+        set -euo pipefail
+        export OPENSHELL_WORKSPACE={{ openshell_workspace }}
         export LITELLM_API_KEY='{{ ll_key.stdout }}'
         if openshell provider get litellm >/dev/null 2>&1; then
           openshell provider update litellm --credential LITELLM_API_KEY

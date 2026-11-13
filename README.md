@@ -68,7 +68,7 @@ openshell sandbox list
 | **k3s** | — | v1.37 channel | single-node Kubernetes |
 | **agent-sandbox controller** | `agent-sandbox-system` | v1.0.10 | reconciles `Sandbox` CRs into workload pods |
 | **OpenShell gateway** | `openshell` | 0.1.7 | StatefulSet + SQLite; OIDC (Keycloak) for people, mTLS `OU=operator` for the VM's CLI; NodePort 30808 |
-| **Sandboxes** | `openshell-lab-<workspace>` | 0.1.7 | one namespace per workspace, created by the gateway (managed mode); workload pod + supervisor pod each; default image `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox` (OpenClaw 2026.11.3) |
+| **Sandboxes** | `<workspace>` (`lab`, `dev`, `team-a`) | 0.1.7 | one namespace per workspace (operator mode): labelled `openshell.ai/workspace=true`, with the `openshell-workspace` chart; `lab` is the platform's; workload pod + supervisor pod each; default image `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox` (OpenClaw 2026.11.3) |
 | **OpenShell Console** | `openshell` | 0.1.3 | [ai-openshell/console](https://github.com/ai-openshell/console) behind oauth2-proxy |
 | **LiteLLM** | `litellm` | 1.108.4 | OpenAI-compatible endpoint in front of your model; alias `default` |
 | **Keycloak** | `keycloak` | 26.8.2 | realm `openshell`; users `demo` (admin) and `learner` (user) |

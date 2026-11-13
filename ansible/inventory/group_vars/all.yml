@@ -24,9 +24,16 @@ k3s_channel: "v1.37"
 k3s_version: ""
 # helm used by every role (pinned release tarball, checksum-verified)
 helm_version: "v3.22.1"
-# Sandboxes run in one namespace per workspace, created by the gateway
-# (workspaceMode managed): openshell-<gateway_id>-<workspace>.
+# Workspaces run in operator mode: each workspace is a namespace of the same
+# name, labelled openshell.ai/workspace=true and given the openshell-workspace
+# chart (sandbox ServiceAccount, RBAC for the gateway, SSH NetworkPolicy).
+# openshell_workspace is the platform's own workspace (agent-0, the fleet); the
+# CLI defaults to it through OPENSHELL_WORKSPACE. Learners create more (dev,
+# team-a) in the lessons, the same way.
 openshell_gateway_id: lab
+openshell_workspace: lab
+openshell_workspace_label: "openshell.ai/workspace=true"
+openshell_workspace_chart: "oci://ghcr.io/nvidia/openshell/openshell-workspace"
 
 # ---- agent-sandbox controller ----------------------------------------------
 # PIN the version; do NOT track "latest". The OpenShell chart runs a preflight

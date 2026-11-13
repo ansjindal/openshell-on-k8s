@@ -8,6 +8,7 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     NO_COLOR: "1"
+    OPENSHELL_WORKSPACE: "{{ openshell_workspace }}"
   block:
     - name: Create sandboxes through the gateway
       ansible.builtin.shell: |

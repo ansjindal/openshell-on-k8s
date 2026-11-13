@@ -17,6 +17,9 @@ const port = parseInt(process.env.PORT || "3000", 10);
 // Where the repo lives on the VM + the k3s kubeconfig Ansible points us at.
 const LAB_CWD = process.env.LAB_CWD || process.cwd();
 const LAB_KUBECONFIG = process.env.LAB_KUBECONFIG || "/etc/rancher/k3s/k3s.yaml";
+// openshell commands from the Run button, the shell and the API routes act on
+// the platform workspace, lab, unless a command says --workspace.
+process.env.OPENSHELL_WORKSPACE ||= "lab";
 const LAB_RC = process.env.LAB_RC || `${process.cwd()}/lab/labrc`;
 const MAX_SESSIONS = parseInt(process.env.LAB_MAX_SESSIONS || "25", 10);
 

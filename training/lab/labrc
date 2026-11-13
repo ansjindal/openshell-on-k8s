@@ -1,5 +1,7 @@
 # OpenShell on Kubernetes — lab shell, sourced by the in-browser terminal (server.mjs).
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+# openshell commands act on the platform workspace, lab, unless --workspace says otherwise.
+export OPENSHELL_WORKSPACE="${OPENSHELL_WORKSPACE:-lab}"
 # /usr/local/bin (kubectl, openshell CLI) + the repo's scripts on PATH.
 export PATH="$PATH:/usr/local/bin:/usr/bin:$LAB_CWD/scripts"
 

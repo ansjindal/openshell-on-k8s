@@ -498,8 +498,8 @@ cat <<EOF
   Cluster
     export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
     kubectl -n openshell get pods             # gateway, console
-    kubectl get ns -l openshell.ai/managed-by=openshell   # one namespace per workspace
-    kubectl -n openshell-lab-default get pods   # workspace "default": sandboxes + supervisors
+    kubectl get ns -l openshell.ai/workspace=true   # one namespace per workspace
+    kubectl -n lab get pods                   # workspace "lab": sandboxes + supervisors
 
   OpenShell (the CLI is set up for $(id -un) and ${LAB_USER} as the lab operator)
     openshell status

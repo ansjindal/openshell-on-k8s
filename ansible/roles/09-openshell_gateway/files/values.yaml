@@ -46,13 +46,15 @@ server:
   policyValidationFailureMode: fail_closed
   drivers:
     kubernetes:
-      # One namespace per workspace, created (and deleted) by the gateway:
-      # openshell-<gateway id>-<workspace>, e.g. openshell-lab-default and
-      # openshell-lab-team-a. The driver creates each namespace's sandbox
-      # ServiceAccount, RBAC and NetworkPolicy, and copies the client TLS
-      # Secret into it. (shared = one namespace for all workspaces; operator =
-      # pre-created namespaces with the openshell-workspace chart.)
-      workspaceMode: managed
+      # Operator mode: a workspace is a namespace of the same name, created
+      # ahead of time, labelled openshell.ai/workspace=true and given the
+      # openshell-workspace chart (roles/10-cli_providers does it for the
+      # platform workspace, lab; the lessons do it for dev and team-a). The
+      # gateway discovers labelled namespaces and creates sandboxes in them.
+      # (managed = the gateway creates openshell-<id>-<workspace> namespaces
+      # itself; shared = one namespace for every workspace.)
+      workspaceMode: operator
+      operatorNamespaceLabel: "openshell.ai/workspace=true"
       # Resource admission: a sandbox may use a cluster resource (RuntimeClass,
       # PriorityClass, volumes) only when it carries the operator's approval
       # labels: openshell.ai/sandbox-attachable=true and
@@ -74,3 +76,8 @@ sandboxServiceAccount:
   create: true
 networkPolicy:
   enabled: true
+
+# Gateway-only release: per-workspace resources (sandbox ServiceAccount, RBAC,
+# SSH NetworkPolicy) come from the openshell-workspace chart in each namespace.
+workspaceResources:
+  enabled: false
