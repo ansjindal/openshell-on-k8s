@@ -310,6 +310,30 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { from: "gw", to: "role", layer: 0, kind: "ok" },
     ],
   },
+  // ---- 1.2 what a workspace is: a record in the gateway + a namespace of the same name
+  "workspace": {
+    title: "A workspace",
+    w: 900, h: 360,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "g", x: 0, y: 0, w: 330, h: 350, label: "namespace openshell", layer: 0, kind: "group" },
+      { id: "gw", icon: "i-shield", x: 20, y: 40, w: 290, h: 64, label: "OpenShell gateway", sub: "finds namespaces with the label", layer: 0, kind: "accent" },
+      { id: "rec", icon: "i-db", x: 20, y: 130, w: 290, h: 100, label: "workspace \"lab\" (in the gateway)", sub: "providers: litellm (the real key)\nmembers: who may use it\nits sandboxes and their policies", layer: 0 },
+      { id: "you", icon: "i-term", x: 20, y: 256, w: 290, h: 70, label: "You, the CLI or the Console", sub: "openshell --workspace lab …", layer: 0 },
+      { id: "n", x: 390, y: 0, w: 510, h: 350, label: "namespace lab · label openshell.ai/workspace=true", layer: 0, kind: "group" },
+      { id: "chart", icon: "i-bundle", x: 410, y: 40, w: 470, h: 74, label: "openshell-workspace chart", sub: "sandbox ServiceAccount · Role + RoleBinding for the gateway\nNetworkPolicy: only the gateway reaches sandboxes", layer: 0 },
+      { id: "wl", icon: "i-bot", x: 410, y: 150, w: 210, h: 66, label: "agent-0", sub: "workload pod: the agent", layer: 0 },
+      { id: "sup", icon: "i-shield", x: 670, y: 150, w: 210, h: 66, label: "supervisor pod", sub: "the policy, the real key", layer: 0, kind: "accent" },
+      { id: "np", icon: "i-route", x: 410, y: 256, w: 470, h: 70, label: "per-sandbox NetworkPolicies", sub: "made by the gateway: the workload talks only to its supervisor", layer: 0 },
+    ],
+    edges: [
+      { from: "you", to: "rec", layer: 0, kind: "ok" },
+      { from: "rec", to: "gw", layer: 0, kind: "dash" },
+      { from: "gw", to: "chart", label: "allowed by the Role", layer: 0, kind: "ok" },
+      { from: "gw", to: "wl", label: "creates sandboxes", layer: 0, kind: "ok", dy: 14 },
+      { from: "wl", to: "sup", layer: 0, kind: "dash" },
+    ],
+  },
   // ---- 1.2 how the lab was installed: one pipeline, left to right
   "install-flow": {
     title: "How the lab was installed",
