@@ -81,18 +81,33 @@ Each line carries the supervisor pod, so you know which sandbox it was. (The gat
 
 Grafana puts a UI on the same Loki data: filter the denials, and watch new ones arrive live.
 
-<Step n="1" title="Open Grafana's Explore on Loki">
+<Step n="1" title="Get the demo user's password">
 
-Open Grafana from the site's **Links** page (`<your site>/grafana`, sign in with Keycloak as `demo`), go to **Explore**, pick **Loki**, and run:
+Grafana signs you in with Keycloak, as the user `demo`. Its password is generated for each lab VM and kept in `.sso-secrets.env` in the repo. Print it:
+
+```bash
+grep KC_DEMO_PASSWORD .sso-secrets.env
+```
+<Output>
+<ExpectedOutput>
+{`KC_DEMO_PASSWORD=<a password generated for your VM>`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Open Grafana's Explore on Loki">
+
+Open Grafana from the site's **Links** page (`<your site>/grafana`) and sign in as **`demo`** with that password. Go to **Explore**, pick **Loki**, and run:
 
 ```bash-ref
-{namespace=~"lab|dev|team-.+", container="supervisor"} |= "OCSF" |= "DENIED"
+{namespace=~"lab|dev", container="supervisor"} |= "OCSF" |= "DENIED"
 ```
 
 
 </Step>
 
-<Step n="2" title="Try other filters and go live">
+<Step n="3" title="Try other filters and go live">
 
 Try `|= "HTTP:"` for every inspected request, or `|= "CONFIG:PUBLISHED"` to see each policy revision being loaded. Click **Live** and run the denied `curl` again: it appears within seconds.
 
