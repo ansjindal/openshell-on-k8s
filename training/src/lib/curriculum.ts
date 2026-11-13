@@ -22,10 +22,10 @@ export const CURRICULUM: Part[] = [
   },
   {
     id: "os", n: 1, title: "OpenShell", accent: "nv", role: "You are the platform operator.",
-    subtitle: "The overview introduces OpenShell; then the labs, each explaining its part before you run it: verify OpenShell, give sandboxes a model through a provider, seal the pi agent from Module 0, and open its network rule by rule.",
+    subtitle: "The overview introduces OpenShell; then the labs, each explaining its part before you run it: see OpenShell on your cluster, add an inference provider, seal the pi agent from Module 0, and open its network rule by rule.",
     lessons: [
       L("openshell", "Overview", "What OpenShell is, the same agent inside it, and how it is built: gateway, supervisor, sandbox.", 15),
-      L("deploy", "Verify OpenShell", "OpenShell on Kubernetes and this lab's platform: the control plane, the gateway and who you are to it, the first sandbox.", 8, "lab"),
+      L("deploy", "OpenShell on your cluster", "OpenShell on Kubernetes and this lab's platform: the control plane, the gateway and who you are to it, the first sandbox.", 8, "lab"),
       L("inference", "Add an inference provider", "What a provider is; the litellm provider holds LiteLLM's key, a sandbox gets a placeholder, and the real key goes only on allowed calls.", 10, "lab"),
       L("build-an-agent", "Bring up a sandboxed agent", "openshell sandbox create, flag by flag; the pods and NetworkPolicy it makes; the seal tested from inside; one door opened for npm; pi run sealed.", 20, "lab"),
       L("policy", "Open its network, rule by rule", "Live rules on the running sandbox: GET allowed and POST refused at L7, a plain TCP rule for one host and one program, revisions.", 15, "lab"),
@@ -34,7 +34,7 @@ export const CURRICULUM: Part[] = [
   },
   {
     id: "m2", n: 2, title: "Customize & operate agents", accent: "nv", role: "You are the agent developer, then the security reviewer.",
-    subtitle: "Customize agents with your own credentials, a persona, governed skills and real tasks; then operate them: read the audit trail, use the web console, and give people roles and workspaces.",
+    subtitle: "Customize agents with your own credentials, a persona and real tasks; then operate them: read the audit trail, use the web console, and give people roles and workspaces.",
     lessons: [
       L("m2-overview", "Overview", "What this module builds: your own provider, a persona, skills, tasks, then the audit trail, the console and people with roles.", 5),
       L("providers", "Your own provider", "Write a profile, attach it live, watch the real token arrive upstream, rotate it.", 10, "lab"),

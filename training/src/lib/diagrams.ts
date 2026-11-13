@@ -288,6 +288,25 @@ export const DIAGRAMS: Record<string, Diagram> = {
     ],
   },
   // ---- 0.3 Your Kubernetes cluster and LiteLLM: one layer per command
+  // ---- 1.2 how the lab was installed: one pipeline, left to right
+  "install-flow": {
+    title: "How the lab was installed",
+    w: 900, h: 150,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "l", icon: "i-cloud", x: 0, y: 40, w: 160, h: 70, label: "Brev Launchable", sub: "your model values", layer: 0, kind: "ext" },
+      { id: "w", icon: "i-term", x: 185, y: 40, w: 160, h: 70, label: "setup script", sub: "writes .env", layer: 0 },
+      { id: "s", icon: "i-term", x: 370, y: 40, w: 160, h: 70, label: "scripts/setup.sh", sub: "installs Ansible", layer: 0 },
+      { id: "p", icon: "i-doc", x: 555, y: 40, w: 160, h: 70, label: "ansible/site.yml", sub: "one playbook", layer: 0 },
+      { id: "r", icon: "i-gear", x: 740, y: 30, w: 160, h: 90, label: "roles, in order", sub: "03 to 19\none piece each", layer: 0, kind: "accent" },
+    ],
+    edges: [
+      { from: "l", to: "w", layer: 0, kind: "ok" },
+      { from: "w", to: "s", layer: 0, kind: "ok" },
+      { from: "s", to: "p", layer: 0, kind: "ok" },
+      { from: "p", to: "r", layer: 0, kind: "ok" },
+    ],
+  },
   // ---- 0.4 summary: what the agent reached, and what saw it
   "agent-unbounded": {
     title: "The agent as an ordinary Kubernetes workload",

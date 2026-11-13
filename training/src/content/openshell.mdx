@@ -69,7 +69,7 @@ openshell sandbox list
 Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; each workspace's sandboxes live in a namespace of the same name, such as <code>lab</code>. You can always drop to <code>kubectl -n lab get sandboxes,pods</code> to see what the gateway did.
 </Callout>
 
-**Try it:** [1.2 Verify OpenShell](/learn/deploy) and [1.4 Bring up a sandboxed agent](/learn/build-an-agent).
+**Try it:** [1.2 OpenShell on your cluster](/learn/deploy) and [1.4 Bring up a sandboxed agent](/learn/build-an-agent).
 
 ## Coming up in the labs
 
@@ -77,7 +77,7 @@ You've seen what OpenShell is and how it's built. The next chapters take it apar
 
 | Chapter | What you'll learn there |
 |---|---|
-| [1.2 Verify OpenShell](/learn/deploy) | How OpenShell runs on Kubernetes, how this lab was installed, and every part of its platform. |
+| [1.2 OpenShell on your cluster](/learn/deploy) | How OpenShell runs on Kubernetes, how this lab was installed, and every part of its platform. |
 | [1.3 Add an inference provider](/learn/inference) | How a request travels end to end, and why the agent never holds the model's key. |
 | [1.4 Bring up a sandboxed agent](/learn/build-an-agent) | Your own workspace, `openshell sandbox create` flag by flag, the kernel seal (Landlock, seccomp), Kubernetes guardrails, and the policy file line by line. |
 | [1.5 Open its network, rule by rule](/learn/policy) | Live policy updates, L7 rules on methods and paths, L4 rules for plain TCP, and revisions. |
@@ -85,7 +85,7 @@ You've seen what OpenShell is and how it's built. The next chapters take it apar
 
 ## What you learned
 
-<Learned next="/learn/deploy" nextLabel="Lab 1.2: Verify OpenShell">
+<Learned next="/learn/deploy" nextLabel="1.2 OpenShell on your cluster">
 
 - **The boundary sits outside the agent.** OpenShell sandboxes the whole agent process; the agent can only ask.
 - **Gateway and supervisor.** The gateway governs sandboxes, policies and keys; a supervisor per sandbox decides every connection, and fails closed.
