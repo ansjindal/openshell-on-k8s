@@ -213,3 +213,15 @@ html[data-theme="light"] .hljs-bullet { color: #953800; }
 .rl-ctrl .rl-run:hover:not(:disabled) { background: var(--color-nv); color: #0b0f05; filter: none; }
 .rl-kcmdlist .rl-code, .rl-kcmdlist .rl-code code { white-space: pre-wrap; overflow-wrap: anywhere; }
 .rl-res { margin: 0.9rem 0 1.4rem; }
+
+/* Breathing room in lessons: more space between step cards (the connector line
+   follows), roomier step bodies, clear space after each run/output block, and
+   quieter inline code (no border) so paragraphs full of names read easier. */
+.step { margin: 2.25rem 0; }
+.prose .step + .step::before { top: calc(-1px - 2.25rem); height: 2.25rem; }
+.stepbody { padding: 4px 22px 18px; }
+.stepbody > p { margin: 0.85rem 0; line-height: 1.75; }
+.stepbody > .rl, .stepbody > .rl-res, .stepbody > .rl-box { margin-top: 1rem; margin-bottom: 1rem; }
+.stepbody > .rl + p, .stepbody > .rl-res + p, .stepbody > .rl-box + p, .stepbody > pre + p { margin-top: 1.4rem; }
+.prose code:not(pre code) { border-color: transparent; padding: 0.08rem 0.35rem; }
+html[data-theme="light"] .prose code:not(pre code) { border-color: transparent; }
