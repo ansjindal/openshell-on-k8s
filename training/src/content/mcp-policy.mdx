@@ -1,4 +1,4 @@
-The MCP server offers five tools to anyone who reaches it. Here you give an agent **four** of them: a sandbox whose policy reads every MCP request, allows the four read-only tools by name, and denies `scale_deployment`. Then pi, inside that sandbox, uses the tools, and tries the one it can't have.
+The MCP server offers six tools to anyone who reaches it. Here you give an agent **four** of them: a sandbox whose policy reads every MCP request, allows the four read-only tools by name, and denies `scale_deployment`. Then pi, inside that sandbox, uses the tools, and tries the one it can't have.
 
 <BeforeYouStart
   will="read an MCP policy, create the sandbox tool-agent in your dev workspace with it, call an allowed and a denied tool from inside, read the decisions in the audit log, then let pi use the server."
@@ -117,11 +117,11 @@ Check it with: pi mcp list. If it requires sign-in: pi mcp login sre-tools
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- pi mcp list
 ```
-<Output summary="Connected through the supervisor; pi sees all five tools. Listing isn't calling.">
+<Output summary="Connected through the supervisor; pi sees all six tools. Listing isn't calling.">
 <ExpectedOutput>
-{`sre-tools: connected, 5 tools (codemode, global)
+{`sre-tools: connected, 6 tools (codemode, global)
   http://sre-tools.tools.svc.cluster.local:8080/mcp
-  tools: pod_status, cluster_events, prometheus_query, loki_query, scale_deployment`}
+  tools: pod_status, cluster_events, prometheus_query, loki_query, tempo_search, scale_deployment`}
 </ExpectedOutput>
 </Output>
 
@@ -134,9 +134,11 @@ openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session -p "Use 
 ```
 <Output>
 <ExpectedOutput>
-{`loadgen-754f44c876-7f6vq Running
-payments-76d47df547-d8c4k Running
-shop-app-7bb978d6c8-xhx69 Running`}
+{`Here are the pods in the \`demo\` namespace with their status:
+
+loadgen-754f44c876-7f6vq  Running  ready 1/1  restarts 0
+payments-76d47df547-94brv  Running  ready 1/1  restarts 0
+shop-app-7bb978d6c8-xhx69  Running  ready 1/1  restarts 0`}
 </ExpectedOutput>
 </Output>
 
@@ -149,7 +151,7 @@ openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session -p "Use 
 ```
 <Output summary="pi gets the supervisor's 403 as the tool's result; payments keeps its replica.">
 <ExpectedOutput>
-{`MCP HTTP request failed with status 403: {"error":"policy_denied","policy":"sre_tools","rule":"POST /mcp","detail":"MCP request blocked by a deny rule; ask the policy owner to review deny_rules and tool selectors","layer":"l7",...,"binary":"/usr/bin/node",...}`}
+{`MCP HTTP request failed with status 403: {"error":"policy_denied","policy":"sre_tools","rule":"POST /mcp","detail":"MCP request blocked by a deny rule; ask the policy owner to review deny_rules and tool selectors","layer":"l7",...}`}
 </ExpectedOutput>
 </Output>
 
@@ -165,7 +167,7 @@ The model asked, pi tried, and the platform said no, whatever the prompt said. C
 
 - **`protocol: mcp` makes the supervisor read MCP**: the method and the tool name of every request.
 - **Allow by tool, deny by tool.** Deny rules win; a tool with no allow rule is refused too.
-- **The decision is the platform's, not the agent's.** pi saw all five tools, but only four could be called, and each decision is an OCSF event.
+- **The decision is the platform's, not the agent's.** pi saw all six tools, but only four could be called, and each decision is an OCSF event.
 - **Arguments and responses aren't inspected**: allow only tools whose every use is acceptable.
 
 </Learned>

@@ -147,7 +147,7 @@ cd ~/openshell-on-k8s && openshell --workspace dev policy set tool-agent --polic
 ```
 <Output>
 <ExpectedOutput>
-{`✓ Policy version 2 submitted (hash: 66193409c3aa)
+{`✓ Policy version 2 submitted (hash: 5345e6cc330f)
 ✓ Policy version 2 loaded (active version: 2)`}
 </ExpectedOutput>
 </Output>
@@ -156,7 +156,7 @@ cd ~/openshell-on-k8s && openshell --workspace dev policy set tool-agent --polic
 
 <Step n="2" title="Clone the skills into the sandbox">
 
-Clone the repository to `/sandbox/skills`, then link each skill into `~/.agents/skills/`, where pi and other clients look:
+Clone the repository to `/sandbox/skills`, then link each skill into `~/.agents/skills/`, where pi and other clients look (the base image already brings one skill there, `github`):
 
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'rm -rf /sandbox/skills && git clone -q http://gitea.skills.svc.cluster.local:3000/platform/skills.git /sandbox/skills && for d in /sandbox/skills/*/; do ln -sfn "$d" ~/.agents/skills/$(basename "$d"); done && ls ~/.agents/skills'
@@ -164,6 +164,7 @@ openshell --workspace dev sandbox exec -n tool-agent -- sh -c 'rm -rf /sandbox/s
 <Output>
 <ExpectedOutput>
 {`demo-app-map
+github
 incident-report
 k8s-triage`}
 </ExpectedOutput>
@@ -181,6 +182,7 @@ openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session --no-mcp
 <Output>
 <ExpectedOutput>
 {`demo-app-map
+github
 incident-report
 k8s-triage`}
 </ExpectedOutput>

@@ -28,8 +28,9 @@ For each line, `scripts/fleet.sh`:
 
 1. writes a **policy** that allows only a read-only clone of the skill repository and, if the agent has tools, the sre-tools MCP server for **those tools only** (the same `protocol: mcp` rule as 3.3, with `scale_deployment` always denied);
 2. creates the sandbox in the platform workspace, `lab`, with the `litellm` provider;
-3. **uploads pi** into it: pi is installed once on the VM and copied in with `openshell sandbox upload`, so the agents need no package egress at all;
-4. writes pi's `models.json` (LiteLLM, with the placeholder key) and `mcp.json` (sre-tools), clones the **platform skills** into `~/.agents/skills`, and writes the agent's **role** to `/sandbox/ROLE.md`.
+3. adds the sre-tools server to pi's `mcp.json` (pi ships in the sandbox image, already pointed at LiteLLM), clones the **platform skills** into `~/.agents/skills`, and writes the agent's **role** to `/sandbox/ROLE.md`.
+
+The agents need no package egress at all: everything they run comes with the image.
 
 <Step n="1" title="Run the helper">
 
@@ -38,19 +39,18 @@ For each line, `scripts/fleet.sh`:
 ```
 <Output summary="Five sandboxes, created two at a time, then configured in parallel.">
 <ExpectedOutput>
-{`Installing pi 1.5.2 once, to upload into each agent…
-Bringing up 5 pi agents in workspace lab, in parallel:
+{`Bringing up 5 pi agents in workspace lab, in parallel:
 ▶ logs  (tools: loki_query)
 ▶ metrics  (tools: prometheus_query)
 ▶ traces  (tools: tempo_search)
 ▶ events  (tools: cluster_events,pod_status)
 ▶ analyst  (tools: -)
-   …waiting for each to be Ready, then configuring (pi, MCP, skills, role) in parallel…
-   ✓ logs ready: pi, tools loki_query, skills, role
-   ✓ metrics ready: pi, tools prometheus_query, skills, role
-   ✓ traces ready: pi, tools tempo_search, skills, role
+   …waiting for each to be Ready, then configuring (MCP, skills, role) in parallel…
    ✓ analyst ready: pi, no tools, skills, role
+   ✓ traces ready: pi, tools tempo_search, skills, role
+   ✓ metrics ready: pi, tools prometheus_query, skills, role
    ✓ events ready: pi, tools cluster_events,pod_status, skills, role
+   ✓ logs ready: pi, tools loki_query, skills, role
 Done. Run './scripts/fleet.sh status', or open the Fleet page in the training site.`}
 </ExpectedOutput>
 </Output>
@@ -196,7 +196,7 @@ Adding an agent is one line in <code>fleet.txt</code> and one role file. It neve
 <Learned next="/learn/fleet-status" nextLabel="The fleet at a glance">
 
 - **One spec, one helper.** `fleet.txt` names each agent and its tools; `fleet.sh` does the rest.
-- **pi is uploaded, not downloaded**: the agents need no package egress.
+- **pi comes with the image**: the agents need no package egress.
 - **The policy makes the specialist**: an MCP rule that names its tools, plus the skill repository.
 - **Roles and skills are files** you can read, review and change in git.
 

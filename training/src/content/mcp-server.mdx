@@ -25,6 +25,7 @@ The setup installed **sre-tools**, a small MCP server written for this lab with 
 | `cluster_events(namespace)` | the most recent Kubernetes events | no |
 | `prometheus_query(query)` | an instant PromQL query | no |
 | `loki_query(query, minutes)` | the newest log lines for a LogQL query | no |
+| `tempo_search(query, minutes)` | recent traces matching a TraceQL query | no |
 | `scale_deployment(namespace, name, replicas)` | sets a Deployment's replicas, in `demo` only | **yes** |
 
 <YamlRead id="sre-tools-manifest" />
@@ -78,12 +79,13 @@ curl -s localhost:8080/mcp -H 'Content-Type: application/json' -H 'Accept: appli
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | grep -o '"name":"[^"]*"'
 kill $PF
 ```
-<Output summary="Five tools. This list, with each tool's description and schema, is what the model sees.">
+<Output summary="Six tools. This list, with each tool's description and schema, is what the model sees.">
 <ExpectedOutput>
 {`"name":"pod_status"
 "name":"cluster_events"
 "name":"prometheus_query"
 "name":"loki_query"
+"name":"tempo_search"
 "name":"scale_deployment"`}
 </ExpectedOutput>
 </Output>
