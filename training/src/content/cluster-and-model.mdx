@@ -65,7 +65,18 @@ service/litellm   ClusterIP   10.43.190.70   <none>        4000/TCP   22h`}
 
 <Step n="2" title="Its configuration">
 
-LiteLLM reads its configuration from a ConfigMap. Its `model_list` is where your inference endpoint is set: it maps the model names agents ask for to the real model, its base URL and its key. Read it:
+LiteLLM reads its configuration from a ConfigMap. Its `model_list` is where your inference endpoint is set: it maps the model names agents ask for to the real model, its base URL and its key.
+
+**Where its values come from.** When the Launchable was created, you (or whoever set it up) filled in three environment values. The VM's setup script wrote them to `.env`, and `scripts/setup.sh` handed them to the Ansible role `05-litellm`, which installed LiteLLM with its Helm chart. Each value ended up in one place:
+
+| You gave the Launchable | Where it went | What you will see |
+|---|---|---|
+| `MODEL_BASE_URL` | ConfigMap `litellm-config` | `api_base`: the inference endpoint LiteLLM calls |
+| `MODEL_NAME` | ConfigMap `litellm-config` | `model_name`, `model: openai/…` (the `openai/` prefix means "speak the OpenAI API to it"), and the target of the alias `default` |
+| `MODEL_API_KEY` | Secret `litellm-secrets`, key `UPSTREAM_API_KEY` | only a reference: `api_key: os.environ/UPSTREAM_API_KEY`. The key itself is never in the config; the pod gets it as an environment variable |
+| nothing: generated at setup | Secret `litellm-secrets`, key `LITELLM_MASTER_KEY` | not in the ConfigMap. It is LiteLLM's own key, which clients use instead of the upstream one; you'll use it in the next step |
+
+Now read it:
 
 ```bash
 kubectl -n litellm get configmap litellm-config -o jsonpath='{.data.config\.yaml}' | sed -n '/^model_list/,$p'
@@ -85,15 +96,6 @@ router_settings:
     default: <MODEL_NAME>`}
 </ExpectedOutput>
 </Output>
-
-**Where these values came from.** When the Launchable was created, you (or whoever set it up) filled in three environment values. The VM's setup script wrote them to `.env`, and `scripts/setup.sh` handed them to the Ansible role `05-litellm`, which installed LiteLLM with its Helm chart. Each value ended up in one place:
-
-| You gave the Launchable | Where it went | What you see above |
-|---|---|---|
-| `MODEL_BASE_URL` | ConfigMap `litellm-config` | `api_base`: the inference endpoint LiteLLM calls |
-| `MODEL_NAME` | ConfigMap `litellm-config` | `model_name`, `model: openai/…` (the `openai/` prefix means "speak the OpenAI API to it"), and the target of the alias `default` |
-| `MODEL_API_KEY` | Secret `litellm-secrets`, key `UPSTREAM_API_KEY` | only a reference: `api_key: os.environ/UPSTREAM_API_KEY`. The key itself is never in the config; the pod gets it as an environment variable |
-| nothing: generated at setup | Secret `litellm-secrets`, key `LITELLM_MASTER_KEY` | not shown here. It is LiteLLM's own key, which clients use instead of the upstream one; you'll use it in the next step |
 
 `default` is an alias: clients ask for `default`, and LiteLLM picks the real model. To point the lab at another model later, you change these values, not the agents.
 
