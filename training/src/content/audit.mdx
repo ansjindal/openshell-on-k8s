@@ -12,7 +12,9 @@ Every decision a supervisor makes, every connection opened or refused, every HTT
 <ReadScene scene="ocsf" />
 
 
-<Section n="1" title="Read audit events from the CLI" goal="Generate denials and read them in the sandbox's log.">
+<Section n="1" title="Read audit events from the CLI">
+
+Make an agent hit a few closed doors, then read each decision its supervisor wrote, straight from the CLI.
 
 <Step n="1" title="Make some denied traffic">
 
@@ -56,7 +58,9 @@ Note the first line: `example.org` isn't in any rule, so the supervisor didn't e
 
 </Section>
 
-<Section n="2" title="Query the same events in Loki, across every sandbox" goal="Query the same events for every sandbox with LogQL.">
+<Section n="2" title="Query the same events in Loki, across every sandbox">
+
+The same events are shipped to Loki for every sandbox, so one LogQL query finds them across the whole cluster.
 
 <Step n="1" title="Query the denials with LogQL">
 
@@ -73,7 +77,9 @@ Each line carries the supervisor pod, so you know which sandbox it was. (The gat
 
 </Section>
 
-<Section n="3" title="Explore the audit trail in Grafana" goal="Explore and live-tail the denials in Grafana.">
+<Section n="3" title="Explore the audit trail in Grafana">
+
+Grafana puts a UI on the same Loki data: filter the denials, and watch new ones arrive live.
 
 <Step n="1" title="Open Grafana's Explore on Loki">
 
@@ -95,7 +101,7 @@ Try `|= "HTTP:"` for every inspected request, or `|= "CONFIG:PUBLISHED"` to see 
 
 </Section>
 
-<Section n="4" title="Follow agent traces in Tempo" goal="Find the agent's own OpenTelemetry spans.">
+<Section n="4" title="Follow agent traces in Tempo">
 
 The supervisor also relays the agent's own **OpenTelemetry** spans: every sandbox process gets `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the supervisor, which tags each span with the sandbox id and forwards it to **Tempo**. An agent instrumented with OpenTelemetry (send `application/x-protobuf`) shows up in Grafana → Explore → **Tempo**, searchable by `resource.openshell.sandbox.id`. The gateway's own spans (every RPC, every sandbox create) are there too, under service `openshell-gateway`.
 
@@ -109,9 +115,9 @@ OCSF is a vendor-neutral schema that SIEMs (Splunk, Sentinel, Security Lake, …
 
 <Learned next="/learn/console" nextLabel="The OpenShell Console">
 
-- **From the CLI.** Generate denials and read them in the sandbox's log.
-- **In Loki, across every sandbox.** Query the same events for every sandbox with LogQL.
-- **In Grafana.** Explore and live-tail the denials in Grafana.
-- **Agent traces in Tempo.** Find the agent's own OpenTelemetry spans.
+- **Every decision is an OCSF event** in the sandbox's log: what tried to connect, where, and whether the policy allowed it.
+- **Loki has them for every sandbox**, so one LogQL query covers the whole cluster.
+- **Grafana puts a UI on the same data**, with filters and a live tail.
+- **The agent's own traces reach Tempo**, next to the gateway's.
 
 </Learned>

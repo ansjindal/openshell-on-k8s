@@ -5,7 +5,9 @@ You've driven the gateway from the CLI. The same gateway has a web UI: the **Ope
   time="about ten minutes."
 />
 
-<Section n="1" title="Sign in to the OpenShell Console" goal="Sign in to the console as demo.">
+<Section n="1" title="Sign in to the OpenShell Console">
+
+The Console is the gateway in a browser. Sign in as `demo`, the platform admin, with Keycloak.
 
 <Step n="1" title="Get the demo users' passwords">
 
@@ -29,7 +31,7 @@ The top bar shows **Gateway status: Healthy** and **Role: Platform admin**: the 
 
 </Section>
 
-<Section n="2" title="Find your way around the console" goal="Know the main areas of the console.">
+<Section n="2" title="Find your way around the console">
 
 - **Workspaces**: tenants, their members, sandboxes, providers and templates ([next lesson](/learn/access-control)).
 - **Sandboxes**: every sandbox you may see, across workspaces, with status and image.
@@ -38,7 +40,9 @@ The top bar shows **Gateway status: Healthy** and **Role: Platform admin**: the 
 
 </Section>
 
-<Section n="3" title="Look at one sandbox from every tab" goal="Map each sandbox tab to the CLI you already used.">
+<Section n="3" title="Look at one sandbox from every tab">
+
+Open `agent-0` and match each tab to the CLI command you already know.
 
 <Step n="1" title="Open agent-0's page">
 
@@ -123,9 +127,8 @@ Create a sandbox in the console, then run <code>openshell sandbox list</code> he
 
 <Learned next="/learn/access-control" nextLabel="Users, roles & workspaces">
 
-- **Open it.** Sign in to the console as demo.
-- **Around the console.** Know the main areas of the console.
-- **One sandbox, every angle.** Map each sandbox tab to the CLI you already used.
-- **Proposals.** Denied traffic becomes a pending rule; a person approves or rejects it.
+- **The Console is the gateway in a browser.** It signs you in with Keycloak and forwards your token; it has no privileges of its own.
+- **Every tab is a CLI command you know**: sandboxes, logs, the terminal, policy revisions.
+- **Denied traffic becomes a proposal**: a pending rule that changes nothing until a person approves or rejects it.
 
 </Learned>

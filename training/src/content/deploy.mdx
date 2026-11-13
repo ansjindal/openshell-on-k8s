@@ -142,7 +142,9 @@ openshell-dashboard-7689bc4dcb-2s72t   2/2     Running   0          11m`}
 
 </Section>
 
-<Section n="2" title="Check that the CLI reaches the gateway, and who you are to it" goal="Confirm the CLI is connected, and see who you are.">
+<Section n="2" title="Check that the CLI reaches the gateway, and who you are to it">
+
+The `openshell` CLI talks only to the gateway. Check that it's connected, and ask the gateway who it thinks you are.
 
 <Step n="1" title="Ask the gateway for its status">
 
@@ -189,7 +191,9 @@ This shell presents a client certificate with `OU=operator`, which cert-manager 
 
 </Section>
 
-<Section n="3" title="Find agent-0, the sandbox the setup created" goal="Find agent-0, created at provisioning time.">
+<Section n="3" title="Find agent-0, the sandbox the setup created">
+
+The setup created one sandbox, `agent-0`, in the platform's workspace `lab`. Find it.
 
 <Step n="1" title="List the sandboxes in the lab workspace">
 
@@ -249,10 +253,10 @@ One <code>Ready</code> node; <code>openshell-0</code>, the console, LiteLLM and 
 
 <Learned next="/learn/inference" nextLabel="Add an inference provider">
 
-- **The node is up.** Confirm the single k3s node is Ready.
-- **The OpenShell control plane.** The gateway and the Console run in namespace `openshell`.
-- **The gateway answers.** Confirm the CLI is connected, and see who you are.
-- **A sandbox is already running.** Find agent-0, created at provisioning time.
-- **The model path and sign-in are up.** Confirm LiteLLM and Keycloak are Running.
+- **The lab was installed with ordinary commands**: `kubectl apply` and `helm upgrade --install`, run in order by Ansible.
+- **The OpenShell control plane runs in `openshell`**: the gateway and the Console.
+- **The CLI is the lab operator**, signed in with a client certificate; people sign in with Keycloak.
+- **`agent-0` is the first sandbox**, in the platform's workspace, `lab`.
+- **LiteLLM and Keycloak are running**: the model path and sign-in for people.
 
 </Learned>

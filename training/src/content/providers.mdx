@@ -7,7 +7,9 @@ The service is a tiny **echo API** (`manifests/demo-echo/echo.yaml`): it answers
   time="about fifteen minutes. Each step has a Run button that runs its command on your lab VM."
 />
 
-<Section n="1" title="Deploy the echo API the provider will call" goal="Run a service that shows what it receives.">
+<Section n="1" title="Deploy the echo API the provider will call">
+
+First, a service to call: the echo API answers every request with what it received, so you can see exactly what leaves the sandbox.
 
 <Step n="1" title="Apply the echo API's manifest">
 
@@ -20,7 +22,9 @@ kubectl apply -f manifests/demo-echo/echo.yaml && kubectl -n lab-demo rollout st
 
 </Section>
 
-<Section n="2" title="Write a provider profile for the echo API" goal="Define where the token may go and for which requests.">
+<Section n="2" title="Write a provider profile for the echo API">
+
+A profile is the access contract for a credential: which variable a sandbox gets, where the credential may go, and for which requests.
 
 <Step n="1" title="Read the profile, field by field">
 
@@ -67,7 +71,9 @@ Imported 1 provider profile.`}
 
 </Section>
 
-<Section n="3" title="Create a provider from the profile" goal="Give the real token to the gateway, not the sandbox.">
+<Section n="3" title="Create a provider from the profile">
+
+Hand the real token to the gateway, which stores it. The sandbox will never see it.
 
 <Step n="1" title="Create it, with the token read from the environment">
 
@@ -86,7 +92,9 @@ ECHO_TOKEN=lab-secret-123 openshell provider create --name echo --type echo-api 
 
 </Section>
 
-<Section n="4" title="Attach the provider to agent-0 while it runs" goal="Add the credential and its policy to agent-0 live.">
+<Section n="4" title="Attach the provider to agent-0 while it runs">
+
+Attach the provider to `agent-0` while it runs: it gets a placeholder variable and the profile's rule, with no restart.
 
 <Step n="1" title="Attach the echo provider">
 
@@ -122,7 +130,9 @@ openshell sandbox exec -n agent-0 -- sh -c 'echo $ECHO_TOKEN'
 
 </Section>
 
-<Section n="5" title="Call the echo API from the sandbox" goal="See what actually arrives at the service.">
+<Section n="5" title="Call the echo API from the sandbox">
+
+Call the echo API from inside the sandbox and see what arrives: the real token, but only on requests the profile allows.
 
 <Step n="1" title="A GET carries the real token">
 
@@ -157,7 +167,9 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -o /dev/null -w "HTTP %{http
 
 </Section>
 
-<Section n="6" title="Rotate the token without touching the sandbox" goal="Change the credential without touching the sandbox.">
+<Section n="6" title="Rotate the token without touching the sandbox">
+
+Change the token in the gateway, and the sandbox uses the new one on its next request, with nothing to restart.
 
 <Step n="1" title="Update the provider's token">
 
@@ -187,7 +199,9 @@ The agent's placeholder didn't change; only the value behind it did.
 
 </Section>
 
-<Section n="7" title="Detach the provider again" goal="Revoke the credential and its policy.">
+<Section n="7" title="Detach the provider again">
+
+Detach the provider: the placeholder and its rule disappear from the sandbox.
 
 <Step n="1" title="Detach echo from agent-0">
 
@@ -210,12 +224,9 @@ An agent with a token in its environment can send it anywhere: in a URL, a log l
 
 <Learned next="/learn/workspace" nextLabel="Give it a soul: workspace files">
 
-- **Deploy the echo API.** Run a service that shows what it receives.
-- **Write the profile.** Define where the token may go and for which requests.
-- **Create the provider.** Give the real token to the gateway, not the sandbox.
-- **Attach it to a running sandbox.** Add the credential and its policy to agent-0 live.
-- **Call the API.** See what actually arrives at the service.
-- **Rotate the token.** Change the credential without touching the sandbox.
-- **Detach it.** Revoke the credential and its policy.
+- **A provider is a credential plus its contract.** The profile says which variable a sandbox gets, where the credential may go and for which requests; the gateway keeps the real value.
+- **Attach and detach live.** The sandbox gets a placeholder and the profile's rule without a restart, and loses both when you detach.
+- **Only allowed requests carry the real token.** A GET reached the echo API with it; a POST never left the sandbox.
+- **Rotation is one command.** Update the provider, and the next request uses the new token.
 
 </Learned>

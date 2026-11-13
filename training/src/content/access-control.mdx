@@ -5,7 +5,9 @@ So far you've been the **operator**: this shell's client certificate makes you a
   time="about fifteen minutes."
 />
 
-<Section n="1" title="Meet two people with two different roles" goal="Meet the two Keycloak users and their roles.">
+<Section n="1" title="Meet two people with two different roles">
+
+Two people are set up in Keycloak: `demo`, a platform admin, and `learner`, an ordinary user. Their roles decide what the gateway lets each of them do.
 
 <Step n="1" title="Get demo's and learner's passwords">
 
@@ -26,7 +28,9 @@ The gateway reads the roles from the token's `realm_access.roles` claim.
 
 </Section>
 
-<Section n="2" title="Sign in as learner and see what a user can do" goal="See that a user with no workspace sees nothing.">
+<Section n="2" title="Sign in as learner and see what a user can do">
+
+Sign in as `learner`, a user who isn't a member of any workspace yet, and see that the gateway shows them nothing.
 
 <Step n="1" title="Open the console as learner">
 
@@ -49,7 +53,9 @@ Try opening `…/workspaces/lab` directly; the gateway refuses with *not a membe
 
 </Section>
 
-<Section n="3" title="Create the team-a workspace and add learner to it" goal="Create team-a and make learner a member.">
+<Section n="3" title="Create the team-a workspace and add learner to it">
+
+Make a new workspace, `team-a`, the same way you made `dev`, and give `learner` access to it.
 
 <Step n="1" title="Create team-a: namespace, chart and workspace">
 
@@ -90,7 +96,9 @@ fadec839-948e-4ab0-913c-0c64ca8f3f12  user`}
 
 </Section>
 
-<Section n="4" title="Give team-a its own model provider" goal="Create team-a's own litellm provider.">
+<Section n="4" title="Give team-a its own model provider">
+
+Providers belong to a workspace, so `team-a` needs its own `litellm` provider before its sandboxes can reach the model.
 
 <Step n="1" title="Create team-a's litellm provider">
 
@@ -109,7 +117,9 @@ LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.
 
 </Section>
 
-<Section n="5" title="Let learner work in team-a" goal="Give learner a sandbox and see the tenant boundary.">
+<Section n="5" title="Let learner work in team-a">
+
+Now `learner` can create a sandbox in `team-a`, and you can see where one tenant ends and the next begins.
 
 <Step n="1" title="Create a sandbox in team-a">
 
@@ -152,7 +162,9 @@ Each workspace is its own namespace, of the same name (`workspaceMode: operator`
 
 </Section>
 
-<Section n="6" title="Remove team-a again" goal="Remove the sandbox, provider and workspace.">
+<Section n="6" title="Remove team-a again">
+
+Delete everything `team-a` used, so the lab is back to where it started.
 
 <Step n="1" title="Delete team-a's sandbox, provider, workspace and namespace">
 
@@ -172,11 +184,8 @@ The CLI, the console and the SDKs all call the same gateway, and the gateway che
 
 <Learned next="/learn/m2-check" nextLabel="Summary & knowledge check">
 
-- **Two people, two roles.** Meet the two Keycloak users and their roles.
-- **Sign in as learner.** See that a user with no workspace sees nothing.
-- **Create a workspace and add learner.** Create team-a and make learner a member.
-- **Give the workspace model access.** Create team-a's own litellm provider.
-- **learner works in team-a.** Give learner a sandbox and see the tenant boundary.
-- **Clean up.** Remove the sandbox, provider and workspace.
+- **People get roles from Keycloak**: `openshell-admin` for the whole platform, `openshell-user` for the workspaces they belong to.
+- **A user with no workspace sees nothing.** Membership, by OIDC subject, is what opens a workspace.
+- **A workspace is a tenant**: its own namespace, providers, sandboxes and members, made the same way as `dev`.
 
 </Learned>

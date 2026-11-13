@@ -5,7 +5,7 @@ Now we put the fleet to work on a real incident — one you cause on purpose —
   time="about fifteen minutes. Everything runs from the panel on this page."
 />
 
-<Section n="1" title="How the conductor runs an investigation" goal="See how the in-page orchestrator combines the specialists.">
+<Section n="1" title="How the conductor runs an investigation">
 
 A fleet of specialists isn't useful until something *combines* them. That's a small **orchestrator** built into this page — no separate app. When you hit **Investigate**, it:
 
@@ -21,7 +21,7 @@ The agents never get a URL to Loki or Prometheus, and no network rule to reach t
 
 </Section>
 
-<Section n="2" title="The demo shop you will break" goal="Know what the sample app emits and where it lands.">
+<Section n="2" title="The demo shop you will break">
 
 <DemoArchitecture />
 
@@ -29,7 +29,7 @@ A continuous **loadgen** drives the instrumented **shop-app**, which on every ch
 
 </Section>
 
-<Section n="3" title="Break the shop, let the fleet investigate, approve the fix" goal="Cause a real outage, let the fleet diagnose it, and approve the fix.">
+<Section n="3" title="Break the shop, let the fleet investigate, approve the fix">
 
 <IncidentLab />
 
@@ -71,7 +71,7 @@ from real telemetry, fixed by a real change.
 
 </Section>
 
-<Section n="4" title="Agents recommend; humans decide" goal="See where the human gate sits, here and in production.">
+<Section n="4" title="Agents recommend; humans decide">
 
 The agents never touch the cluster — they're sealed from the Kubernetes API and only *read* telemetry. They produce a **recommendation**; the human approves (and may change) the **actual** change. That gap between "what the fleet suggested" and "what you applied" is the human-in-the-loop, made explicit and on the record.
 
@@ -91,9 +91,9 @@ That's the capstone: a governed, observable SRE copilot — spun up repeatably, 
 
 <Learned next="/learn/orchestration" nextLabel="Under the hood">
 
-- **The conductor.** See how the in-page orchestrator combines the specialists.
-- **The demo, deployed.** Know what the sample app emits and where it lands.
-- **The loop: break, investigate, fix.** Cause a real outage, let the fleet diagnose it, and approve the fix.
-- **Agents recommend; humans decide.** See where the human gate sits, here and in production.
+- **The conductor asks, the agents investigate**: each specialist reads live data through its own tools.
+- **The demo is real**: a shop with a real dependency, reporting metrics, logs and traces.
+- **The fleet found the cause of a real outage**, and recommended the fix.
+- **Agents recommend; humans decide.** You approved the change, here and in production.
 
 </Learned>

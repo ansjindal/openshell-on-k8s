@@ -70,7 +70,9 @@ A new sandbox is `Ready` in about fifteen seconds: the same pair of pods as `pi-
 
 </Section>
 
-<Section n="2" title="Send one task to every agent" goal="Fan one prompt out to every agent.">
+<Section n="2" title="Send one task to every agent">
+
+`fleet task … all` sends the same prompt to every agent at once; each works on it in its own sandbox.
 
 <Step n="1" title="Send a haiku task to all agents">
 
@@ -103,7 +105,9 @@ Each agent receives the prompt, calls LiteLLM through its `litellm` provider (th
 
 </Section>
 
-<Section n="3" title="Send a task to one agent" goal="Send a task to just one agent.">
+<Section n="3" title="Send a task to one agent">
+
+Name an agent instead of `all` to give the task to that one alone.
 
 <Step n="1" title="Ask agent-0 alone">
 
@@ -131,7 +135,9 @@ All agents finished.`}
 
 </Section>
 
-<Section n="4" title="Read what the logs recorded" goal="See the output and the agent's reasoning.">
+<Section n="4" title="Read what the logs recorded">
+
+See what the logs show of the work: the model calls the supervisor allowed, and what the pod itself logged.
 
 <Step n="1" title="Follow the sandbox's OpenShell log">
 
@@ -166,7 +172,9 @@ kubectl -n lab logs agent-0
 
 </Section>
 
-<Section n="5" title="Watch the whole fleet with status" goal="Get the bird's-eye view while agents run.">
+<Section n="5" title="Watch the whole fleet with status">
+
+While agents work, `fleet status` gives you the whole fleet at a glance.
 
 <Step n="1" title="Show the fleet's status">
 
@@ -190,10 +198,8 @@ Keep the fleet up — it's what the rest of the course (the console, [the Module
 
 <Learned next="/learn/m2-check" nextLabel="Summary & knowledge check">
 
-- **Make sure you have agents.** Have at least one agent running.
-- **Hand the fleet a task.** Fan one prompt out to every agent.
-- **Target a single agent.** Send a task to just one agent.
-- **Read the logs.** See the output and the agent's reasoning.
-- **Watch the whole fleet work.** Get the bird's-eye view while agents run.
+- **The fleet helper wraps the same `openshell` commands** for several sandboxes at once.
+- **`fleet task` runs pi in each sandbox**, in parallel, all agents or one.
+- **The logs record the model calls the supervisor allowed**; the answers come back through the task itself.
 
 </Learned>
