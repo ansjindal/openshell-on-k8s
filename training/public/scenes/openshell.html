@@ -847,7 +847,7 @@ const rand=(a,b)=>a+Math.random()*(b-a), pick=a=>a[Math.floor(Math.random()*a.le
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const easeOut=t=>1-Math.pow(1-t,3), easeInOut=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2, lin=t=>t;
 
-try{const t=localStorage.getItem('openshell-deep-deck-theme');document.documentElement.dataset.theme=(t==='light'||t==='dark')?t:'dark';}catch(e){document.documentElement.dataset.theme='dark';}
+try{var _root=document.documentElement,_p=(window.parent!==window)?window.parent.document.documentElement:null;if(_p){var _sync=function(){_root.dataset.theme=_p.dataset.theme==='light'?'light':'dark';};_sync();new MutationObserver(_sync).observe(_p,{attributes:true,attributeFilter:['data-theme']});}else{const t=localStorage.getItem('openshell-deep-deck-theme');document.documentElement.dataset.theme=(t==='light'||t==='dark')?t:'dark';}}catch(e){document.documentElement.dataset.theme='dark';}
 
 /* ================= world ================= */
 class World{

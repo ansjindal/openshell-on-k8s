@@ -12,7 +12,7 @@ export function DeckScene({ src, only, title }: { src: string; only: string; tit
   const url = `/scenes/${src}.html?only=${encodeURIComponent(only)}`;
   return (
     <figure className="not-prose my-6">
-      <div className="relative overflow-hidden rounded-xl border border-[var(--color-line)] bg-black" style={{ aspectRatio: "16 / 9" }}>
+      <div className="relative overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-ink2)]" style={{ aspectRatio: "16 / 9" }}>
         <iframe src={url} title={title ?? only} loading="lazy" className="absolute inset-0 h-full w-full border-0" />
         <button onClick={() => setBig(true)} title="Full screen"
           className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-md border border-[var(--color-line-2)] bg-black/70 px-2 py-1 text-[11px] text-[var(--color-fg-dim)] hover:text-[var(--color-fg)]">

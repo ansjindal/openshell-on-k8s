@@ -53,7 +53,7 @@ export function ReadScene({ scene }: { scene: string }) {
       </div>
       <div>
         <div className="sticky top-20">
-          <div className="overflow-hidden rounded-xl border border-[var(--color-line)] bg-black" style={{ aspectRatio: "1100 / 784" }}>
+          <div className="overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-ink2)]" style={{ aspectRatio: "1100 / 784" }}>
             <iframe ref={frame} src={`/scenes/${sc.src}.html?only=${scene}&mode=board`} title={sc.title} loading="lazy"
               className="h-full w-full border-0" />
           </div>

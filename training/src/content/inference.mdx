@@ -178,6 +178,8 @@ dev      Active        2026-11-13 10:33:06`}
 </ExpectedOutput>
 </Output>
 
+Already ran this step? `openshell workspace create` then stops with `workspace already exists`. That's fine: `dev` is there. Run `openshell workspace list` to see it.
+
 You need both halves. Without this record, the gateway doesn't know `dev`, even though the namespace is labelled: `openshell --workspace dev provider create` fails with `workspace 'dev' not found`. Without the namespace and its label (steps 1 and 2), the record exists but every `sandbox create` is refused as `not in the operator namespace allowlist`.
 
 From now on, `--workspace dev` on an `openshell` command acts on your workspace. Without it, commands act on `lab`, the default set for this shell (`OPENSHELL_WORKSPACE=lab`).
@@ -198,6 +200,8 @@ NAME     TYPE     CREDENTIAL_KEYS   CONFIG_KEYS
 litellm  litellm  1                 0`}
 </ExpectedOutput>
 </Output>
+
+Already ran this step? `provider create` then stops with `provider already exists`, and the `&&` skips the list. That's fine: `dev` already has its `litellm` provider. Run `openshell --workspace dev provider list` to see it.
 
 </Step>
 
