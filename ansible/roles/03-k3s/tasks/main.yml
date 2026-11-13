@@ -24,7 +24,7 @@
   register: _inotify
 
 - name: Apply sysctl settings
-  ansible.builtin.command: sysctl --system
+  ansible.builtin.command: sysctl -p /etc/sysctl.d/90-inotify.conf
   when: _inotify.changed
   changed_when: true
 
