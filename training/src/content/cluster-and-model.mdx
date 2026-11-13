@@ -9,9 +9,9 @@ Before you build an agent, look at what it will run on: a Kubernetes cluster on 
 
 **Open the Cluster shell** at the bottom of the page if you want to type along: it's a real bash shell on the VM, with `kubectl` pointed at the cluster.
 
-<Section n="1" title="The cluster">
+<Section n="1" title="Look at the cluster's node">
 
-<Step n="1" title="The node">
+<Step n="1" title="List the node: your VM, control plane and worker in one">
 
 Start with the machine itself. `kubectl get nodes` lists the nodes of the cluster, and `-o wide` adds their address, operating system, Kubernetes version and container runtime. There is one: your VM, running both the control plane and the worker.
 
@@ -44,7 +44,7 @@ This lab uses **[LiteLLM](https://www.litellm.ai/)**, an open-source gateway tha
 | [Portkey AI Gateway](https://portkey.ai/) | A lightweight open-source gateway, also offered as a hosted service. |
 
 
-<Step n="1" title="The LiteLLM service">
+<Step n="1" title="Find LiteLLM's Deployment and Service">
 
 LiteLLM runs like any other app on Kubernetes: a Deployment that keeps its pod running, and a Service in front of it, so other pods reach it by name on port 4000.
 
@@ -63,7 +63,7 @@ service/litellm   ClusterIP   10.43.190.70   <none>        4000/TCP   22h`}
 
 </Step>
 
-<Step n="2" title="Its configuration">
+<Step n="2" title="Read the model list: where your inference endpoint is set">
 
 LiteLLM reads its configuration from a ConfigMap. Its `model_list` is where your inference endpoint is set: it maps the model names agents ask for to the real model, its base URL and its key.
 
@@ -105,7 +105,7 @@ router_settings:
 
 <Section n="3" title="Talk to the model through LiteLLM">
 
-<Step n="1" title="Call LiteLLM from the VM">
+<Step n="1" title="List the models and ask one question through LiteLLM">
 
 The Service is only reachable inside the cluster, so open a short-lived port-forward, read the master key from its Secret (it's never printed), and call the OpenAI-compatible API:
 

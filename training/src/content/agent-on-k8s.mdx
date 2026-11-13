@@ -5,9 +5,35 @@ An **agent** is a model plus a **harness**: the program that sends your prompt t
   time="about twelve minutes. The pod takes about half a minute to start (it installs pi from npm)."
 />
 
+## What a harness is
+
+A model on its own only turns text into text: it can't run a command, open a file or remember yesterday. The **harness** is the program around it that makes it an agent. Whatever the harness, it does the same few jobs:
+
+- **The loop.** Send the task to the model; if the answer asks for a tool, run it, send the result back, and repeat until the model gives a final answer.
+- **Tools.** Decide what the model may ask for: a shell, reading and editing files, a web browser, search, or any service exposed through [MCP](https://modelcontextprotocol.io/).
+- **Context.** Build what the model sees each turn: a system prompt, the conversation so far, project files, skills, memory.
+- **The model connection.** Which API to call, with which key and model name.
+- **Permissions.** Whether to ask a person before running a tool, and which commands or paths to allow. These checks live inside the harness, in the same process as the agent.
+
+Many harnesses exist, and new ones appear every month. A few you may meet:
+
+| Harness | What it is |
+|---|---|
+| [pi](https://github.com/earendil-works/pi) | A minimal open-source coding agent for the terminal, with any model. The one you deploy here. |
+| [OpenClaw](https://openclaw.ai/) | An open-source personal assistant agent that runs on your own machine and talks to you through chat apps. The default agent later in this course. |
+| [Claude Code](https://github.com/anthropics/claude-code) | Anthropic's coding agent for the terminal and IDEs. |
+| [Codex CLI](https://github.com/openai/codex) | OpenAI's open-source coding agent for the terminal. |
+| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | Google's open-source agent for the terminal. |
+| [OpenCode](https://opencode.ai/) | An open-source terminal coding agent that works with many model providers. |
+| [Goose](https://github.com/aaif-goose/goose) | An open-source, extensible agent built around MCP extensions, with a desktop app and a CLI. |
+| [OpenHands](https://github.com/OpenHands/OpenHands) | An open-source platform for software agents that write code, run commands and browse. |
+| [Aider](https://aider.chat/) | AI pair programming in your terminal, working in your git repository. |
+
+They differ in their tools, their prompts and how they ask permission. They share one thing: each runs its tools with the rights of wherever it runs. In a container on Kubernetes, that is the pod.
+
 ## What pi is
 
-**pi** is a small, open-source **agent harness**: the program from [What is an agent?](/learn/what-is-an-agent) that runs the loop around a model. You give it a task; it sends the task to the model, the model answers with either text or a request to use a tool, pi runs that tool and sends the result back, and it goes round again until the model is done.
+**pi** is a small, open-source **agent harness** ([github.com/earendil-works/pi](https://github.com/earendil-works/pi)). You give it a task; it sends the task to the model, the model answers with either text or a request to use a tool, pi runs that tool and sends the result back, and it goes round again until the model is done.
 
 | Part of pi | What it is | In this lab |
 |---|---|---|
@@ -17,13 +43,18 @@ An **agent** is a model plus a **harness**: the program that sends your prompt t
 | **Sessions** | pi keeps a history of each conversation under `~/.pi/agent/sessions/`. `--no-session` keeps nothing. | Every run is one-off. |
 | **`PI_OFFLINE=1`** | Stops pi's own update check and install telemetry, so the only network calls are to the model. | Set in the Deployment. |
 
-pi is only one harness among many (OpenClaw, Claude Code, Codex, OpenCode…); it's used here because it is small, scriptable and easy to point at any model. The point of this lab is not pi: it is what **any** harness can reach once it runs with real access.
+This lab uses pi because it is small, scriptable and easy to point at any model. The point is not pi: it is what **any** harness can reach once it runs with real access, as you'll see below.
 
-<Section n="1" title="Deploy it" goal="Run pi as an ordinary Deployment in its own namespace.">
+<Section n="1" title="Deploy pi as an ordinary Kubernetes Deployment">
 
-<Step n="1" title="A namespace and the key">
+<Step n="1" title="Create the agents namespace and a Secret with the LiteLLM key">
 
-The agent needs a key for LiteLLM. Put LiteLLM's master key in a Secret in a new namespace, `agents` (it's never printed). `--dry-run … | kubectl apply` creates them, or updates them if they already exist, so you can run this again safely.
+The agent gets its own namespace, `agents`, and a key for LiteLLM in a Secret there, the usual way to hand a workload an API key. Line by line:
+
+- **`kubectl create namespace agents`** makes the namespace.
+- **`kubectl -n agents create secret generic litellm-key`** makes a Secret named `litellm-key` with one entry, `LITELLM_API_KEY`.
+- **`--from-literal=LITELLM_API_KEY="$(…)"`** fills that entry with LiteLLM's master key, read from the Secret `litellm-secrets` you met in 0.3 (`-o jsonpath` picks the field, `base64 -d` decodes it). It goes straight from one Secret to the other and is never printed.
+- **`--dry-run=client -o yaml | kubectl apply -f -`** on both lines: instead of creating the object directly, `kubectl` only writes it out as YAML, and `kubectl apply` creates it, or updates it if it already exists. A plain `create` would fail the second time; this way you can run the step again safely.
 
 ```bash
 kubectl create namespace agents --dry-run=client -o yaml | kubectl apply -f -
@@ -40,77 +71,11 @@ secret/litellm-key created`}
 
 </Step>
 
-<Step n="2" title="The Deployment">
+<Step n="2" title="Read the Deployment manifest, then apply it">
 
-`manifests/agents/pi-agent.yaml` describes the agent. Part by part:
+<YamlRead id="pi-agent-deployment" />
 
-- **`kind: Deployment`, namespace `agents`, one replica.** An ordinary Kubernetes workload: Kubernetes keeps one pod of it running.
-- **`image: node:22`.** A stock Node.js image, with a shell, `curl` and `npm`: everything a coding agent typically gets.
-- **The startup script** (`command` and `args`) installs pi from npm (`@earendil-works/pi-coding-agent@1.5.2`), writes pi's model configuration, then sleeps, so you can `exec` in and use the agent.
-- **pi's `models.json`** defines one provider, `lab`: `baseUrl` is LiteLLM's Service (`http://litellm.litellm.svc.cluster.local:4000/v1`), `api: openai-completions` because LiteLLM speaks the OpenAI API, `apiKey: "$LITELLM_API_KEY"` tells pi to read the key from that environment variable, and the one model is `default`, LiteLLM's alias for your model.
-- **`env`.** `LITELLM_API_KEY` comes from the Secret you just made (`secretKeyRef`), so the **real key** sits in the agent's environment. `PI_OFFLINE=1` stops pi's own update check.
-- **`readinessProbe`** waits for `/tmp/ready`, written once pi is installed, so the rollout below finishes only when the agent can be used.
-- **`resources`.** Half a gigabyte requested, at most two.
-
-<Optional title="Show the whole manifest">
-
-```yaml
-# Module 0 lab: the pi agent as an ordinary Kubernetes workload. It gets the
-# LiteLLM key as an environment variable, installs pi from npm at start, and
-# points it at LiteLLM in the cluster.
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: pi-agent
-  namespace: agents
-spec:
-  replicas: 1
-  selector:
-    matchLabels: { app: pi-agent }
-  template:
-    metadata:
-      labels: { app: pi-agent }
-    spec:
-      containers:
-        - name: agent
-          image: node:22
-          env:
-            - name: PI_OFFLINE
-              value: "1"
-            - name: LITELLM_API_KEY
-              valueFrom:
-                secretKeyRef: { name: litellm-key, key: LITELLM_API_KEY }
-          command: ["bash", "-c"]
-          args:
-            - |
-              npm install -g --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2
-              mkdir -p ~/.pi/agent
-              cat > ~/.pi/agent/models.json <<'JSON'
-              {
-                "providers": {
-                  "lab": {
-                    "baseUrl": "http://litellm.litellm.svc.cluster.local:4000/v1",
-                    "api": "openai-completions",
-                    "apiKey": "$LITELLM_API_KEY",
-                    "compat": { "supportsDeveloperRole": false, "supportsReasoningEffort": false },
-                    "models": [{ "id": "default" }]
-                  }
-                }
-              }
-              JSON
-              touch /tmp/ready
-              sleep infinity
-          readinessProbe:
-            exec: { command: ["test", "-f", "/tmp/ready"] }
-            periodSeconds: 3
-          resources:
-            requests: { memory: 512Mi }
-            limits: { memory: 2Gi }
-```
-
-</Optional>
-
-Apply it and wait for it:
+Apply it and wait for it. **`kubectl apply -f`** sends the manifest to the API server, which creates the Deployment; the scheduler places its pod on the node, and the kubelet starts it. **`kubectl rollout status`** waits until the pod is Ready, which here means pi is installed (about half a minute), or gives up after four minutes:
 
 ```bash
 cd ~/openshell-on-k8s && kubectl apply -f manifests/agents/pi-agent.yaml && kubectl -n agents rollout status deploy/pi-agent --timeout=240s
@@ -127,9 +92,17 @@ deployment "pi-agent" successfully rolled out`}
 
 </Section>
 
-<Section n="2" title="Use it" goal="Ask it something, then give it a shell.">
+<Section n="2" title="Use the agent: a question, then a shell command">
 
-<Step n="1" title="Ask it something">
+<Step n="1" title="Ask a question: text only, no tools">
+
+**`kubectl -n agents exec deploy/pi-agent --`** runs a command inside the agent's pod, as if you had a shell there. The command is `pi`:
+
+- **`--provider lab --model default`** picks the provider from its `models.json` (LiteLLM) and the model `default`.
+- **`--no-session`** keeps no conversation history.
+- **`-p "…"`** runs one task and prints the answer, instead of opening the interactive chat.
+
+No `--tools` flag here, so the model can only answer in text.
 
 ```bash
 kubectl -n agents exec deploy/pi-agent -- pi --provider lab --model default --no-session -p "In one sentence: what is an AI agent harness?"
@@ -142,7 +115,9 @@ kubectl -n agents exec deploy/pi-agent -- pi --provider lab --model default --no
 
 </Step>
 
-<Step n="2" title="Give it a tool">
+<Step n="2" title="Let it use bash: fetch a web page from inside the pod">
+
+The same call with **`--tools bash`**: now the model may ask pi to run shell commands in the pod. The task asks it to fetch `https://example.com` with `curl` and report the HTTP status. The model doesn't run anything itself: it asks for a `bash` tool call, pi runs it in the pod, and sends the result back.
 
 ```bash
 kubectl -n agents exec deploy/pi-agent -- pi --provider lab --model default --no-session --tools bash -p "Use bash to run curl -s -m 8 -o /dev/null -w %{http_code} https://example.com and reply with one line: the HTTP status it printed."
@@ -157,9 +132,16 @@ kubectl -n agents exec deploy/pi-agent -- pi --provider lab --model default --no
 
 </Section>
 
-<Section n="3" title="What it holds, and what it can reach" goal="Look at the agent's pod the way an attacker would.">
+<Section n="3" title="Check what the agent holds and what it can reach">
 
-<Step n="1" title="Its key and the cluster">
+Look at the agent's pod the way an attacker would: what could anything running in it use?
+
+<Step n="1" title="The real key in its environment, and the Kubernetes API from its pod">
+
+One shell command run inside the agent's pod (`bash -c '…'`) checks the two things anything running there can use:
+
+- **`${LITELLM_API_KEY:0:3}` and `${#LITELLM_API_KEY}`** print only the first three characters of the key and its length: enough to show the real key is in the environment, without printing it.
+- **`curl … https://kubernetes.default.svc/api`** calls the Kubernetes API server from inside the pod, with the **ServiceAccount token** Kubernetes mounts into every pod by default (`/var/run/secrets/kubernetes.io/serviceaccount/token`). `-k` skips certificate checks, `-m 5` gives up after five seconds, and `-w` prints only the HTTP status.
 
 ```bash
 kubectl -n agents exec deploy/pi-agent -- bash -c 'echo "LITELLM_API_KEY: ${LITELLM_API_KEY:0:3}… (${#LITELLM_API_KEY} characters)"; curl -sk -m 5 -o /dev/null -w "Kubernetes API with its token: HTTP %{http_code}\n" -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/api'

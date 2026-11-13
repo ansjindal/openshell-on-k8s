@@ -71,25 +71,11 @@ openshell logs pi-agent | grep OCSF | grep registry.npmjs.org | tail -1
 
 <Step n="3" title="Open one door">
 
-`manifests/policies/pi-agent.yaml` is the baseline plus one grant: the npm registry, **read-only** (GET, HEAD, OPTIONS), for **`/usr/bin/node` only**:
+`manifests/policies/pi-agent.yaml` is the baseline plus one grant: the npm registry, **read-only**, for **`/usr/bin/node` only**.
 
-```yaml
-network_policies:
-  npm_registry:
-    name: npm_registry
-    endpoints:
-      - host: registry.npmjs.org
-        port: 443
-        protocol: rest
-        enforcement: enforce
-        access: read-only
-        # scoped packages are fetched as /@scope%2Fname
-        allow_encoded_slash: true
-    binaries:
-      - path: /usr/bin/node
-```
+<YamlRead id="pi-agent-policy" />
 
-`allow_encoded_slash` is there because scoped packages such as `@earendil-works/…` are requested with an encoded `/` (`%2F`) in the path, which the L7 check refuses unless the endpoint allows it. Apply the file to the running sandbox:
+Apply the file to the running sandbox:
 
 ```bash
 cd ~/openshell-on-k8s && openshell policy set pi-agent --policy manifests/policies/pi-agent.yaml --wait

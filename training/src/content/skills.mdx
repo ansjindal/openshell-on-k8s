@@ -17,15 +17,9 @@ We do this with a **policy YAML** and `openshell policy set` (not `policy update
 openshell policy set agent-0 --policy manifests/openclaw/policies/skills-locked.policy.yaml --wait
 ```
 
-Its single rule — read [`skills-locked.policy.yaml`](https://github.com/ansjindal/openshell-on-k8s/blob/main/manifests/openclaw/policies/skills-locked.policy.yaml):
+Here is the policy you just applied ([`skills-locked.policy.yaml`](https://github.com/ansjindal/openshell-on-k8s/blob/main/manifests/openclaw/policies/skills-locked.policy.yaml) in the repo):
 
-```yaml
-network_policies:
-  in-cluster-registry:
-    endpoints:
-      - { host: registry.openshell.svc.cluster.local, port: 4873, access: full, protocol: rest, enforcement: enforce, allow_encoded_slash: true }
-    binaries: [ {path: /usr/bin/npm}, {path: /usr/local/bin/npm}, {path: /usr/bin/node}, {path: /usr/local/bin/node}, {path: /usr/local/lib/openclaw/node/bin/node} ]
-```
+<YamlRead id="skills-locked-policy" />
 
 </Step>
 
