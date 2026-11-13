@@ -420,6 +420,49 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { from: "v3", to: "v4", layer: 0, kind: "ok" },
     ],
   },
+  // ---- 3.4 §1: a skill's path from the platform team to pi in the sandbox
+  "skill-flow": {
+    title: "From the skill repository to the sandbox",
+    w: 960, h: 330,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "write", icon: "i-doc", x: 0, y: 20, w: 280, h: 100, label: "1 · Write a skill", sub: "~/skills/demo-app-map/SKILL.md\nname, description, instructions", layer: 0 },
+      { id: "lint", icon: "i-shield", x: 340, y: 20, w: 280, h: 100, label: "2 · Check it: skill-lint", sub: "a valid name that matches the folder\na description, known fields only", layer: 0 },
+      { id: "git", icon: "i-git", x: 680, y: 20, w: 280, h: 100, label: "3 · Gitea · platform/skills", sub: "namespace skills\nonly the platform user may push", layer: 0, kind: "ext" },
+      { id: "pi", icon: "i-bot", x: 0, y: 200, w: 280, h: 120, label: "5 · pi in tool-agent", sub: "/sandbox/skills, linked into\n~/.agents/skills/<name>\nreads names + descriptions at start", layer: 0 },
+      { id: "sup", icon: "i-shield", x: 340, y: 200, w: 280, h: 120, label: "4 · Supervisor: rule skill_repo", sub: "GET …/info/refs\nPOST …/git-upload-pack\nplatform/skills only, git only", layer: 0, kind: "accent" },
+      { id: "no", icon: "i-ban", x: 680, y: 200, w: 280, h: 120, label: "Push, or another program", sub: "POST …/git-receive-pack: no rule\ncurl, Node, Python: no rule\nrefused and logged", layer: 0, kind: "deny" },
+    ],
+    edges: [
+      { from: "write", to: "lint", layer: 0, kind: "ok" },
+      { from: "lint", to: "git", label: "git push", layer: 0, kind: "ok", dx: -8 },
+      { from: "pi", to: "sup", label: "git clone", layer: 0, kind: "ok" },
+      { from: "sup", to: "git", label: "read-only", layer: 0, kind: "ok" },
+      { from: "sup", to: "no", layer: 0, kind: "deny" },
+    ],
+  },
+  // ---- 3.4 §4: an outage investigated with skills + MCP tools, the fix left to a person
+  "skills-outage": {
+    title: "An outage, investigated",
+    w: 960, h: 330,
+    layers: [{ n: 0, name: "all" }],
+    nodes: [
+      { id: "ask", icon: "i-user", x: 0, y: 36, w: 250, h: 100, label: "You ask", sub: "\"Users report the shop in\nnamespace demo is failing.\nInvestigate and report.\"", layer: 0 },
+      { id: "fix", icon: "i-user", x: 0, y: 206, w: 250, h: 100, label: "You apply the fix", sub: "kubectl scale deploy/payments\n--replicas=1", layer: 0 },
+      { id: "sb", x: 320, y: 0, w: 300, h: 330, label: "sandbox tool-agent", layer: 0, kind: "group" },
+      { id: "pi", icon: "i-bot", x: 338, y: 36, w: 264, h: 120, label: "pi, with three skills", sub: "k8s-triage: which tool when\ndemo-app-map: payments first\nincident-report: the report's shape", layer: 0 },
+      { id: "rep", icon: "i-doc", x: 338, y: 206, w: 264, h: 100, label: "The report", sub: "payments at 0 replicas\nevidence from four tools\na proposed fix, not applied", layer: 0 },
+      { id: "sup", icon: "i-shield", x: 690, y: 36, w: 270, h: 120, label: "Supervisor: protocol mcp", sub: "pod_status, cluster_events,\nprometheus_query, loki_query: allowed\nscale_deployment: denied", layer: 0, kind: "accent" },
+      { id: "sre", icon: "i-svc", x: 690, y: 206, w: 270, h: 100, label: "sre-tools MCP server", sub: "reads pods, events,\nmetrics and logs", layer: 0, kind: "ext" },
+    ],
+    edges: [
+      { from: "ask", to: "pi", layer: 0, kind: "ok" },
+      { from: "pi", to: "sup", label: "tools/call", layer: 0, kind: "ok" },
+      { from: "sup", to: "sre", layer: 0, kind: "ok" },
+      { from: "pi", to: "rep", layer: 0, kind: "ok" },
+      { from: "rep", to: "fix", layer: 0, kind: "dash" },
+    ],
+  },
   // ---- 1.3.4 the provider's rules: a model call gets the key, anything else is refused
   "provider-l7": {
     title: "One placeholder, two requests",
@@ -612,7 +655,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
   m3: {
     title: "Module 3: tools and skills, the standard way",
     w: 600, h: 400,
-    layers: [{ n: 0, name: "A sandbox" }, { n: 1, name: "An MCP server" }, { n: 2, name: "Rules per tool" }, { n: 3, name: "A skill repository" }],
+    layers: [{ n: 0, name: "A sandbox" }, { n: 1, name: "An MCP server" }, { n: 2, name: "Rules per tool" }, { n: 3, name: "Skills through git" }],
     nodes: [
       { id: "sb", x: 10, y: 15, w: 280, h: 230, label: "sandbox tool-agent · workspace dev", layer: 0, kind: "group" },
       { id: "pi", icon: "i-bot", x: 25, y: 50, w: 250, h: 56, label: "pi", sub: "mcp.json · skills · the model via LiteLLM", layer: 0 },

@@ -25,7 +25,9 @@ Harnesses load skills in three stages: at start only each skill's **name and des
 
 <Section n="1" title="Look at the platform's skill repository">
 
-The setup installed **Gitea**, a small git server, in namespace `skills`, and created the public repository **`platform/skills`** from the repo's `skills/` folder (`ansible/roles/19-skill-repo`). Anyone in the cluster may clone it; only the `platform` user may push.
+The setup installed **Gitea**, a small git server, in namespace `skills`, and created the public repository **`platform/skills`** from the repo's `skills/` folder (`ansible/roles/19-skill-repo`). Anyone in the cluster may clone it; only the `platform` user may push. The rest of this lesson follows one skill along this path:
+
+<Diagram id="skill-flow" n="3.1" caption="You write a skill, check it against the standard and push it to the platform's repository. The sandbox clones it through its supervisor, which allows git's two read requests for this one repository and nothing else, so pi loads the skill but can't push or reach Gitea with any other program." />
 
 <Step n="1" title="List the git server's Deployment and Service">
 
@@ -205,6 +207,8 @@ k8s-triage`}
 <Section n="4" title="Put it together: an outage, investigated">
 
 Now use everything at once: break the demo shop, then ask the agent a plain question and let the tools and skills do the work.
+
+<Diagram id="skills-outage" n="3.2" caption="The skills tell pi how to investigate and how to report, the MCP tools give it the evidence, and the supervisor allows only the read-only tools. The agent proposes the fix; you apply it." />
 
 <Step n="1" title="Break the shop: scale payments to zero">
 

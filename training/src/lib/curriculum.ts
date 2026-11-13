@@ -50,7 +50,7 @@ export const CURRICULUM: Part[] = [
       L("tools-overview", "Overview", "MCP and Agent Skills: what each gives an agent, and where each runs on the cluster.", 5),
       L("mcp-server", "Serve tools with MCP", "An MCP server as a Deployment and Service; initialize, tools/list and tools/call by hand.", 10, "lab"),
       L("mcp-policy", "Decide which tools an agent may call", "protocol: mcp rules allow four tools and deny one; pi uses the server from a sandbox.", 15, "lab"),
-      L("skill-repo", "A skill repository", "Agent Skills in git: add one, lint it, push it, clone it read-only into the sandbox, and triage an outage.", 20, "lab"),
+      L("skill-repo", "Share skills with every agent through git", "Agent Skills in git: add one, lint it, push it, clone it read-only into the sandbox, and triage an outage.", 20, "lab"),
       L("tools-check", "Summary & knowledge check", "MCP, tool rules, Agent Skills and the skill repository.", 6, "check"),
     ],
   },
