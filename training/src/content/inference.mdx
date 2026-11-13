@@ -271,10 +271,6 @@ openshell sandbox exec -n agent-0 -- sh -c 'curl -s -X POST -H "Authorization: B
 
 </Section>
 
-<Callout type="note" title="What changed from older OpenShell">
-Earlier releases routed every sandbox through a managed endpoint, <code>inference.local</code>. OpenShell 0.1 removed it: a sandbox reaches a model only through a provider you attach to <em>that</em> sandbox, and the agent calls the model's own API. Access is per sandbox and explicit, and the provider's L7 rules define exactly which calls are allowed.
-</Callout>
-
 ## What you learned
 
 <Learned next="/learn/build-an-agent" nextLabel="Bring up a sandboxed agent">
