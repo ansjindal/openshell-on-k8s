@@ -118,9 +118,11 @@ A sandbox is a pair of pods plus a policy. You ask the gateway for one; it write
 
 **Open the Cluster shell.** It's a real bash shell on the VM, with `KUBECONFIG` pointed at `/etc/rancher/k3s/k3s.yaml`, started in the repository folder.
 
-<Section n="1" title="The control plane is running" goal="See the gateway, console and registry pods.">
+<Section n="1" title="Check the OpenShell control plane pods">
 
-<Step n="1" title="List the openshell pods">
+OpenShell's control plane lives in namespace `openshell`: the gateway and the Console.
+
+<Step n="1" title="List the pods in namespace openshell">
 
 ```bash
 kubectl -n openshell get pods
@@ -129,14 +131,12 @@ kubectl -n openshell get pods
 <ExpectedOutput>
 {`NAME                                   READY   STATUS    RESTARTS   AGE
 openshell-0                            1/1     Running   0          20m
-openshell-dashboard-7689bc4dcb-2s72t   2/2     Running   0          11m
-registry-6968dc66b4-t6jbm              1/1     Running   0          10m`}
+openshell-dashboard-7689bc4dcb-2s72t   2/2     Running   0          11m`}
 </ExpectedOutput>
 </Output>
 
 - `openshell-0`: the **gateway** (a StatefulSet with an SQLite database).
 - `openshell-dashboard`: the **OpenShell Console**, two containers: oauth2-proxy (sign-in) and the console's backend.
-- `registry`: the in-cluster skill registry, used in [Skills](/learn/skills).
 
 </Step>
 
@@ -240,7 +240,7 @@ One <code>Ready</code> node; <code>openshell-0</code>, the console, LiteLLM and 
 <Learned next="/learn/inference" nextLabel="Add an inference provider">
 
 - **The node is up.** Confirm the single k3s node is Ready.
-- **The control plane is running.** See the gateway, console and registry pods.
+- **The OpenShell control plane.** The gateway and the Console run in namespace `openshell`.
 - **The gateway answers.** Confirm the CLI is connected, and see who you are.
 - **A sandbox is already running.** Find agent-0, created at provisioning time.
 - **The model path and sign-in are up.** Confirm LiteLLM and Keycloak are Running.
