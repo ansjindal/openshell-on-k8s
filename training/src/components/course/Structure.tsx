@@ -74,6 +74,13 @@ export function Learned({ next, nextLabel, children }: { next?: string; nextLabe
 }
 
 
+/** A numbered part of a reading lesson, prefixed with the lesson's number
+ *  like a lab's sections: <Part n="1">Enter OpenShell</Part> in 1.1 -> "1.1.1 · Enter OpenShell". */
+export function Part({ n, children }: { n: string | number; children: ReactNode }) {
+  const { number } = useLesson();
+  return <h2>{number}.{n} · {children}</h2>;
+}
+
 export function Section({ n, title, goal, children }: { n: string | number; title: ReactNode; goal?: ReactNode; children: ReactNode }) {
   const { number } = useLesson();
   const id = `${number}.${n}`;

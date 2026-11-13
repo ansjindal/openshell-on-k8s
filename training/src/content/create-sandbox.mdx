@@ -1,22 +1,11 @@
 In [Build an agent](/learn/build-an-agent) you created one sandbox by hand and installed pi in it. The lab's default agent, **OpenClaw**, comes preinstalled in the sandbox image, and a small helper, `fleet`, creates as many sandboxes as you ask for with the same `openshell sandbox create`. Here you use it, read the command behind it, and look at what a sandbox is made of on the cluster.
 
-**Concept:** [Part 4 in the Overview: gateway and supervisor](/learn/openshell#t-4).
+**Concept:** [Part 3 in the Overview: how OpenShell is built](/learn/openshell#t-3): gateway, supervisor and the sandbox.
 
 <BeforeYouStart
   will="scale the fleet to two sandboxes, read the openshell command behind it, and see what it created on the cluster."
   time="about ten minutes. A new sandbox is Ready in about fifteen seconds."
 />
-
-## The boundary up close
-
-<ReadScene scene="halves" />
-
-<Optional title="Why the supervisor moved out (0.0.x to 0.1)">
-
-<ReadScene scene="versions" />
-
-</Optional>
-
 
 <Section n="1" title="The easy way: the fleet helper" goal="Create agent-1 with one helper command.">
 

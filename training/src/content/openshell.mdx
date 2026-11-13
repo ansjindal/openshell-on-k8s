@@ -1,14 +1,14 @@
-OpenShell is the runtime that puts the boundary **outside** the agent. This overview introduces it in five short parts; the rest of OpenShell is explained in the lab where you use it. Read down the page: in each part the picture beside the text follows the step you are reading. Parts with a **Try it** link have a lab later in this module, where you do it on your VM; the labs follow in order, starting with a check of your environment.
+OpenShell is the runtime that puts the boundary **outside** the agent. This overview introduces it in four short parts; the rest of OpenShell is explained in the lab where you use it. Read down the page: in each part the picture beside the text follows the step you are reading. Parts with a **Try it** link have a lab later in this module, where you do it on your VM; the labs follow in order, starting with a check of your environment.
 
 <BeforeYouStart
-  learn="what OpenShell is, the same agent inside it, how it is built, its gateway and supervisor, and NVIDIA Sentry for when the host itself is in scope."
+  learn="what OpenShell is, the same agent inside it, how it is built (gateway, supervisor and the sandbox), and NVIDIA Sentry for when the host itself is in scope."
   prereq="Module 0: what an agent is, and why the guardrail has to sit outside it."
-  start="part 1, and read down. About fifteen minutes for all five; no commands."
+  start="part 1, and read down. About fifteen minutes for all four; no commands."
 />
 
 <div id="t-1" className="scroll-mt-20" />
 
-## 1 · Enter OpenShell
+<Part n="1">Enter OpenShell</Part>
 
 The last module ended with a requirement: a boundary outside the agent's process, which it can't see into, argue with or switch off. **NVIDIA OpenShell** is an open-source runtime that builds exactly that. It puts the whole agent process in a sandbox governed by a YAML policy: you declare what the agent may touch, and OpenShell enforces it from outside.
 
@@ -16,7 +16,7 @@ The last module ended with a requirement: a boundary outside the agent's process
 
 <div id="t-2" className="scroll-mt-20" />
 
-## 2 · Same agent, inside OpenShell
+<Part n="2">Same agent, inside OpenShell</Part>
 
 The same agent, the same poisoned issue. The model is still misled, but every harmful step now stops at the boundary, while the real work still flows. **OpenShell doesn't make the agent smarter. It makes its mistakes harmless.**
 
@@ -26,11 +26,21 @@ The same agent, the same poisoned issue. The model is still misled, but every ha
 
 <div id="t-3" className="scroll-mt-20" />
 
-## 3 · How OpenShell is built
+<Part n="3">How OpenShell is built: gateway, supervisor and the sandbox</Part>
 
 **OpenShell** is what makes "run an autonomous agent *safely*" practical. In one line: **to be useful, agents need access; to be safe, they need zero trust**, and OpenShell is the runtime that gives you both. It is a gateway plus guardrails, built on the open-source `agent-sandbox` Kubernetes primitive.
 
-<Fig id="sandbox-anatomy" n="1.1" caption="A sandbox is a workload pod and a supervisor pod, inside its workspace's namespace." />
+Read down: first the whole architecture, then one sandbox up close.
+
+<ReadScene scene="arch" />
+
+<ReadScene scene="halves" />
+
+<Optional title="Why the supervisor moved out (0.0.x to 0.1)">
+
+<ReadScene scene="versions" />
+
+</Optional>
 
 ### The pieces
 
@@ -69,19 +79,11 @@ openshell sandbox list
 Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; each workspace's sandboxes live in a namespace the gateway creates for it, such as <code>openshell-lab-default</code>. You can always drop to <code>kubectl -n openshell-lab-default get sandboxes,pods</code> to see what the gateway did.
 </Callout>
 
-**Try it:** [1.2 Verify OpenShell](/learn/deploy).
+**Try it:** [1.2 Verify OpenShell](/learn/deploy) and [1.4 Create a sandbox](/learn/create-sandbox).
 
 <div id="t-4" className="scroll-mt-20" />
 
-## 4 · Gateway and supervisor
-
-<ReadScene scene="arch" />
-
-**Try it:** [1.4 Create a sandbox](/learn/create-sandbox).
-
-<div id="t-5" className="scroll-mt-20" />
-
-## 5 · NVIDIA Sentry: beyond the host
+<Part n="4">NVIDIA Sentry: beyond the host</Part>
 
 <ReadScene scene="pwn" />
 
@@ -113,7 +115,6 @@ Each remaining part of OpenShell is explained in the lab where you use it, right
 | Topic | Explained in |
 |---|---|
 | OpenShell on Kubernetes, and every part of this lab's platform | [1.2 Verify OpenShell](/learn/deploy) |
-| The boundary up close: the workload and supervisor pods | [1.4 Create a sandbox](/learn/create-sandbox) |
 | Inside the sandbox: the kernel (Landlock, seccomp) and Kubernetes guardrails | [1.5 Test the seal from inside](/learn/into-the-sandbox) |
 | The policy file, line by line | [1.6 Egress policy, rule by rule](/learn/policy) |
 | One request end to end, and why the agent never holds the key | [1.8 A key the agent doesn't hold](/learn/lab-keys) |

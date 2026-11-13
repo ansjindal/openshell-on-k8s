@@ -3,7 +3,7 @@ import { Terminal } from "@/components/Terminal";
 import { Callout } from "@/components/Callout";
 import { CodeBlock } from "@/components/CodeBlock";
 import { ExpectedOutput } from "@/components/ExpectedOutput";
-import { BeforeYouStart, Section, Step, Optional, Learned } from "@/components/course/Structure";
+import { BeforeYouStart, Section, Step, Optional, Learned, Part } from "@/components/course/Structure";
 import { Output } from "@/components/course/Output";
 import { Run } from "@/components/course/Run";
 import { Quiz, Q } from "@/components/course/Quiz";
@@ -28,6 +28,7 @@ const components: MDXComponents = {
   ExpectedOutput,
   BeforeYouStart,
   Section,
+  Part,
   Step,
   Optional,
   Learned,

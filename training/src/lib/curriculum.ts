@@ -22,9 +22,9 @@ export const CURRICULUM: Part[] = [
   },
   {
     id: "os", n: 1, title: "OpenShell", accent: "nv", role: "You are the platform operator.",
-    subtitle: "The overview introduces OpenShell in five parts; then the labs, one by one, each explaining its part of OpenShell before you run it: verify OpenShell, seal the agent from Module 0, open its network rule by rule.",
+    subtitle: "The overview introduces OpenShell in four parts; then the labs, one by one, each explaining its part of OpenShell before you run it: verify OpenShell, seal the agent from Module 0, open its network rule by rule.",
     lessons: [
-      L("openshell", "Overview", "What OpenShell is, the same agent inside it, how it is built, gateway and supervisor, and NVIDIA Sentry.", 15),
+      L("openshell", "Overview", "What OpenShell is, the same agent inside it, how it is built (gateway, supervisor, sandbox), and NVIDIA Sentry.", 15),
       L("deploy", "Verify OpenShell", "The OpenShell control plane, the gateway and who you are to it, the first sandbox.", 6, "lab"),
       L("build-an-agent", "Seal the agent", "The same pi agent in an OpenShell sandbox: npm refused, one door opened, the model through the provider, the seal tested.", 15, "lab"),
       L("create-sandbox", "Create a sandbox", "openshell sandbox create, and the workload and supervisor pods it makes.", 9, "lab"),

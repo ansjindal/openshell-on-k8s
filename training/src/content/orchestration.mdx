@@ -5,7 +5,7 @@ and how the analyst concludes. Nothing here is hidden.
 
 <FleetOrchestration />
 
-## 1 · A fixed plan — no model call to "plan"
+<Part n="1">A fixed plan — no model call to "plan"</Part>
 
 A lot of "agent orchestrators" burn a model call just to decide what to do. We don't. The plan is
 **fixed**: one prescribed probe per specialist. The intelligence is in each agent *running and
@@ -31,7 +31,7 @@ function buildProbes() {
 }
 ```
 
-## 2 · Each agent gets a directive sub-task
+<Part n="2">Each agent gets a directive sub-task</Part>
 
 Free-form "investigate this" makes a small model wander — read files, hunt for tools, loop until
 it blows its context. So each sealed specialist gets a **directive** sub-task that inlines the
@@ -50,7 +50,7 @@ const subtask =
   Incident: ${task}`;
 ```
 
-## 3 · How a sealed agent is actually invoked
+<Part n="3">How a sealed agent is actually invoked</Part>
 
 Each step runs **inside the agent's sandbox**, through OpenClaw's embedded agent. The website
 never calls a model — the sandbox does, through its `litellm` provider (the key is injected by its supervisor):
@@ -68,7 +68,7 @@ egress-allowed binary, so the call stays bounded by the agent's single-backend p
 a *compact* summary so the agent stays focused. OpenClaw's `web_fetch` is blocked for internal
 hosts — the skill is how a sealed agent reads `*.svc.cluster.local` without weakening anything.
 
-## 4 · The analyst concludes
+<Part n="4">The analyst concludes</Part>
 
 The investigators run in **parallel**; when they're all in, their findings go to the no-egress,
 no-tools **analyst**, which reasons over them — combining the error rate, the error logs, the
