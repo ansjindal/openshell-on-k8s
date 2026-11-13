@@ -222,7 +222,7 @@ kubectl -n demo scale deploy/payments --replicas=0 && kubectl -n demo wait --for
 
 <Step n="2" title="Ask the agent what is wrong">
 
-A plain question, no hints. The skills tell pi how to investigate and how to report; the MCP tools give it the evidence; the policy keeps it read-only:
+A plain question, no hints. The skills tell pi how to investigate and how to report; the MCP tools give it the evidence; the policy keeps it read-only. Expect about a minute: pi calls several tools and the model several times before it answers:
 
 ```bash
 openshell --workspace dev sandbox exec -n tool-agent -- pi --no-session -p "Users report the shop in namespace demo is failing. Investigate and report."

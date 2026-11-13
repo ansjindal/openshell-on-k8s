@@ -41,7 +41,7 @@ const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
 const CHECK_MAX_OUTPUT = 20000;
 // A Run is stopped after this long. pi investigations (several tool calls and
 // model turns) and steps that wait for pods take well over 25 s.
-const CHECK_TIMEOUT_MS = 180000;
+const CHECK_TIMEOUT_MS = Number(process.env.LAB_RUN_TIMEOUT_MS) || 180000;
 
 // Run an author-supplied lab "Check"/notebook-run command, streaming chunks to
 // onChunk as they arrive (some commands, e.g. `sandbox create`, print progress
@@ -64,6 +64,9 @@ function runCheckStream(cmd, onChunk) {
       // close that was never going to come. 'ignore' gives the child an
       // already-closed stdin, so a read returns EOF immediately.
       stdio: ["ignore", "pipe", "pipe"],
+      // Its own process group, so a timeout stops the whole command (e.g. the
+      // openshell exec under bash), not just the shell.
+      detached: true,
     });
     let total = 0;
     const send = (stream, data) => {
@@ -74,7 +77,7 @@ function runCheckStream(cmd, onChunk) {
       onChunk(stream, s);
     };
     let timedOut = false;
-    const timer = setTimeout(() => { timedOut = true; try { p.kill("SIGTERM"); } catch {} }, CHECK_TIMEOUT_MS);
+    const timer = setTimeout(() => { timedOut = true; try { process.kill(-p.pid, "SIGTERM"); } catch { try { p.kill("SIGTERM"); } catch {} } }, CHECK_TIMEOUT_MS);
     p.stdout.on("data", (d) => send("stdout", d));
     p.stderr.on("data", (d) => send("stderr", d));
     p.on("close", (code) => {
