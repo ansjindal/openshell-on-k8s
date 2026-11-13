@@ -60,10 +60,10 @@ Then watch them reach Ready (`status` wraps `openshell sandbox list`):
 
 <Step n="1" title="The sandbox pods">
 
-See the sandbox **pods** on the cluster (each agent is a sealed pod — they live in the workspace's namespace, `openshell-lab-default`; the gateway control plane stays in `openshell`):
+See the sandbox **pods** on the cluster (each agent is a sealed pod — they live in the workspace's namespace, `lab`; the gateway control plane stays in `openshell`):
 
 ```bash
-kubectl get pods -n openshell-lab-default
+kubectl get pods -n lab
 ```
 
 </Step>
@@ -73,7 +73,7 @@ kubectl get pods -n openshell-lab-default
 The same fleet as **Sandbox custom resources** — what the OpenShell gateway reconciles into those pods:
 
 ```bash
-kubectl get sandboxes -n openshell-lab-default
+kubectl get sandboxes -n lab
 ```
 
 </Step>

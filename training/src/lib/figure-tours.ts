@@ -27,7 +27,7 @@ export const FIGURE_TOURS: Record<string, TourPath[]> = {
       steps: [
         { x: 40, y: 228, title: "You ask", text: "From the CLI, or the Console with your Keycloak token, you ask for a sandbox: a name, a policy, its providers." },
         { x: 88, y: 660, title: "The gateway", text: "Checks who you are, stores the sandbox and its policy, and decides which workspace it belongs to." },
-        { x: 472, y: 510, title: "The workspace namespace", text: "In managed mode the gateway creates the workspace's namespace (openshell-lab-default) and starts the supervisor pod in it." },
+        { x: 472, y: 510, title: "The workspace namespace", text: "In operator mode each workspace is a namespace prepared with the openshell-workspace chart (lab here); the gateway starts the supervisor pod in it." },
         { x: 486, y: 890, title: "The controller", text: "The gateway writes a Sandbox resource; the agent-sandbox controller turns it into the workload pod." },
         { x: 826, y: 890, title: "Kyverno", text: "Checks the pod on admission: no host network, no host PID, no host IPC." },
         { x: 676, y: 566, title: "A pair, Ready", text: "Workload pod and supervisor pod, side by side. agent-1 and lab-a (in team-a's namespace) are made the same way." },

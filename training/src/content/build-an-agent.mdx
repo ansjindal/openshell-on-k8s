@@ -1,13 +1,118 @@
-In [0.4](/learn/agent-on-k8s) you ran pi as an ordinary pod: it reached any host, held the real LiteLLM key and could talk to the Kubernetes API. Now run the **same agent** in an OpenShell sandbox: create the sandbox yourself, see what it is made of, test the seal from inside, and open exactly one door so pi can be installed.
+In [0.4](/learn/agent-on-k8s) you ran pi as an ordinary pod: it reached any host, held the real LiteLLM key and could talk to the Kubernetes API. Now bring up the **same agent** as a sandboxed agent, from the ground up: a workspace of your own, its model provider, the sandbox, then pi inside it, with exactly one door opened so pi can be installed.
 
 **Concept:** [Parts 2 and 3 in the Overview](/learn/openshell#t-2): the same agent inside OpenShell, and how OpenShell is built.
 
 <BeforeYouStart
-  will="create a sandbox for pi with openshell sandbox create, see what the gateway made on the cluster, test the seal from inside, watch npm get refused, open one door with a policy file, then install pi and run it sealed."
-  time="about twenty minutes. The sandbox you create, pi-agent, stays for the next lab."
+  will="create your own workspace with the openshell-workspace Helm chart and give it the litellm provider, create a sandbox for pi, see what the gateway made on the cluster, test the seal from inside, watch npm get refused, open one door with a policy file, then install pi and run it sealed."
+  time="about twenty-five minutes. The workspace dev and the sandbox pi-agent stay for the next lab."
 />
 
-<Section n="1" title="Create a sandbox for pi with openshell sandbox create">
+<Section n="1" title="Create a workspace for your agent">
+
+A **workspace** is OpenShell's tenant: its own sandboxes, providers and members. On this cluster each workspace is a Kubernetes **namespace of the same name**: the gateway runs in *operator mode*, so it doesn't create namespaces; you prepare one, and the gateway uses it. The platform's own workspace, `lab` (where `agent-0` runs), was made this way at setup. Now make yours, `dev`.
+
+<Step n="1" title="Create the namespace and label it as a workspace">
+
+The gateway watches for namespaces labelled `openshell.ai/workspace=true` (its `operatorNamespaceLabel` setting). `--dry-run=client -o yaml | kubectl apply` makes this safe to run twice:
+
+```bash
+kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f - && kubectl label namespace dev openshell.ai/workspace=true --overwrite
+```
+<Output>
+<ExpectedOutput>
+{`namespace/dev created
+namespace/dev labeled`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="2" title="Install the openshell-workspace chart into it">
+
+NVIDIA's **`openshell-workspace`** Helm chart, the same version as the gateway, puts what sandboxes need into the namespace:
+
+```bash
+helm upgrade --install openshell-workspace oci://ghcr.io/nvidia/openshell/openshell-workspace --version 0.1.7 --namespace dev --wait
+```
+<Output summary="One Helm release in dev.">
+<ExpectedOutput>
+{`Release "openshell-workspace" does not exist. Installing it now.
+NAME: openshell-workspace
+NAMESPACE: dev
+STATUS: deployed
+REVISION: 1`}
+</ExpectedOutput>
+</Output>
+
+List what it made:
+
+```bash
+kubectl -n dev get serviceaccount,role,rolebinding,networkpolicy
+```
+<Output>
+<ExpectedOutput>
+{`NAME                               AGE
+serviceaccount/default             2s
+serviceaccount/openshell-sandbox   0s
+
+NAME                                                         CREATED AT
+role.rbac.authorization.k8s.io/openshell-workspace-sandbox   2026-11-13T10:33:06Z
+
+NAME                                                                ROLE                               AGE
+rolebinding.rbac.authorization.k8s.io/openshell-workspace-sandbox   Role/openshell-workspace-sandbox   0s
+
+NAME                                                              POD-SELECTOR                        AGE
+networkpolicy.networking.k8s.io/openshell-workspace-sandbox-ssh   openshell.ai/managed-by=openshell   0s`}
+</ExpectedOutput>
+</Output>
+
+- **`openshell-sandbox`**: the ServiceAccount sandbox pods run as. It has no Kubernetes permissions of its own.
+- **Role and RoleBinding `openshell-workspace-sandbox`**: let the **gateway's** ServiceAccount (in `openshell`) create and manage `Sandbox` resources, pods and Secrets in **this** namespace only.
+- **NetworkPolicy `openshell-workspace-sandbox-ssh`**: only the gateway's pods may reach sandboxes for `exec` and `connect`.
+
+</Step>
+
+<Step n="3" title="Create the workspace in the gateway">
+
+The namespace is ready; now tell the gateway about it. The workspace name is the namespace name:
+
+```bash
+openshell workspace create --name dev && openshell workspace list
+```
+<Output>
+<ExpectedOutput>
+{`✓ Created workspace dev
+NAME     STATUS        CREATED               LABELS
+default  Active        2026-11-11 11:41:33
+lab      Active        2026-11-13 10:31:49
+dev      Active        2026-11-13 10:33:06`}
+</ExpectedOutput>
+</Output>
+
+From now on, `--workspace dev` on an `openshell` command acts on your workspace. Without it, commands act on `lab`, the default set for this shell (`OPENSHELL_WORKSPACE=lab`).
+
+</Step>
+
+<Step n="4" title="Give the workspace the litellm provider">
+
+Providers belong to a workspace, so `dev` has none yet. Create one exactly the way the platform created `lab`'s ([1.3](/learn/inference)): LiteLLM's key goes from its Secret into the `LITELLM_API_KEY` variable of this one command, and `--credential LITELLM_API_KEY` reads it from there, so it is never printed:
+
+```bash
+LITELLM_API_KEY="$(kubectl -n litellm get secret litellm-secrets -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)" openshell --workspace dev provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY && openshell --workspace dev provider list
+```
+<Output>
+<ExpectedOutput>
+{`✓ Created provider litellm
+NAME     TYPE     CREDENTIAL_KEYS   CONFIG_KEYS
+litellm  litellm  1                 0`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Section n="2" title="Create the sandbox with openshell sandbox create">
 
 You don't write Kubernetes objects for a sandbox: you ask the **gateway** for one with the `openshell` CLI, and it does the rest.
 
@@ -16,8 +121,9 @@ You don't write Kubernetes objects for a sandbox: you ask the **gateway** for on
 | Part | What it does |
 |---|---|
 | `openshell sandbox create` | Asks the gateway for a new sandbox. The CLI talks only to the gateway (with the lab operator's certificate), never to Kubernetes. |
+| `--workspace dev` | Which workspace the sandbox belongs to, so which namespace it runs in: `dev`. |
 | `--name pi-agent` | The sandbox's name: you use it in every later command (`exec`, `policy`, `logs`, `delete`). |
-| `--provider litellm` | Attaches the provider from [1.3](/learn/inference): the sandbox gets a placeholder `LITELLM_API_KEY`, and the provider's rule for LiteLLM is merged into its policy. |
+| `--provider litellm` | Attaches the workspace's `litellm` provider (step 1.4.1.4): the sandbox gets a placeholder `LITELLM_API_KEY`, and the provider's rule for LiteLLM is merged into its policy. |
 | `--policy manifests/policies/baseline.yaml` | The policy it starts with: the lab's baseline, which lets the agent write only `/sandbox` and `/tmp` and opens **no network at all**. |
 | `--memory 2Gi` | The workload pod's memory request and limit. (`--cpu` would become a request too; on an 8-vCPU VM a few of those fill the node.) |
 | `--no-tty --detach` | Don't attach a terminal, and return as soon as the sandbox is requested. |
@@ -25,7 +131,7 @@ You don't write Kubernetes objects for a sandbox: you ask the **gateway** for on
 | (no `--from`) | The gateway's default image, `ghcr.io/ansjindal/openshell-on-k8s/openclaw-sandbox`: Node, npm, Python, curl and OpenClaw on the OpenShell base. |
 
 ```bash
-cd ~/openshell-on-k8s && openshell sandbox create --name pi-agent --provider litellm --policy manifests/policies/baseline.yaml --memory 2Gi --no-tty --detach -- sleep infinity
+cd ~/openshell-on-k8s && openshell --workspace dev sandbox create --name pi-agent --provider litellm --policy manifests/policies/baseline.yaml --memory 2Gi --no-tty --detach -- sleep infinity
 ```
 <Output summary="The gateway accepts the request and starts creating the sandbox.">
 <ExpectedOutput>
@@ -35,22 +141,21 @@ cd ~/openshell-on-k8s && openshell sandbox create --name pi-agent --provider lit
 </ExpectedOutput>
 </Output>
 
-Without `--detach` and a trailing command, `openshell sandbox create` opens an interactive shell in the new sandbox instead; type `exit` to leave.
+Without `--detach` and a trailing command, `openshell --workspace dev sandbox create` opens an interactive shell in the new sandbox instead; type `exit` to leave.
 
 </Step>
 
 <Step n="2" title="Wait until it is Ready">
 
-**`openshell sandbox list`** shows every sandbox in your workspace and its phase. Give it a few seconds:
+**`openshell --workspace dev sandbox list`** shows every sandbox in your workspace and its phase. Give it a few seconds:
 
 ```bash
-openshell sandbox list
+openshell --workspace dev sandbox list
 ```
-<Output summary="pi-agent is Ready, next to agent-0, the sandbox the platform made at setup.">
+<Output summary="pi-agent is Ready, the only sandbox in dev.">
 <ExpectedOutput>
 {`NAME      CREATED              PHASE
-agent-0   2026-11-11 13:19:44  Ready
-pi-agent  2026-11-13 10:04:28  Ready`}
+pi-agent  2026-11-13 10:33:06  Ready`}
 </ExpectedOutput>
 </Output>
 
@@ -58,12 +163,12 @@ pi-agent  2026-11-13 10:04:28  Ready`}
 
 </Section>
 
-<Section n="2" title="See what the gateway made on the cluster">
+<Section n="3" title="See what the gateway made on the cluster">
 
 For that one command, the gateway:
 
 1. stored the sandbox and its policy (revision 1);
-2. wrote a `Sandbox` resource in the workspace's namespace, `openshell-lab-default` (one namespace per workspace), which the **agent-sandbox controller** turned into the **workload pod** `pi-agent`, where the agent runs;
+2. wrote a `Sandbox` resource in the workspace's namespace, `dev`, which the **agent-sandbox controller** turned into the **workload pod** `pi-agent`, where the agent runs;
 3. started the **supervisor pod** `os-supervisor-<id>`, which fetched the policy and the provider's credential and became the workload's only way out.
 
 <Step n="1" title="List the Sandbox resources">
@@ -71,12 +176,11 @@ For that one command, the gateway:
 `Sandbox` is a custom resource (`agents.x-k8s.io`), so `kubectl` can list it like any other object:
 
 ```bash
-kubectl -n openshell-lab-default get sandboxes
+kubectl -n dev get sandboxes
 ```
 <Output>
 <ExpectedOutput>
 {`NAME       READY   REASON              AGE
-agent-0    True    DependenciesReady   44h
 pi-agent   True    DependenciesReady   13s`}
 </ExpectedOutput>
 </Output>
@@ -88,37 +192,34 @@ pi-agent   True    DependenciesReady   13s`}
 Each sandbox is **two pods**. Their labels say which is which: `boundary-role` is `workload` or `supervisor`, and `boundary-pair` is the sandbox's id, shared by the two. `-L` shows those labels as columns:
 
 ```bash
-kubectl -n openshell-lab-default get pods -L openshell.ai/boundary-role,openshell.ai/boundary-pair
+kubectl -n dev get pods -L openshell.ai/boundary-role,openshell.ai/boundary-pair
 ```
-<Output summary="pi-agent and os-supervisor-07563414…: one pair, one id.">
+<Output summary="pi-agent and os-supervisor-64aee23c…: one pair, one id.">
 <ExpectedOutput>
 {`NAME                                                 READY   STATUS    AGE   BOUNDARY-ROLE   BOUNDARY-PAIR
-agent-0                                              1/1     Running   44h   workload        bb5457b5-93bf-40d1-8421-7ce92d1984cf
-os-supervisor-07563414-ecb5-4f57-bead-d55229f065de   1/1     Running   13s   supervisor      07563414-ecb5-4f57-bead-d55229f065de
-os-supervisor-bb5457b5-93bf-40d1-8421-7ce92d1984cf   1/1     Running   44h   supervisor      bb5457b5-93bf-40d1-8421-7ce92d1984cf
-pi-agent                                             1/1     Running   13s   workload        07563414-ecb5-4f57-bead-d55229f065de`}
+os-supervisor-64aee23c-9946-4c69-b500-c39ec1b03a7d   1/1     Running   13s   supervisor      64aee23c-9946-4c69-b500-c39ec1b03a7d
+pi-agent                                             1/1     Running   13s   workload        64aee23c-9946-4c69-b500-c39ec1b03a7d`}
 </ExpectedOutput>
 </Output>
 
-`openshell sandbox get pi-agent` shows the same sandbox from the gateway's side: its id, phase and runtime.
+`openshell --workspace dev sandbox get pi-agent` shows the same sandbox from the gateway's side: its id, phase and runtime.
 
 </Step>
 
 <Step n="3" title="The NetworkPolicy that pairs them">
 
-The isolation between the two pods is ordinary Kubernetes **NetworkPolicy**, created by the gateway:
+The isolation between the two pods is ordinary Kubernetes **NetworkPolicy**: the gateway made three with the sandbox, next to the chart's SSH policy:
 
 ```bash
-kubectl -n openshell-lab-default get networkpolicy
+kubectl -n dev get networkpolicy
 ```
 <Output>
 <ExpectedOutput>
 {`NAME                                              POD-SELECTOR
-openshell-sandbox-ssh                             openshell.ai/managed-by=openshell
 openshell-sandbox-supervisors                     openshell.ai/boundary-role=supervisor
 openshell-sandbox-workloads                       openshell.ai/boundary-role=workload
-os-control-07563414-ecb5-4f57-bead-d55229f065de   openshell.ai/boundary-pair=07563414-ecb5-4f57-bead-d55229f065de
-os-control-bb5457b5-93bf-40d1-8421-7ce92d1984cf   openshell.ai/boundary-pair=bb5457b5-93bf-40d1-8421-7ce92d1984cf`}
+openshell-workspace-sandbox-ssh                   openshell.ai/managed-by=openshell
+os-control-64aee23c-9946-4c69-b500-c39ec1b03a7d   openshell.ai/boundary-pair=64aee23c-9946-4c69-b500-c39ec1b03a7d`}
 </ExpectedOutput>
 </Output>
 
@@ -128,7 +229,7 @@ Workload pods may talk only to their own supervisor (`os-control-<id>` matches t
 
 </Section>
 
-<Section n="3" title="Test the seal from inside">
+<Section n="4" title="Test the seal from inside">
 
 The agent runs as the unprivileged user `sandbox`. Before it starts, the sandbox runtime applies the policy's static parts:
 
@@ -140,12 +241,12 @@ The agent runs as the unprivileged user `sandbox`. Before it starts, the sandbox
 
 Kubernetes adds two guardrails of its own: a sandbox may use a cluster resource (a RuntimeClass, a PriorityClass, a volume) only if the operator labelled it `openshell.ai/sandbox-attachable=true`, and **Kyverno** rejects any sandbox pod that asks for the host's network, PID or IPC namespace.
 
-Now check it. **`openshell sandbox exec -n pi-agent -- <command>`** runs one command inside the sandbox, through the gateway and the supervisor, and returns.
+Now check it. **`openshell --workspace dev sandbox exec -n pi-agent -- <command>`** runs one command inside the sandbox, through the gateway and the supervisor, and returns.
 
 <Step n="1" title="Who the agent runs as">
 
 ```bash
-openshell sandbox exec -n pi-agent -- id
+openshell --workspace dev sandbox exec -n pi-agent -- id
 ```
 <Output summary="An unprivileged user, not root.">
 <ExpectedOutput>
@@ -160,7 +261,7 @@ openshell sandbox exec -n pi-agent -- id
 Try to write in `/usr`, write in `/sandbox`, and list `/root`:
 
 ```bash
-openshell sandbox exec -n pi-agent -- sh -c 'touch /usr/x; touch /sandbox/x && echo "/sandbox is writable"; ls /root'
+openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'touch /usr/x; touch /sandbox/x && echo "/sandbox is writable"; ls /root'
 ```
 <Output>
 <ExpectedOutput>
@@ -179,7 +280,7 @@ Exactly the policy's `filesystem_policy`.
 In 0.4 the agent's pod reached the API server with its ServiceAccount token. Here `curl` gets no connection at all (`-m 6` gives up after six seconds; exit 7 means it couldn't connect):
 
 ```bash
-openshell sandbox exec -n pi-agent -- sh -c 'curl -sk -m 6 -o /dev/null https://kubernetes.default.svc.cluster.local/version || echo "blocked (curl exit $?)"'
+openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'curl -sk -m 6 -o /dev/null https://kubernetes.default.svc.cluster.local/version || echo "blocked (curl exit $?)"'
 ```
 <Output>
 <ExpectedOutput>
@@ -192,26 +293,26 @@ openshell sandbox exec -n pi-agent -- sh -c 'curl -sk -m 6 -o /dev/null https://
 <Step n="4" title="The environment the supervisor prepared">
 
 ```bash
-openshell sandbox exec -n pi-agent -- sh -c 'env | grep -E "^(HOME|LITELLM_API_KEY|SSL_CERT_FILE)" | cut -c1-80'
+openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'env | grep -E "^(HOME|LITELLM_API_KEY|SSL_CERT_FILE)" | cut -c1-80'
 ```
 <Output>
 <ExpectedOutput>
 {`HOME=/sandbox
-LITELLM_API_KEY=openshell:resolve:env:v11345618150965087392_LITELLM_API_KEY
+LITELLM_API_KEY=openshell:resolve:env:v6304638483022285593_LITELLM_API_KEY
 SSL_CERT_FILE=/run/openshell-supervisor-ca/material/ca-bundle.crt`}
 </ExpectedOutput>
 </Output>
 
-`LITELLM_API_KEY` is the provider's placeholder from 1.3. `SSL_CERT_FILE` points at a bundle that includes the supervisor's CA: that's how the supervisor can inspect HTTPS requests at L7 while the agent's TLS still validates.
+`LITELLM_API_KEY` is the placeholder from `dev`'s `litellm` provider. `SSL_CERT_FILE` points at a bundle that includes the supervisor's CA: that's how the supervisor can inspect HTTPS requests at L7 while the agent's TLS still validates.
 
 </Step>
 
 <Optional title="Explore with an interactive shell">
 
-`openshell sandbox connect pi-agent` opens a shell **inside** the sandbox. Try `id`, `ls /`, `touch /usr/x`, `touch /sandbox/notes.txt`, then press **Ctrl-D** to come back (the sandbox keeps running):
+`openshell --workspace dev sandbox connect pi-agent` opens a shell **inside** the sandbox. Try `id`, `ls /`, `touch /usr/x`, `touch /sandbox/notes.txt`, then press **Ctrl-D** to come back (the sandbox keeps running):
 
 ```bash-interactive
-openshell sandbox connect pi-agent
+openshell --workspace dev sandbox connect pi-agent
 ```
 
 Type those commands at the sandbox prompt, not in the Cluster shell: there they'd show you the VM itself.
@@ -220,33 +321,33 @@ Type those commands at the sandbox prompt, not in the Cluster shell: there they'
 
 </Section>
 
-<Section n="4" title="Install pi: refused, then one door opened">
+<Section n="5" title="Install pi: refused, then one door opened">
 
 <Step n="1" title="Ask npm for pi">
 
 The sandbox image has Node and npm. Ask the npm registry for pi's latest version (`--fetch-retries=0 --fetch-timeout=5000` makes it fail fast instead of retrying):
 
 ```bash
-openshell sandbox exec -n pi-agent -- npm view @earendil-works/pi-coding-agent version --fetch-retries=0 --fetch-timeout=5000
+openshell --workspace dev sandbox exec -n pi-agent -- npm view @earendil-works/pi-coding-agent version --fetch-retries=0 --fetch-timeout=5000
 ```
 <Output summary="Refused: connect EACCES. The connection never left the sandbox.">
 <ExpectedOutput>
 {`npm error code EACCES
 npm error syscall connect
 npm error errno EACCES
-npm error FetchError: request to https://registry.npmjs.org/@earendil-works%2fpi-coding-agent failed, reason: connect EACCES 198.18.0.3:443 - Local (0.0.0.0:0)
+npm error FetchError: request to https://registry.npmjs.org/@earendil-works%2fpi-coding-agent failed, reason: connect EACCES 198.18.0.2:443 - Local (0.0.0.0:0)
 ...`}
 </ExpectedOutput>
 </Output>
 
-The supervisor wrote down why. **`openshell logs pi-agent`** prints the sandbox's log; its `OCSF` lines are the audit events:
+The supervisor wrote down why. **`openshell --workspace dev logs pi-agent`** prints the sandbox's log; its `OCSF` lines are the audit events:
 
 ```bash
-openshell logs pi-agent | grep OCSF | grep registry.npmjs.org | tail -1
+openshell --workspace dev logs pi-agent | grep OCSF | grep registry.npmjs.org | tail -1
 ```
 <Output summary="One OCSF event: node tried registry.npmjs.org:443, and no policy allows it.">
 <ExpectedOutput>
-{`[1794406676.136] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/node(0) -> registry.npmjs.org:443 [reason:transparent_tcp_policy_denied]`}
+{`[1794566012.787] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/node(0) -> registry.npmjs.org:443 [reason:transparent_tcp_policy_denied]`}
 </ExpectedOutput>
 </Output>
 
@@ -269,10 +370,10 @@ Every layer of a sandbox is set by one short YAML file: its **policy**. The base
 
 <YamlRead id="pi-agent-policy" />
 
-**`openshell policy set`** replaces the sandbox's policy with a file; `--wait` returns once the supervisor has loaded it:
+**`openshell --workspace dev policy set`** replaces the sandbox's policy with a file; `--wait` returns once the supervisor has loaded it:
 
 ```bash
-cd ~/openshell-on-k8s && openshell policy set pi-agent --policy manifests/policies/pi-agent.yaml --wait
+cd ~/openshell-on-k8s && openshell --workspace dev policy set pi-agent --policy manifests/policies/pi-agent.yaml --wait
 ```
 <Output summary="Revision 2 is loaded into the running sandbox: no restart.">
 <ExpectedOutput>
@@ -288,7 +389,7 @@ cd ~/openshell-on-k8s && openshell policy set pi-agent --policy manifests/polici
 The same install as in 0.4, into `/sandbox/pi` (the agent can write only `/sandbox` and `/tmp`):
 
 ```bash
-openshell sandbox exec -n pi-agent -- npm install --prefix /sandbox/pi --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2
+openshell --workspace dev sandbox exec -n pi-agent -- npm install --prefix /sandbox/pi --no-audit --no-fund @earendil-works/pi-coding-agent@1.5.2
 ```
 <Output summary="The same 123 packages, now through the policy.">
 <ExpectedOutput>
@@ -300,14 +401,14 @@ openshell sandbox exec -n pi-agent -- npm install --prefix /sandbox/pi --no-audi
 
 </Section>
 
-<Section n="5" title="Run pi sealed: the model works, nothing else does">
+<Section n="6" title="Run pi sealed: the model works, nothing else does">
 
 <Step n="1" title="Point pi at LiteLLM, with the placeholder">
 
 The same `models.json` as in 0.4: LiteLLM's address, and `apiKey: "$LITELLM_API_KEY"`, a reference pi resolves from its environment. Here that variable holds the placeholder:
 
 ```bash
-openshell sandbox exec -n pi-agent -- sh -c 'mkdir -p ~/.pi/agent && cat > ~/.pi/agent/models.json <<EOF
+openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'mkdir -p ~/.pi/agent && cat > ~/.pi/agent/models.json <<EOF
 {
   "providers": {
     "lab": {
@@ -335,7 +436,7 @@ grep apiKey ~/.pi/agent/models.json'
 The same question as in 0.4 (`PI_OFFLINE=1` stops pi's own update check, which the policy would refuse anyway):
 
 ```bash
-openshell sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "In one sentence: what is an AI agent harness?"
+openshell --workspace dev sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session -p "In one sentence: what is an AI agent harness?"
 ```
 <Output summary="It answers: the model call went through the supervisor, which added the real key.">
 <ExpectedOutput>
@@ -350,7 +451,7 @@ openshell sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/
 The same task as in 0.4: use bash to reach example.com with curl.
 
 ```bash
-openshell sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --tools bash -p "Use bash to run curl -s -m 8 -o /dev/null -w %{http_code} https://example.com and reply with one line: the HTTP status it printed."
+openshell --workspace dev sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --tools bash -p "Use bash to run curl -s -m 8 -o /dev/null -w %{http_code} https://example.com and reply with one line: the HTTP status it printed."
 ```
 <Output summary="000: curl got no response. The agent still runs its tool; the network says no.">
 <ExpectedOutput>
@@ -361,13 +462,13 @@ openshell sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/
 Unlike 0.4, this time there is a record. The log shows both decisions: the model call allowed by the provider's L7 rule, and curl to example.com denied:
 
 ```bash
-openshell logs pi-agent | grep OCSF | grep -E "example.com|litellm" | tail -3
+openshell --workspace dev logs pi-agent | grep OCSF | grep -E "example.com|litellm" | tail -3
 ```
 <Output>
 <ExpectedOutput>
-{`[1794564317.989] [sandbox] [OCSF ] [ocsf] CONFIG:OBSERVATION [INFO] Policy DNS staged unapproved name example.com synthetic=198.18.0.6 for TCP policy review
-[1794564317.991] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/curl(0) -> example.com:443 [reason:transparent_tcp_policy_denied]
-[1794564318.004] [sandbox] [OCSF ] [ocsf] HTTP:POST [INFO] ALLOWED POST http://litellm.litellm.svc.cluster.local:4000/v1/chat/completions [policy:_provider_litellm engine:l7]`}
+{`[1794566037.907] [sandbox] [OCSF ] [ocsf] CONFIG:OBSERVATION [INFO] Policy DNS staged unapproved name example.com synthetic=198.18.0.5 for TCP policy review
+[1794566037.911] [sandbox] [OCSF ] [ocsf] NET:OPEN [MED] DENIED /usr/bin/curl(0) -> example.com:443 [reason:transparent_tcp_policy_denied]
+[1794566037.918] [sandbox] [OCSF ] [ocsf] HTTP:POST [INFO] ALLOWED POST http://litellm.litellm.svc.cluster.local:4000/v1/chat/completions [policy:_provider_litellm engine:l7]`}
 </ExpectedOutput>
 </Output>
 
@@ -378,15 +479,15 @@ openshell logs pi-agent | grep OCSF | grep -E "example.com|litellm" | tail -3
 In 0.4 an agent with a shell could read the real key. Here:
 
 ```bash
-openshell sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --tools bash -p "Use bash to print the environment variable LITELLM_API_KEY and reply with only its value." | cut -c1-40
+openshell --workspace dev sandbox exec -n pi-agent -- env PI_OFFLINE=1 /sandbox/pi/node_modules/.bin/pi --provider lab --model default --no-session --tools bash -p "Use bash to print the environment variable LITELLM_API_KEY and reply with only its value." | cut -c1-40
 ```
 <Output summary="A placeholder. The real key only exists in the gateway and on the supervisor's outbound requests.">
 <ExpectedOutput>
-{`openshell:resolve:env:v11345618150965087`}
+{`openshell:resolve:env:v63046384830222855`}
 </ExpectedOutput>
 </Output>
 
-Keep `pi-agent`: the next lab opens its network rule by rule.
+Keep `pi-agent` and the `dev` workspace: the next lab opens its network rule by rule.
 
 </Step>
 

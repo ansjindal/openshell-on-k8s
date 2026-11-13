@@ -53,14 +53,17 @@ Try opening `…/workspaces/default` directly; the gateway refuses with *not a m
 
 <Step n="1" title="Create the workspace">
 
-A **workspace** is a tenant: its own sandboxes, providers and members. Create one:
+A **workspace** is a tenant: its own sandboxes, providers and members. Make `team-a` the way you made `dev` in [1.4](/learn/build-an-agent): a namespace labelled as a workspace, the `openshell-workspace` chart in it, then the workspace in the gateway:
 
 ```bash
-openshell workspace create --name team-a
+kubectl create namespace team-a --dry-run=client -o yaml | kubectl apply -f - && kubectl label namespace team-a openshell.ai/workspace=true --overwrite && helm upgrade --install openshell-workspace oci://ghcr.io/nvidia/openshell/openshell-workspace --version 0.1.7 --namespace team-a --wait | grep STATUS && openshell workspace create --name team-a
 ```
 <Output>
 <ExpectedOutput>
-{`✓ Created workspace team-a`}
+{`namespace/team-a created
+namespace/team-a labeled
+STATUS: deployed
+✓ Created workspace team-a`}
 </ExpectedOutput>
 </Output>
 
@@ -118,31 +121,32 @@ openshell --workspace team-a sandbox create --name lab-a --provider litellm --po
 <Output>
 <ExpectedOutput>
 {`NAME   CREATED              PHASE
-lab-a  2026-11-10 16:00:18  Ready`}
+lab-a  2026-11-13 10:35:47  Ready`}
 </ExpectedOutput>
 </Output>
 
-`learner` sees `lab-a`, its policy revision and its providers, and can open its logs and terminal. They still can't see `agent-0`: it's in `default`.
+`learner` sees `lab-a`, its policy revision and its providers, and can open its logs and terminal. They still can't see `agent-0`: it's in `lab`.
 
 </Step>
 
 <Step n="2" title="One namespace per workspace">
 
 ```bash
-kubectl get namespaces -l openshell.ai/managed-by=openshell -L openshell.ai/sandbox-workspace && kubectl -n openshell-lab-team-a get pods
+kubectl get namespaces -l openshell.ai/workspace=true && kubectl -n team-a get pods
 ```
 <Output>
 <ExpectedOutput>
-{`NAME                    STATUS   AGE   SANDBOX-WORKSPACE
-openshell-lab-default   Active   75s   default
-openshell-lab-team-a    Active   50s   team-a
+{`NAME     STATUS   AGE
+dev      Active   2m54s
+lab      Active   4m12s
+team-a   Active   13s
 NAME                                                 READY   STATUS    RESTARTS   AGE
-lab-a                                                1/1     Running   0          50s
-os-supervisor-33815dba-169c-42a7-bdac-8dcb3e5ad92b   1/1     Running   0          50s`}
+lab-a                                                1/1     Running   0          12s
+os-supervisor-9c0f9e48-a1ef-44c6-8641-fb1e6b318c70   1/1     Running   0          12s`}
 </ExpectedOutput>
 </Output>
 
-Each workspace has its own namespace, created by the gateway when its first sandbox needed one (`workspaceMode: managed`): `openshell-<gateway id>-<workspace>`, with its own ServiceAccount and NetworkPolicies. Deleting the workspace deletes the namespace.
+Each workspace is its own namespace, of the same name (`workspaceMode: operator`): `lab` for the platform, `dev` from 1.4, `team-a` here. Sandboxes of one workspace can't land in another's namespace, and the chart's RBAC lets the gateway work only in namespaces you prepared.
 
 </Step>
 
@@ -153,7 +157,7 @@ Each workspace has its own namespace, created by the gateway when its first sand
 <Step n="1" title="Delete team-a">
 
 ```bash
-openshell --workspace team-a sandbox delete lab-a && openshell --workspace team-a provider delete litellm && openshell workspace delete team-a
+openshell --workspace team-a sandbox delete lab-a && openshell --workspace team-a provider delete litellm && openshell workspace delete team-a && helm uninstall openshell-workspace -n team-a && kubectl delete namespace team-a
 ```
 
 </Step>

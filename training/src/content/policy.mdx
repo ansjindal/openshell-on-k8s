@@ -2,7 +2,7 @@ In [1.4](/learn/build-an-agent) you opened one door for `pi-agent` with a policy
 
 <BeforeYouStart
   will="read pi-agent's effective policy, open GitHub's API for GET only and watch a POST refused at L7, add a plain TCP rule and test its host and program limits, then read the policy's revisions."
-  time="about fifteen minutes. Only pi-agent's network rules change; you delete it at the end."
+  time="about fifteen minutes. Only pi-agent's network rules change; you delete it at the end, and keep the dev workspace."
 />
 
 ## How network rules work
@@ -25,18 +25,18 @@ A few details the steps below rely on:
 
 <Step n="1" title="The policy's version and status">
 
-**`openshell policy get`** asks the gateway for a sandbox's current policy:
+All commands here carry `--workspace dev`, the workspace `pi-agent` lives in. **`openshell policy get`** asks the gateway for a sandbox's current policy:
 
 ```bash
-openshell policy get pi-agent
+openshell --workspace dev policy get pi-agent
 ```
 <Output summary="Version 2: the file you applied in 1.4.">
 <ExpectedOutput>
 {`Version:      2
-Hash:         f4d66064ffbcc41230824b1a10bea94909c6af4903e3c8616b9d745a234b889c
+Hash:         c9e67284bcc5538cf8fa68810644b136768b018e2156dbd7ec4b7918b7649712
 Status:       Effective
 Source:       sandbox
-Config rev:   15209562269842545252`}
+Config rev:   5640519166585926973`}
 </ExpectedOutput>
 </Output>
 
@@ -47,7 +47,7 @@ Config rev:   15209562269842545252`}
 `--full` prints the **effective** policy: your file plus what attached providers added. Under `network_policies` there are two entries: `_provider_litellm`, merged in from the provider (LiteLLM, model calls only, for any program), and your `npm_registry`. Anything not listed is denied.
 
 ```bash
-openshell policy get pi-agent --full
+openshell --workspace dev policy get pi-agent --full
 ```
 <Output>
 <ExpectedOutput>
@@ -90,7 +90,7 @@ openshell policy get pi-agent --full
 `-w 'HTTP %{http_code}'` makes curl print the status code; `000` means there was no HTTP response at all:
 
 ```bash
-openshell sandbox exec -n pi-agent -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/zen
+openshell --workspace dev sandbox exec -n pi-agent -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/zen
 ```
 <Output summary="No response: no rule allows api.github.com.">
 <ExpectedOutput>
@@ -105,7 +105,7 @@ openshell sandbox exec -n pi-agent -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_
 **`openshell policy update`** changes one part of the policy instead of replacing the file. `--add-endpoint` takes `host:port[:access[:protocol[:enforcement]]]`, and the rule applies only to the programs you name with `--binary`:
 
 ```bash
-openshell policy update pi-agent --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --wait
+openshell --workspace dev policy update pi-agent --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --wait
 ```
 <Output summary="Revision 3, loaded into the running sandbox.">
 <ExpectedOutput>
@@ -125,11 +125,11 @@ The parts of the rule:
 <Step n="3" title="GET now works">
 
 ```bash
-openshell sandbox exec -n pi-agent -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
+openshell --workspace dev sandbox exec -n pi-agent -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
 ```
 <Output>
 <ExpectedOutput>
-{`Mind your words, they are important. HTTP 200`}
+{`Encourage flow. HTTP 200`}
 </ExpectedOutput>
 </Output>
 
@@ -140,7 +140,7 @@ openshell sandbox exec -n pi-agent -- curl -s -m 10 -w ' HTTP %{http_code}\n' ht
 A `POST` to the same host, from the same program, is refused by the supervisor, which says exactly why:
 
 ```bash
-openshell sandbox exec -n pi-agent -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{http_code}\n' https://api.github.com/markdown
+openshell --workspace dev sandbox exec -n pi-agent -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{http_code}\n' https://api.github.com/markdown
 ```
 <Output summary="403 from the supervisor: POST /markdown matches no rule.">
 <ExpectedOutput>
@@ -162,7 +162,7 @@ Not everything is HTTP: a database, an MQTT broker, any raw TCP service has no m
 The bare form of `--add-endpoint` is just `host:port`. `--dry-run` prints the merged policy and sends nothing:
 
 ```bash
-openshell policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/bin/curl --dry-run | grep -A7 'allow_example_com_443:'
+openshell --workspace dev policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/bin/curl --dry-run | grep -A7 'allow_example_com_443:'
 ```
 <Output>
 <ExpectedOutput>
@@ -183,7 +183,7 @@ Compare it with the GitHub rule: no `protocol`, `enforcement` or `access`. No re
 <Step n="2" title="Apply it">
 
 ```bash
-openshell policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/bin/curl --wait
+openshell --workspace dev policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/bin/curl --wait
 ```
 <Output>
 <ExpectedOutput>
@@ -199,7 +199,7 @@ openshell policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/
 The same request pi's tool made in 1.4, which got `000` then:
 
 ```bash
-openshell sandbox exec -n pi-agent -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://example.com/
+openshell --workspace dev sandbox exec -n pi-agent -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://example.com/
 ```
 <Output>
 <ExpectedOutput>
@@ -212,7 +212,7 @@ openshell sandbox exec -n pi-agent -- curl -s -o /dev/null -w 'HTTP %{http_code}
 <Step n="4" title="Every other host is still closed">
 
 ```bash
-openshell sandbox exec -n pi-agent -- sh -c 'curl -s -m 8 -o /dev/null https://example.org/ || echo "blocked (curl exit $?)"'
+openshell --workspace dev sandbox exec -n pi-agent -- sh -c 'curl -s -m 8 -o /dev/null https://example.org/ || echo "blocked (curl exit $?)"'
 ```
 <Output>
 <ExpectedOutput>
@@ -227,7 +227,7 @@ openshell sandbox exec -n pi-agent -- sh -c 'curl -s -m 8 -o /dev/null https://e
 The rule is **per program**: Python, going to the very same host, is refused:
 
 ```bash
-openshell sandbox exec -n pi-agent -- python3 -c 'import urllib.request; print(urllib.request.urlopen("https://example.com").status)'
+openshell --workspace dev sandbox exec -n pi-agent -- python3 -c 'import urllib.request; print(urllib.request.urlopen("https://example.com").status)'
 ```
 <Output>
 <ExpectedOutput>
@@ -246,28 +246,28 @@ That program check is what stops an agent from sending data out through an unexp
 <Step n="1" title="List the policy history">
 
 ```bash
-openshell policy list pi-agent
+openshell --workspace dev policy list pi-agent
 ```
 <Output summary="Four revisions: the baseline, your file, GitHub, example.com.">
 <ExpectedOutput>
 {`VERSION  HASH           STATUS       CREATED                  ERROR
-4        57ae5fc61fa7   Loaded       1794564342481
-3        80d45453fd59   Superseded   1794564334082
-2        6750e23ab498   Superseded   1794564295055
-1        76a21cf40933   Superseded   1794564268489`}
+4        57ae5fc61fa7   Loaded       1794566049867
+3        80d45453fd59   Superseded   1794566043429
+2        6750e23ab498   Superseded   1794566015909
+1        76a21cf40933   Superseded   1794565986800`}
 </ExpectedOutput>
 </Output>
 
-`openshell policy get pi-agent --rev 1 --full` shows an older one. Small changes go through `policy update`; a whole policy you keep in a YAML file and apply with `policy set`, as in 1.4.
+`openshell --workspace dev policy get pi-agent --rev 1 --full` shows an older one. Small changes go through `policy update`; a whole policy you keep in a YAML file and apply with `policy set`, as in 1.4.
 
 </Step>
 
 <Step n="2" title="Clean up">
 
-`pi-agent` has done its job. Delete it; the gateway removes both pods, the Sandbox resource and its NetworkPolicy:
+`pi-agent` has done its job. Delete it; the gateway removes both pods, the Sandbox resource and its NetworkPolicies. The `dev` workspace stays, empty, for later modules:
 
 ```bash
-openshell sandbox delete pi-agent
+openshell --workspace dev sandbox delete pi-agent
 ```
 <Output>
 <ExpectedOutput>

@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1600 1090" width="1600" height="1090" role="img" aria-label="OpenShell on Kubernetes lab architecture: a single Brev VM running k3s with Envoy Gateway, the OpenShell gateway and console, one namespace per workspace (openshell-lab-default with agent-0 and agent-1, openshell-lab-team-a with lab-a), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1600 1090" width="1600" height="1090" role="img" aria-label="OpenShell on Kubernetes lab architecture: a single Brev VM running k3s with Envoy Gateway, the OpenShell gateway and console, one namespace per workspace, of the same name, prepared with the openshell-workspace chart (lab with agent-0 and agent-1, team-a with lab-a), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.">
 <title>One VM, the whole platform</title>
-<desc>OpenShell on Kubernetes lab architecture: a single Brev VM running k3s with Envoy Gateway, the OpenShell gateway and console, one namespace per workspace (openshell-lab-default with agent-0 and agent-1, openshell-lab-team-a with lab-a), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.</desc>
+<desc>OpenShell on Kubernetes lab architecture: a single Brev VM running k3s with Envoy Gateway, the OpenShell gateway and console, one namespace per workspace, of the same name, prepared with the openshell-workspace chart (lab with agent-0 and agent-1, team-a with lab-a), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.</desc>
 <defs>
 <symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 17h5"/><circle cx="12" cy="3.5" r="1"/></symbol>
 <symbol id="i-browser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M2.5 8.5h19M5.5 6.3h.01M8 6.3h.01"/></symbol>
@@ -207,8 +207,8 @@
 </g>
 <rect x="472" y="510" width="660" height="236" rx="8" fill="#f3f9e8" stroke="#b7dc7a" stroke-width="1.2"/>
 <text x="484" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="557.45" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">openshell-lab-default</text>
-<text x="738.385" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">· workspace default</text>
+<text x="557.45" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">lab</text>
+<text x="590.155" y="530" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">· workspace lab · openshell-workspace chart</text>
 <g class="dg-node" data-node="agent-1">
 <rect x="496" y="574" width="172" height="82" rx="8" fill="#f3f9e8" stroke="#b7dc7a" stroke-width="1"/>
 <rect x="488" y="566" width="172" height="82" rx="8" fill="#fff" stroke="#76b900" stroke-width="1.4"/>
@@ -263,8 +263,8 @@
 </g>
 <rect x="472" y="758" width="660" height="72" rx="8" fill="#f3f9e8" stroke="#b7dc7a" stroke-width="1.2"/>
 <text x="484" y="778" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">namespace </text>
-<text x="557.45" y="778" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">openshell-lab-team-a</text>
-<text x="730.15" y="778" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">· workspace team-a</text>
+<text x="557.45" y="778" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5" font-weight="bold" fill="#4a7a00" text-anchor="start" xml:space="preserve">team-a</text>
+<text x="614.86" y="778" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#4a7a00" text-anchor="start" xml:space="preserve">· workspace team-a · openshell-workspace chart</text>
 <g class="dg-node" data-node="lab-a">
 <rect x="872" y="764" width="248" height="60" rx="8" fill="#fff" stroke="#76b900" stroke-width="1.4"/>
 <use href="#i-cube" xlink:href="#i-cube" x="880" y="770" width="18" height="18" color="#4a7a00"/>

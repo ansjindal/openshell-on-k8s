@@ -3,7 +3,7 @@ from lib import *
 
 S = Svg(1600, 1090, "One VM, the whole platform",
         "OpenShell on Kubernetes lab architecture: a single Brev VM running k3s with Envoy Gateway, the OpenShell gateway and console, "
-        "one namespace per workspace (openshell-lab-default with agent-0 and agent-1, openshell-lab-team-a with lab-a), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.")
+        "one namespace per workspace, of the same name, prepared with the openshell-workspace chart (lab with agent-0 and agent-1, team-a with lab-a), each sandbox a workload pod and a supervisor pod, Keycloak, LiteLLM, cert-manager, Kyverno, agent-sandbox controller and a monitoring stack.")
 S.text(24, 38, "One VM, the whole platform", 26, True)
 S.text(24, 64, "OpenShell on Kubernetes training lab: everything below runs on a single Brev VM", 15, False, SUB)
 
@@ -70,8 +70,8 @@ S.label(332, 641, "user's Keycloak token", GREEN_D, anchor="end", flow="2")
 S.arrow("M54 286 V735 H86", GREEN_D, flow="1 2")
 S.label(62, 300, "mTLS · OU=operator = platform admin → NodePort 30808", GREEN_D, anchor="start", size=13, mono=False, flow="1 2")
 
-# ---- workspaces: managed mode gives each workspace its own namespace
-S.ns(472, 510, 660, 236, "openshell-lab-default", green=True, sub="· workspace default")
+# ---- workspaces: operator mode, each workspace a namespace of the same name
+S.ns(472, 510, 660, 236, "lab", green=True, sub="· workspace lab · openshell-workspace chart")
 # agent-1 and more, compact
 def pair(x, y, small=False):
     """A sandbox's two pods, side by side: workload (grey) and supervisor (green)."""
@@ -113,7 +113,7 @@ S.box(924, 598, 180, 128, "supervisor pod", ["policy L4 / L7", "credential injec
 S.arrow("M880 676 H922", GREEN_D, both=True, flow="3")
 S.label(901, 664, "port", GREEN_D, size=12.5, flow="3")
 
-S.ns(472, 758, 660, 72, "openshell-lab-team-a", green=True, sub="· workspace team-a")
+S.ns(472, 758, 660, 72, "team-a", green=True, sub="· workspace team-a · openshell-workspace chart")
 S.raw('<g class="dg-node" data-node="lab-a">')
 S.rect(872, 764, 248, 60, fill="#fff", stroke=GREEN, sw=1.4, rx=8)
 S.icon("i-cube", 880, 770, 18, GREEN_D)

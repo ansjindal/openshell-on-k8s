@@ -66,7 +66,7 @@ openshell sandbox list
 ```
 
 <Callout type="tip" title="Two front doors, one cluster">
-Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; each workspace's sandboxes live in a namespace the gateway creates for it, such as <code>openshell-lab-default</code>. You can always drop to <code>kubectl -n openshell-lab-default get sandboxes,pods</code> to see what the gateway did.
+Everything you do through <code>openshell</code> shows up as ordinary Kubernetes objects. The control plane lives in <code>openshell</code>; each workspace's sandboxes live in a namespace of the same name, such as <code>lab</code>. You can always drop to <code>kubectl -n lab get sandboxes,pods</code> to see what the gateway did.
 </Callout>
 
 **Try it:** [1.2 Verify OpenShell](/learn/deploy) and [1.4 Bring up a sandboxed agent](/learn/build-an-agent).

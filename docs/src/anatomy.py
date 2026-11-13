@@ -28,7 +28,7 @@ for i, (t, sub, ic) in enumerate([("policy store", "revisions v1, v2 …", "i-do
     layer(38, yy, 248, 66, t, [sub] if sub else [], ic)
 
 # ---- middle: namespace with two pods
-S.ns(330, 96, 850, 668, "openshell-lab-default", green=True, sub="· workspace default · one sandbox")
+S.ns(330, 96, 850, 668, "lab", green=True, sub="· workspace lab · one sandbox")
 
 # workload pod
 S.rect(348, 150, 400, 596, fill="#fff", stroke=GREY, sw=1.3, rx=8)

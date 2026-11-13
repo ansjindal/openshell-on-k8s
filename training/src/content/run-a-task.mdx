@@ -50,7 +50,7 @@ NAME     CREATED              PHASE
 agent-0  2026-11-11 13:19:44  Ready
 agent-1  2026-11-11 13:20:46  Ready
 
-== Kubernetes (openshell-lab-default): one workload pod + one supervisor pod per sandbox ==
+== Kubernetes (lab): one workload pod + one supervisor pod per sandbox ==
 NAME      READY   REASON              AGE
 agent-0   True    DependenciesReady   75s
 agent-1   True    DependenciesReady   13s
@@ -117,7 +117,7 @@ The output and the agent's reasoning show up in its logs:
 That's the same as reading the pod's logs directly, if you prefer the raw view:
 
 ```bash
-kubectl -n openshell-lab-default logs agent-0
+kubectl -n lab logs agent-0
 ```
 
 </Step>

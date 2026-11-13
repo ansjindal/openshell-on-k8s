@@ -63,7 +63,7 @@ Note the first line: `example.org` isn't in any rule, so the supervisor didn't e
 The supervisors' logs are shipped to **Loki** by Alloy. The same events, for every sandbox, queryable with LogQL. Find the Loki service and ask for the denials of the last 15 minutes:
 
 ```bash
-L=$(kubectl -n monitoring get svc loki -o jsonpath='{.spec.clusterIP}'); curl -sG "http://$L:3100/loki/api/v1/query_range" --data-urlencode 'query={namespace=~"openshell-lab-.+", container="supervisor"} |= "OCSF" |= "DENIED"' --data-urlencode limit=10 | python3 -c 'import sys,json; [print(s["stream"]["pod"], v[1][:150]) for s in json.load(sys.stdin)["data"]["result"] for v in s["values"]]'
+L=$(kubectl -n monitoring get svc loki -o jsonpath='{.spec.clusterIP}'); curl -sG "http://$L:3100/loki/api/v1/query_range" --data-urlencode 'query={namespace=~"lab|dev|team-.+", container="supervisor"} |= "OCSF" |= "DENIED"' --data-urlencode limit=10 | python3 -c 'import sys,json; [print(s["stream"]["pod"], v[1][:150]) for s in json.load(sys.stdin)["data"]["result"] for v in s["values"]]'
 ```
 
 Each line carries the supervisor pod, so you know which sandbox it was. (The gateway also exports its OCSF events to Loki over OTLP, with the sandbox id as an attribute.)
@@ -80,7 +80,7 @@ Each line carries the supervisor pod, so you know which sandbox it was. (The gat
 Open Grafana from the site's **Links** page (`<your site>/grafana`, sign in with Keycloak as `demo`), go to **Explore**, pick **Loki**, and run:
 
 ```bash-ref
-{namespace=~"openshell-lab-.+", container="supervisor"} |= "OCSF" |= "DENIED"
+{namespace=~"lab|dev|team-.+", container="supervisor"} |= "OCSF" |= "DENIED"
 ```
 
 

@@ -66,7 +66,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { n: 2, step: "2.1", name: "Control plane", note: "Namespace openshell: the gateway (StatefulSet, SQLite), the Console (oauth2-proxy + backend) and the skill registry, with the states your command saw." },
       { n: 3, step: "3.1", name: "Gateway reachable", note: "The CLI reaches the gateway on NodePort 30808 over TLS, with a client certificate." },
       { n: 4, step: "3.2", name: "Your identity", note: "The certificate says OU=operator: the gateway treats this shell as a platform admin. People in the browser sign in with Keycloak instead." },
-      { n: 5, step: "4.1", name: "Sandbox agent-0", note: "A sandbox is two pods in its workspace's namespace (openshell-lab-default): the workload (the agent) and its supervisor, which the gateway starts." },
+      { n: 5, step: "4.1", name: "Sandbox agent-0", note: "A sandbox is two pods in its workspace's namespace (lab): the workload (the agent) and its supervisor, which the gateway starts." },
       { n: 6, step: "5.1", name: "Models & sign-in", note: "LiteLLM serves the model to sandboxes through their supervisor; Keycloak signs people in." },
     ],
     nodes: [
@@ -82,7 +82,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
         dyn: (o) => { const r = row(o(2), "registry"); return r ? { sub: `skill registry · ${r.READY} ${r.STATUS}` } : undefined; } },
       { id: "id", x: 20, y: 275, w: 170, h: 80, label: "lab-operator", sub: "OU=operator\nplatform admin", layer: 4, kind: "accent",
         dyn: (o) => { const k = kv(o(4)); return k.Subject ? { label: k.Subject, sub: `roles: ${k.Roles || "-"}\nvia ${k.Provider || "-"}` } : undefined; } },
-      { id: "nssb", x: 510, y: 45, w: 205, h: 200, label: "namespace openshell-lab-default", layer: 5, kind: "group" },
+      { id: "nssb", x: 510, y: 45, w: 205, h: 200, label: "namespace lab", layer: 5, kind: "group" },
       { id: "wl", x: 525, y: 80, w: 175, h: 60, label: "agent-0", sub: "workload · Ready", layer: 5,
         dyn: (o) => { const rs = table(o(5)); if (!rs.length) return; const r = rs[0]; return { label: r.NAME, sub: `workload · ${r.PHASE}${rs.length > 1 ? ` · +${rs.length - 1} more` : ""}` }; } },
       { id: "sup", x: 525, y: 165, w: 175, h: 60, label: "os-supervisor-…", sub: "supervisor", layer: 5, kind: "accent" },
@@ -111,7 +111,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
     nodes: [
       { id: "you", x: 15, y: 150, w: 150, h: 75, label: "You", sub: "fleet / openshell", layer: 0 },
       { id: "gw", x: 230, y: 150, w: 195, h: 75, label: "OpenShell gateway", sub: "ns openshell", layer: 0, kind: "accent" },
-      { id: "ns", x: 470, y: 15, w: 475, h: 385, label: "namespace openshell-lab-default", layer: 0, kind: "group" },
+      { id: "ns", x: 470, y: 15, w: 475, h: 385, label: "namespace lab", layer: 0, kind: "group" },
       { id: "a0", x: 490, y: 325, w: 210, h: 55, label: "agent-0", sub: "+ its supervisor (already there)", layer: 0 },
       { id: "store", x: 230, y: 275, w: 195, h: 80, label: "agent-1 · policy v1", sub: "stored by the gateway\nprovider: litellm", layer: 1,
         dyn: (o) => { const rs = table(o(1)).filter((r) => r.PHASE); const n = rs.sort((a, b) => (a.CREATED < b.CREATED ? 1 : -1))[0]; return n ? { label: `${n.NAME} · policy v1`, sub: `stored by the gateway\ncreated ${n.CREATED.slice(11)}` } : undefined; } },
@@ -231,7 +231,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { n: 1, step: "1.1", name: "Denied traffic", note: "Two refusals: example.org (no rule, not even resolved) and LiteLLM's admin API (L7)." },
       { n: 2, step: "1.2", name: "OCSF in the CLI", note: "The supervisor writes one OCSF event per decision: class, ALLOWED/DENIED, binary, target, policy and reason." },
       { n: 3, step: "2.1", name: "Loki", note: "Alloy ships the supervisor's log to Loki: the same events for every sandbox in every workspace namespace, queryable with LogQL." },
-      { n: 4, step: "3.1", name: "Grafana", note: "Grafana Explore on Loki: {namespace=~\"openshell-lab-.+\", container=\"supervisor\"} |= \"DENIED\"." },
+      { n: 4, step: "3.1", name: "Grafana", note: "Grafana Explore on Loki: {namespace=~\"lab|dev|team-.+\", container=\"supervisor\"} |= \"DENIED\"." },
       { n: 5, step: "3.2", name: "Live", note: "In Live mode a new denial shows up within seconds." },
     ],
     nodes: [
@@ -268,7 +268,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
       { id: "vm", x: 10, y: 10, w: 580, h: 450, label: "Brev VM · k3s, one Kubernetes node", layer: 1, kind: "group" },
       { id: "gw", x: 30, y: 45, w: 210, h: 60, label: "OpenShell gateway", sub: "sandboxes · policies · keys", layer: 2, kind: "accent" },
       { id: "you", x: 370, y: 45, w: 200, h: 60, label: "You", sub: "openshell CLI (mTLS)", layer: 2 },
-      { id: "ns", x: 30, y: 130, w: 540, h: 150, label: "namespace openshell-lab-default · workspace default", layer: 3, kind: "group" },
+      { id: "ns", x: 30, y: 130, w: 540, h: 150, label: "namespace lab · workspace lab", layer: 3, kind: "group" },
       { id: "wl", x: 45, y: 165, w: 200, h: 60, label: "workload pod", sub: "the agent, sealed in", layer: 3 },
       { id: "sup", x: 355, y: 165, w: 200, h: 60, label: "supervisor pod", sub: "policy · keys · audit", layer: 3, kind: "accent" },
       { id: "ll", x: 30, y: 310, w: 170, h: 56, label: "LiteLLM → model", sub: "real key added", layer: 4, kind: "ext" },
@@ -361,7 +361,7 @@ export const DIAGRAMS: Record<string, Diagram> = {
         ["demo", "demo", ["demo"], 470, 226, undefined, "i-svc"],
         ["ks", "kube-system", ["kube-system"], 705, 226, undefined, "i-gear"],
         ["cm2", "cert-manager · kyverno", ["cert-manager", "kyverno"], 232, 280, undefined, "i-cert"],
-        ["os", "openshell + sandboxes", ["openshell", "openshell-lab-default", "openshell-lab-team-a", "agent-sandbox-system"], 470, 280, undefined, "i-shield"],
+        ["os", "openshell + sandboxes", ["openshell", "lab", "dev", "agent-sandbox-system"], 470, 280, undefined, "i-shield"],
         ["ag", "agents", ["agents"], 705, 280, undefined, "i-bot"],
       ] as [string, string, string[], number, number, DNode["kind"], string][]).map(([id, label, names, x, y, kind, icon]): DNode => ({
         id, x, y, w: 218, h: 46, label, icon, sub: SUBS[id], layer: 1, kind,
