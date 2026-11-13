@@ -3,7 +3,8 @@
 // markers sit on the picture where each step happens (x, y in the SVG's own
 // coordinates; architecture.svg is 1600 x 1090).
 export type TourStep = { x: number; y: number; title: string; text: string };
-export type TourPath = { title: string; intro: string; flow: string; nodes: string[]; steps: TourStep[] };
+// `all`: light the whole figure (no dimming); `zoom`: 1 shows it whole.
+export type TourPath = { title: string; intro: string; flow: string; nodes: string[]; steps: TourStep[]; all?: boolean; zoom?: number };
 
 export const FIGURE_TOURS: Record<string, TourPath[]> = {
   architecture: [
@@ -56,6 +57,17 @@ export const FIGURE_TOURS: Record<string, TourPath[]> = {
         { x: 978, y: 400, title: "Loki", text: "…and stores them in Loki, queryable by sandbox, namespace and verdict." },
         { x: 826, y: 400, title: "Tempo", text: "The agent's own traces, relayed by its supervisor, and the gateway's spans." },
         { x: 1110, y: 400, title: "Grafana", text: "Reads Loki, Tempo and Prometheus. You'll query the audit trail there in Module 2." },
+      ],
+    },
+    {
+      title: "The whole platform, together", flow: "all", all: true, zoom: 1, nodes: [],
+      intro: "All four paths on one picture: how you come in, who decides, where agents run, how they reach the model, and where the evidence goes.",
+      steps: [
+        { x: 230, y: 96, title: "Coming in", text: "People reach the lab through two Brev links and Envoy; the VM's CLI talks to the gateway directly." },
+        { x: 88, y: 660, title: "Deciding", text: "The OpenShell gateway, with Keycloak for people and cert-manager for certificates, decides who may do what and creates every sandbox." },
+        { x: 676, y: 566, title: "Running", text: "Each workspace is a namespace with its sandboxes: one workload pod and one supervisor pod each." },
+        { x: 1210, y: 640, title: "Reaching the model", text: "Every model call goes through the agent's supervisor to LiteLLM, the only place that holds the upstream key." },
+        { x: 1110, y: 400, title: "Recording", text: "Every decision lands in Loki and every trace in Tempo, and Grafana reads them all." },
       ],
     },
   ],

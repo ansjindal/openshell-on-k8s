@@ -75,6 +75,7 @@ export function FigTour({ id, n, caption }: { id: string; n?: string; caption?: 
   // into the markup, so React swaps it when the path changes
   const svg = useMemo(() => {
     if (!f || !cur) return "";
+    if (cur.all) return f.svg; // the whole platform: nothing dimmed
     const on = new Set(cur.nodes);
     return f.svg
       .replace('<svg class="dg-svg"', '<svg class="dg-svg dg-touring"')
@@ -94,7 +95,7 @@ export function FigTour({ id, n, caption }: { id: string; n?: string; caption?: 
 
   if (!f || !cur) return null;
   // zoom in around the current step's marker, so its boxes are readable beside the text
-  const ZOOM = 1.6;
+  const ZOOM = cur.zoom ?? 1.6;
   const at = cur.steps[step] ?? cur.steps[0];
   const clamp = (v: number) => Math.min(0, Math.max(1 - ZOOM, v));
   const tx = clamp((0.5 * f.w - ZOOM * at.x) / f.w) * 100, ty = clamp((0.5 * f.h - ZOOM * at.y) / f.h) * 100;

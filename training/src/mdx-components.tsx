@@ -12,6 +12,7 @@ import { Fig, FigTour, FigRead } from "@/components/course/Fig";
 import { DeckScene } from "@/components/course/DeckScene";
 import { ReadScene } from "@/components/course/ReadScene";
 import { YamlRead } from "@/components/course/YamlRead";
+import { Timeline, TStep } from "@/components/course/Timeline";
 import { ScrollBuild } from "@/components/course/ScrollBuild";
 import { ModuleLessons } from "@/components/course/ModuleLessons";
 import { PolicyExplorer } from "@/components/diagrams/PolicyExplorer";
@@ -40,6 +41,8 @@ const components: MDXComponents = {
   DeckScene,
   ReadScene,
   YamlRead,
+  Timeline,
+  TStep,
   Fig,
   FigTour,
   FigRead,

@@ -13,41 +13,57 @@ Nothing to run here: this happened once, when the VM first booted.
 
 <Diagram id="install-flow" n="1.1" caption="One pipeline: the Launchable's values go into .env, setup.sh installs Ansible, and one playbook runs the roles in order." />
 
-On the k3s cluster, the OpenShell pieces went in with these commands, in this order. The setup runs them through Ansible so they can be re-run safely, but each one is an ordinary `kubectl` or `helm` command you could type yourself.
+On the k3s cluster, the OpenShell pieces went in with these commands, in this order. The setup runs them through Ansible so they can be re-run safely, but each is an ordinary `kubectl`, `helm` or `openshell` command you could type yourself.
 
-**1. The Sandbox controller.** The open-source agent-sandbox controller and its `Sandbox` resource, which OpenShell builds on:
+<Timeline>
+
+<TStep n="1" title="The Sandbox controller">
+
+The open-source agent-sandbox controller and its `Sandbox` resource, which OpenShell builds on.
 
 ```bash-ref
 kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/v1.0.10/sandbox.yaml
 ```
 
-**2. cert-manager**, which issues the certificates for the gateway's mTLS:
+</TStep>
+
+<TStep n="2" title="cert-manager">
+
+Issues the certificates for the gateway's mTLS.
 
 ```bash-ref
 helm upgrade --install cert-manager oci://quay.io/jetstack/charts/cert-manager --version v1.21.3 \
   --namespace cert-manager --create-namespace --set crds.enabled=true
 ```
 
-**3. LiteLLM**, the model gateway, with your model values from the Launchable ([0.3.2](/learn/cluster-and-model)):
+</TStep>
+
+<TStep n="3" title="LiteLLM, the model gateway">
+
+With your model values from the Launchable ([0.3.2](/learn/cluster-and-model)).
 
 ```bash-ref
 helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm --version 1.108.4 \
   --namespace litellm --create-namespace -f litellm-values.yaml
 ```
 
-**4. The OpenShell gateway**, NVIDIA's Helm chart, in namespace `openshell`:
+</TStep>
+
+<TStep n="4" title="The OpenShell gateway">
+
+NVIDIA's Helm chart, in namespace `openshell`, with `pi-sandbox` as the default sandbox image. Its settings are in [`values.yaml`](https://github.com/ansjindal/openshell-on-k8s/blob/main/ansible/roles/09-openshell_gateway/files/values.yaml): who may sign in, operator mode for workspaces, fail-closed policy loading.
 
 ```bash-ref
 helm upgrade --install openshell oci://ghcr.io/nvidia/openshell/helm-chart --version 0.1.7 \
-  --namespace openshell --create-namespace -f ansible/roles/09-openshell_gateway/files/values.yaml \
+  --namespace openshell --create-namespace -f values.yaml \
   --set sandbox.image.repository=ghcr.io/ansjindal/openshell-on-k8s/pi-sandbox --set-string sandbox.image.tag=1.5.2
 ```
 
-`--set sandbox.image…` makes `pi-sandbox` the image every sandbox starts from unless it says otherwise. Everything else is in the values file (plus small overlays for Keycloak, mTLS and tracing):
+</TStep>
 
-<YamlRead id="gateway-values" />
+<TStep n="5" title="The openshell CLI">
 
-**5. The `openshell` CLI**, signed in to the gateway as the lab operator:
+Downloaded from the release, and signed in to the gateway as the lab operator.
 
 ```bash-ref
 curl -fsSLO https://github.com/NVIDIA/OpenShell/releases/download/v0.1.7/openshell-x86_64-unknown-linux-musl.tar.gz
@@ -55,7 +71,11 @@ tar -xzf openshell-x86_64-unknown-linux-musl.tar.gz openshell && sudo install -m
 openshell gateway add https://localhost:30808 --local --name fleet
 ```
 
-**6. The platform's workspace, `lab`, with its model provider.** A labelled namespace, NVIDIA's `openshell-workspace` chart in it, the workspace in the gateway, then the `litellm` provider ([1.3](/learn/inference)):
+</TStep>
+
+<TStep n="6" title="The platform's workspace, lab">
+
+A labelled namespace, NVIDIA's `openshell-workspace` chart in it, the workspace in the gateway, then its `litellm` provider ([1.3](/learn/inference)).
 
 ```bash-ref
 kubectl create namespace lab && kubectl label namespace lab openshell.ai/workspace=true
@@ -65,11 +85,11 @@ openshell profile import -f litellm-profile.yaml --global
 openshell --workspace lab provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY
 ```
 
-A **workspace** is OpenShell's tenant, and it has two halves: a record in the gateway (its providers, its members, and its sandboxes with their policies) and, in operator mode, a Kubernetes namespace of the same name, where those sandboxes actually run:
+</TStep>
 
-<Diagram id="workspace" n="1.2" caption="Workspace lab: the gateway's record of it (providers, members, sandboxes) and the namespace lab, labelled as a workspace, with the chart's objects and the sandbox pods the gateway creates there." />
+<TStep n="7" title="The first sandbox and the Console">
 
-**7. The first sandbox and the Console.** `agent-0` in `lab`, and the OpenShell Console from its repository ([github.com/ai-openshell/console](https://github.com/ai-openshell/console)):
+`agent-0` in `lab`, and the OpenShell Console from its repository ([github.com/ai-openshell/console](https://github.com/ai-openshell/console)).
 
 ```bash-ref
 openshell --workspace lab sandbox create --name agent-0 --provider litellm \
@@ -78,15 +98,21 @@ helm upgrade --install openshell-dashboard ./openshell-console/deploy/helm/opens
   --namespace openshell -f console-values.yaml
 ```
 
-Keycloak, Envoy Gateway, Kyverno and the monitoring stack went in the same way, each with its own Helm chart; the skill repository and the MCP server for Module 3 with `kubectl apply`.
+</TStep>
 
-<Callout type="note" title="Workspaces are namespaces">
-In <strong>operator mode</strong> each workspace is a namespace of the same name, prepared ahead of time with the <code>openshell-workspace</code> chart, as in step 6. The setup also made <code>lab</code> the default for <code>openshell</code> commands (<code>OPENSHELL_WORKSPACE=lab</code>). You'll make your own in <a href="/learn/build-an-agent">1.4</a>.
-</Callout>
+</Timeline>
+
+Keycloak, Envoy Gateway, Kyverno and the monitoring stack went in the same way, each with its own Helm chart; the skill repository and the MCP server for Module 3 with `kubectl apply`.
 
 <Callout type="tip" title="Changing a setting later">
 Edit <code>.env</code> and re-run only the role that needs it, by its tag: for example <code>ANSIBLE_TAGS=litellm ./scripts/setup.sh</code>.
 </Callout>
+
+## What a workspace is
+
+Step 6 made a **workspace**, OpenShell's tenant. It has two halves: a record in the gateway (its providers, its members, and its sandboxes with their policies) and, in operator mode, a Kubernetes namespace of the same name, where those sandboxes actually run. The setup also made `lab` the default for `openshell` commands (`OPENSHELL_WORKSPACE=lab`); you'll make your own workspace in [1.4](/learn/build-an-agent).
+
+<Diagram id="workspace" n="1.2" caption="Workspace lab: the gateway's record of it (providers, members, sandboxes) and the namespace lab, labelled as a workspace, with the chart's objects and the sandbox pods the gateway creates there." />
 
 ## The platform, piece by piece
 
