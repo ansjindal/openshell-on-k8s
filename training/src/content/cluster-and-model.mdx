@@ -23,19 +23,6 @@ brev-abc123xyz   Ready    control-plane   22h   v1.37.2+k3s1   10.160.1.113   <n
 </ExpectedOutput>
 </Output>
 
-
-What runs on that node, one namespace per component:
-
-| Namespace | What it is |
-|---|---|
-| `litellm` | the model gateway: this lesson |
-| `monitoring` | Prometheus, Grafana, Loki, Alloy, Tempo |
-| `keycloak` | sign-in for people |
-| `envoy-gateway-system` | routes the lab's web pages |
-| `cert-manager`, `kyverno` | certificates and admission rules |
-| `demo` | a small shop app the capstone breaks on purpose |
-| `openshell`, `openshell-lab-*`, `agent-sandbox-system` | used from Module 1 on |
-
 </Step>
 
 </Section>
