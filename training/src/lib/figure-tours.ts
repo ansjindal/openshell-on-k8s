@@ -60,3 +60,37 @@ export const FIGURE_TOURS: Record<string, TourPath[]> = {
     },
   ],
 };
+
+// A figure read as a scroll flow (<FigRead>): each step lights its boxes
+// (data-node names) and puts its number at x, y (the SVG's own coordinates).
+export type ReadStep = { title: string; where?: string; text: string; nodes: string[]; x: number; y: number };
+export type FigureRead = { title: string; intro: string; steps: ReadStep[] };
+
+export const FIGURE_READS: Record<string, FigureRead> = {
+  cluster: {
+    title: "The stack, layer by layer",
+    intro: "Everything in the picture runs on one Brev VM. Scroll down: each layer lights up in the picture as you read about it, from the way you come in to the agent you will deploy.",
+    steps: [
+      { title: "The VM", where: "your Brev instance", nodes: ["Browser", "Brev Secure Link", "socat", "Training site", "kubectl"], x: 395, y: 126,
+        text: "Ubuntu, with this training site and the Cluster shell running on it. A Brev secure link brings your browser in; socat passes it on to the cluster. The Cluster shell's kubectl talks to the cluster as admin." },
+      { title: "Kubernetes: the control plane", where: "k3s", nodes: ["kube-apiserver", "datastore", "kube-scheduler", "controller-manager"], x: 225, y: 417,
+        text: "k3s is a full Kubernetes on a single machine. Its control plane decides what runs where: the API server everyone talks to, the datastore that holds the cluster's state, the scheduler that places pods, and the controller-manager that keeps things as declared." },
+      { title: "Kubernetes: the worker", where: "k3s", nodes: ["kubelet · containerd"], x: 892, y: 885,
+        text: "The kubelet takes its orders from the API server and starts each pod; containerd runs the containers. Here one node is both control plane and worker; larger clusters give the control plane its own nodes." },
+      { title: "Envoy Gateway", where: "envoy-gateway-system", nodes: ["Envoy Gateway"], x: 246, y: 567,
+        text: "The front door for web traffic: this site at /, Keycloak at /auth, Grafana at /grafana." },
+      { title: "LiteLLM", where: "litellm", nodes: ["LiteLLM", "Upstream model API"], x: 1365, y: 808,
+        text: "The model gateway. It holds your inference endpoint and its key, and offers one OpenAI-compatible API inside the cluster, with your model under the alias default. Every agent in this course talks to the model through it; only LiteLLM talks to the upstream API." },
+      { title: "Keycloak", where: "keycloak", nodes: ["Keycloak"], x: 631, y: 576,
+        text: "Sign-in for people, used from Module 1 on." },
+      { title: "Monitoring", where: "monitoring", nodes: ["Prometheus", "Loki", "Alloy", "Tempo", "Grafana"], x: 1175, y: 575,
+        text: "Prometheus for metrics, Alloy and Loki for logs, Tempo for traces, and Grafana to look at all of it." },
+      { title: "Guardrails and plumbing", where: "cert-manager · kyverno · kube-system", nodes: ["cert-manager", "Kyverno", "CoreDNS · metrics-server"], x: 631, y: 1060,
+        text: "cert-manager issues TLS certificates, Kyverno checks pods as they are created, and kube-system holds cluster DNS and the metrics kubectl top uses." },
+      { title: "A demo app", where: "demo", nodes: ["shop-app", "payments", "loadgen"], x: 892, y: 720,
+        text: "A small shop: shop-app calls payments, and loadgen keeps traffic flowing. The capstone breaks it on purpose." },
+      { title: "Your agent", where: "agents (red)", nodes: ["pi-agent pod", "Secret litellm-key", "What it can do", "Any host on the internet"], x: 238, y: 763,
+        text: "Not there yet: you deploy it in the next lab, the way agents are usually deployed, with an API key from a Secret. The red arrows show everything it will be able to reach." },
+    ],
+  },
+};

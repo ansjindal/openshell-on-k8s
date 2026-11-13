@@ -5,23 +5,7 @@ Before you build an agent, look at what it will run on: a Kubernetes cluster on 
   time="about eight minutes. Every command only reads, except a short-lived port-forward."
 />
 
-<Fig id="cluster" n="0.1" caption="Your cluster: the model behind LiteLLM, and in red the pi agent you deploy in 0.4, with everything it can reach." />
-
-## The stack
-
-Everything in the figure runs on **one Brev VM**. From the bottom up:
-
-| Layer | Where | What it does |
-|---|---|---|
-| **The VM** | your Brev instance | Ubuntu, with this training site and the Cluster shell running on it. A Brev secure link brings your browser in; `socat` passes it to the cluster. |
-| **Kubernetes** | k3s, one node | A full Kubernetes cluster on a single machine, in two halves. The **control plane** (kube-apiserver, the datastore, the scheduler, the controller-manager) decides what runs where; the **worker** side (kubelet and containerd) runs it. Here one node is both; larger clusters give the control plane its own nodes. `kubectl` in the Cluster shell talks to the API server as cluster admin. |
-| **Envoy Gateway** | `envoy-gateway-system` | The front door for web traffic: this site at `/`, Keycloak at `/auth`, Grafana at `/grafana`. |
-| **LiteLLM** | `litellm` | The model gateway. It holds your **inference endpoint** and its key, and offers one OpenAI-compatible API inside the cluster, with your model under the alias `default`. Every agent in this course talks to the model through it. |
-| **Keycloak** | `keycloak` | Sign-in for people (used from Module 1 on). |
-| **Monitoring** | `monitoring` | Prometheus for metrics, Loki and Alloy for logs, Tempo for traces, Grafana to look at all of it. |
-| **Guardrails and plumbing** | `cert-manager`, `kyverno`, `kube-system` | TLS certificates, admission rules for pods, cluster DNS and metrics. |
-| **A demo app** | `demo` | A small shop (`shop-app` calling `payments`, with `loadgen` traffic) that the capstone breaks on purpose. |
-| **Your agent** | `agents` (red) | Not there yet: you deploy it in the next lab, the way agents are usually deployed, and see everything it can reach. |
+<FigRead id="cluster" n="0.1" caption="Your cluster: the model behind LiteLLM, and in red the pi agent you deploy in 0.4, with everything it can reach." />
 
 Now look at it for real.
 
@@ -60,6 +44,17 @@ What runs on that node, one namespace per component:
 </Section>
 
 <Section n="2" title="LiteLLM: one gateway to your model" goal="See where the inference endpoint is configured.">
+
+An agent needs a model, and a cluster usually has more than one agent. Rather than hand each one the inference endpoint and its key, the cluster runs one **model gateway** in front of it. Agents call the gateway with a key of its own; the gateway knows the real endpoint and key, maps model names and aliases, and can add budgets, rate limits and logging in one place.
+
+This lab uses **[LiteLLM](https://www.litellm.ai/)**, an open-source gateway that offers one OpenAI-compatible API in front of more than a hundred model providers ([docs](https://docs.litellm.ai/)). Other gateways do the same job, and any of them would fit here:
+
+| Gateway | What it is |
+|---|---|
+| [Envoy AI Gateway](https://aigateway.envoyproxy.io/) | Built on Envoy Gateway, which already fronts this lab's web traffic. Open source. |
+| [Kong AI Gateway](https://konghq.com/products/kong-ai-gateway) | AI plugins for the Kong API gateway. Open source core. |
+| [Portkey AI Gateway](https://portkey.ai/) | A lightweight open-source gateway, also offered as a hosted service. |
+
 
 <Step n="1" title="The LiteLLM service">
 

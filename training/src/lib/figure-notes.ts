@@ -91,7 +91,7 @@ export const FIGURE_NOTES: Record<string, Record<string, string>> = {
     "cert-manager": "Issues TLS certificates from the lab CA.",
     "Kyverno": "Admission rules that check pods as they are created.",
     "CoreDNS · metrics-server": "Cluster DNS, and the resource metrics kubectl top uses.",
-    "Any host on the internet": "Where the unsandboxed agent can send anything: no rule stops it, no log records it.",
+    "Any host on the internet": "Where the agent can send anything: no rule stops it, no log records it.",
     "Upstream model API": "Your inference endpoint (MODEL_BASE_URL). Only LiteLLM talks to it.",
   },
 };

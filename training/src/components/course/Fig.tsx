@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Maximize2, X } from "lucide-react";
 import { FIGURE_SVG } from "@/lib/figures.generated";
 import { FIGURE_NOTES } from "@/lib/figure-notes";
-import { FIGURE_TOURS } from "@/lib/figure-tours";
+import { FIGURE_TOURS, FIGURE_READS } from "@/lib/figure-tours";
 
 export function Fig({ id, n, caption }: { id: string; n?: string; caption?: string }) {
   const f = FIGURE_SVG[id];
@@ -149,6 +149,103 @@ export function FigTour({ id, n, caption }: { id: string; n?: string; caption?: 
       <figcaption className="mt-2 text-[13px] leading-[1.55] text-[var(--color-fg-dim)]">
         {n && <>Figure {n}. </>}{caption ?? f.title}
       </figcaption>
+    </figure>
+  );
+}
+
+/** The same figure as a reading flow: the steps are text on the left, the
+ *  figure stays beside them and lights up the boxes of the step you are
+ *  reading, with a numbered marker on the picture. No clicks or autoplay:
+ *  scroll down and the picture follows; click a step to jump to it.
+ *    <FigRead id="cluster" n="0.1" caption="…" />  steps: lib/figure-tours.ts FIGURE_READS */
+export function FigRead({ id, n, caption }: { id: string; n?: string; caption?: string }) {
+  const f = FIGURE_SVG[id];
+  const read = FIGURE_READS[id];
+  const [active, setActive] = useState(0); // 0 = the intro: the whole picture lit
+  const items = useRef<(HTMLDivElement | null)[]>([]);
+  useEffect(() => {
+    const io = new IntersectionObserver((entries) => {
+      const seen = entries.filter((e) => e.isIntersecting).map((e) => Number((e.target as HTMLElement).dataset.n));
+      if (seen.length) setActive(Math.max(...seen));
+    }, { rootMargin: "-38% 0px -52% 0px" });
+    items.current.forEach((el) => el && io.observe(el));
+    return () => io.disconnect();
+  }, []);
+  const cur = active > 0 ? read?.steps[active - 1] : undefined;
+  // every box's rectangle, from the figure's markup
+  const rects = useMemo(() => {
+    const m: Record<string, [number, number, number, number]> = {};
+    for (const r of (f?.svg ?? "").matchAll(/<g class="dg-node" data-node="([^"]*)">\s*<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g))
+      m[r[1]] = [+r[2], +r[3], +r[4], +r[5]];
+    return m;
+  }, [f]);
+  const svg = useMemo(() => {
+    if (!f) return "";
+    if (!cur) return f.svg;
+    const on = new Set(cur.nodes);
+    return f.svg
+      .replace('<svg class="dg-svg"', '<svg class="dg-svg dg-touring"')
+      .replace(/<g class="dg-node" data-node="([^"]*)">/g, (m, name) => (on.has(name) ? `<g class="dg-node dg-hl" data-node="${name}">` : m));
+  }, [f, cur]);
+  // zoom onto the lit boxes (at most 2.2x), keeping the picture inside its frame
+  const view = useMemo(() => {
+    if (!f || !cur) return { s: 1, tx: 0, ty: 0, mx: 0, my: 0 };
+    const bs = cur.nodes.map((k) => rects[k]).filter(Boolean);
+    if (!bs.length) return { s: 1, tx: 0, ty: 0, mx: cur.x, my: cur.y };
+    const x0 = Math.min(...bs.map((b) => b[0])), y0 = Math.min(...bs.map((b) => b[1]));
+    const x1 = Math.max(...bs.map((b) => b[0] + b[2])), y1 = Math.max(...bs.map((b) => b[1] + b[3]));
+    const pad = 120;
+    const sc = Math.max(1, Math.min(2.2, f.w / (x1 - x0 + 2 * pad), f.h / (y1 - y0 + 2 * pad)));
+    const cl = (v: number, lo: number) => Math.min(0, Math.max(lo, v));
+    const tx = cl((0.5 * f.w - sc * (x0 + x1) / 2) / f.w, 1 - sc) * 100;
+    const ty = cl((0.5 * f.h - sc * (y0 + y1) / 2) / f.h, 1 - sc) * 100;
+    return { s: sc, tx, ty, mx: x0, my: y0 };
+  }, [f, cur, rects]);
+  if (!f || !read) return null;
+  const blocks = [{ title: read.title, text: read.intro }, ...read.steps];
+  return (
+    <figure className="not-prose my-8 grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div>
+        {blocks.map((b, i) => (
+          <div key={i} data-n={i} ref={(el) => { items.current[i] = el; }} onClick={() => setActive(i)}
+            className={`cursor-pointer border-l-2 py-4 pl-4 transition-all duration-300 ${i === active ? "border-[var(--color-nv)] opacity-100" : "border-[var(--color-line)] opacity-55 hover:opacity-80"}`}>
+            {i > 0 && <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-nv-bright)]">{i} of {blocks.length - 1}{"where" in b && b.where ? <span className="ml-2 font-mono normal-case tracking-normal text-[var(--color-fg-mut)]">{b.where}</span> : null}</div>}
+            <div className={`font-bold text-[var(--color-fg)] ${i === 0 ? "text-[18px]" : "text-[16px]"}`}>{b.title}</div>
+            <p className="mt-1.5 text-[15px] leading-[25px] text-[var(--color-fg-dim)]">{b.text}</p>
+          </div>
+        ))}
+        <div className="h-[30vh]" />
+      </div>
+      <div>
+        <div className="sticky top-20">
+          <div className="rounded-[10px] border border-[var(--color-line)] bg-[var(--color-ink2)] p-3">
+            <div className="relative overflow-hidden" style={{ aspectRatio: `${f.w} / ${f.h}` }}>
+              <div className="absolute inset-0 origin-top-left transition-transform duration-700 ease-in-out"
+                style={{ transform: `translate(${view.tx}%, ${view.ty}%) scale(${view.s})` }}>
+                <div dangerouslySetInnerHTML={{ __html: svg }} />
+                {cur && (
+                  <svg viewBox={`0 0 ${f.w} ${f.h}`} className="pointer-events-none absolute inset-0 h-full w-full">
+                    <g key={active} style={{ animation: "swapIn .4s ease both" }}>
+                      <circle cx={view.mx} cy={view.my} r={46 / view.s} fill="none" stroke="var(--color-nv-bright)" strokeWidth={5 / view.s} className="dg-ping" />
+                      <circle cx={view.mx} cy={view.my} r={34 / view.s} fill="var(--color-nv-bright)" stroke="var(--color-bg)" strokeWidth={5 / view.s} />
+                      <text x={view.mx} y={view.my + 12 / view.s} textAnchor="middle" fontSize={34 / view.s} fontWeight={800} fill="#0b0f05">{active}</text>
+                    </g>
+                  </svg>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-1.5">
+            {read.steps.map((_, i) => (
+              <span key={i} className={`h-1.5 rounded-full transition-all ${i + 1 === active ? "w-6 bg-[var(--color-nv)]" : i + 1 < active ? "w-3 bg-[var(--color-nv-dim)]" : "w-3 bg-[var(--color-line-2)]"}`} />
+            ))}
+            <span className="ml-auto text-[12px] text-[var(--color-fg-mut)]">Scroll to follow the steps</span>
+          </div>
+          <figcaption className="mt-1 text-[13px] leading-[1.55] text-[var(--color-fg-dim)]">
+            {n && <>Figure {n}. </>}{caption ?? f.title}
+          </figcaption>
+        </div>
+      </div>
     </figure>
   );
 }
