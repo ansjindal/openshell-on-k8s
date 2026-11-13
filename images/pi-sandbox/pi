@@ -1,0 +1,25 @@
+#!/bin/sh
+# pi launcher for OpenShell sandboxes.
+#
+# On first use it seeds pi's agent directory (~/.pi/agent) from /etc/pi:
+#   models.json    provider "lab": LiteLLM at http://litellm.litellm.svc.cluster.local:4000/v1,
+#                  model "default", apiKey "$LITELLM_API_KEY" (the `litellm`
+#                  provider's placeholder; the supervisor adds the real key on
+#                  allowed requests only)
+#   settings.json  defaultProvider "lab", defaultModel "default"
+# Files you change are never overwritten.
+#
+# One-shot runs (`pi -p …`) read stdin from /dev/null when stdin is not a
+# terminal: `openshell sandbox exec -- cmd` keeps stdin open and pi would wait on
+# it. Set PI_KEEP_STDIN=1 to pass stdin through.
+set -eu
+: "${PI_OFFLINE:=1}"
+export PI_OFFLINE
+dir="${PI_CODING_AGENT_DIR:-${HOME:-/sandbox}/.pi/agent}"
+mkdir -p "$dir"
+for f in models.json settings.json; do
+  [ -f "$dir/$f" ] || cp "/etc/pi/$f" "$dir/$f"
+done
+bin=/usr/local/lib/pi/bin/pi
+if [ -t 0 ] || [ "${PI_KEEP_STDIN:-}" = 1 ]; then exec "$bin" "$@"; fi
+exec "$bin" "$@" </dev/null
