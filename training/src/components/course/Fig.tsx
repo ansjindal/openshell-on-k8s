@@ -93,6 +93,11 @@ export function FigTour({ id, n, caption }: { id: string; n?: string; caption?: 
   }, [playing, step, cur]);
 
   if (!f || !cur) return null;
+  // zoom in around the current step's marker, so its boxes are readable beside the text
+  const ZOOM = 1.6;
+  const at = cur.steps[step] ?? cur.steps[0];
+  const clamp = (v: number) => Math.min(0, Math.max(1 - ZOOM, v));
+  const tx = clamp((0.5 * f.w - ZOOM * at.x) / f.w) * 100, ty = clamp((0.5 * f.h - ZOOM * at.y) / f.h) * 100;
   const choose = (i: number) => { setPath(i); setStep(0); setPlaying(true); };
   const jump = (i: number) => { setStep(i); setPlaying(false); };
   return (
@@ -105,9 +110,15 @@ export function FigTour({ id, n, caption }: { id: string; n?: string; caption?: 
           </button>
         ))}
       </div>
+      {/* side by side on wide screens: the steps on the left, the figure beside them
+          and sticky, so the text and the picture are on screen together */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.62fr)_minmax(0,1.38fr)] lg:items-start">
+      <div className="lg:order-2 lg:sticky lg:top-20">
       <div className="rounded-[10px] border border-[var(--color-line)] bg-[var(--color-ink2)] p-3">
         <div className="overflow-x-auto">
-          <div className="relative min-w-[760px]">
+          <div className="relative min-w-[760px] overflow-hidden lg:min-w-0" style={{ aspectRatio: `${f.w} / ${f.h}` }}>
+          <div className="absolute inset-0 origin-top-left transition-transform duration-700 ease-in-out"
+            style={{ transform: `translate(${tx}%, ${ty}%) scale(${ZOOM})` }}>
             <div dangerouslySetInnerHTML={{ __html: svg }} />
             <svg viewBox={`0 0 ${f.w} ${f.h}`} className="pointer-events-none absolute inset-0 h-full w-full">
               {cur.steps.map((s, i) => (
@@ -120,10 +131,15 @@ export function FigTour({ id, n, caption }: { id: string; n?: string; caption?: 
               ))}
             </svg>
           </div>
+          </div>
         </div>
       </div>
-      <div className="mt-3 rounded-[10px] border border-[var(--color-line)] bg-[var(--color-panel)] px-4 py-3">
-        <div className="flex items-center gap-3">
+      <figcaption className="mt-2 text-[13px] leading-[1.55] text-[var(--color-fg-dim)]">
+        {n && <>Figure {n}. </>}{caption ?? f.title}
+      </figcaption>
+      </div>
+      <div className="rounded-[10px] border border-[var(--color-line)] bg-[var(--color-panel)] px-4 py-3 lg:order-1">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="text-[15px] font-bold text-[var(--color-fg)]">{path + 1} · {cur.title}</div>
           <button onClick={() => (playing ? setPlaying(false) : (step >= cur.steps.length - 1 ? choose(path) : setPlaying(true)))}
             className="ml-auto rounded-md border border-[var(--color-line-2)] px-2.5 py-0.5 text-[12px] text-[var(--color-fg-dim)] hover:text-[var(--color-fg)]">
@@ -146,9 +162,7 @@ export function FigTour({ id, n, caption }: { id: string; n?: string; caption?: 
           ))}
         </ol>
       </div>
-      <figcaption className="mt-2 text-[13px] leading-[1.55] text-[var(--color-fg-dim)]">
-        {n && <>Figure {n}. </>}{caption ?? f.title}
-      </figcaption>
+      </div>
     </figure>
   );
 }
