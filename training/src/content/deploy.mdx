@@ -75,11 +75,11 @@ openshell gateway add https://localhost:30808 --local --name fleet
 
 <TStep n="6" title="The platform's workspace, lab">
 
-A labelled namespace, NVIDIA's `openshell-workspace` chart in it, the workspace in the gateway, then its `litellm` provider ([1.3](/learn/inference)).
+NVIDIA's `openshell-workspace` chart in a new namespace, the label that lets the gateway use it, the workspace in the gateway, then its `litellm` provider. You'll do the same for your own workspace in [1.3](/learn/inference).
 
 ```bash-ref
-kubectl create namespace lab && kubectl label namespace lab openshell.ai/workspace=true
-helm upgrade --install openshell-workspace oci://ghcr.io/nvidia/openshell/openshell-workspace --version 0.1.7 --namespace lab
+helm upgrade --install openshell-workspace oci://ghcr.io/nvidia/openshell/openshell-workspace --version 0.1.7 --namespace lab --create-namespace
+kubectl label namespace lab openshell.ai/workspace=true
 openshell workspace create --name lab
 openshell profile import -f litellm-profile.yaml --global
 openshell --workspace lab provider create --name litellm --type litellm --global-profile --credential LITELLM_API_KEY
@@ -110,7 +110,7 @@ Edit <code>.env</code> and re-run only the role that needs it, by its tag: for e
 
 ## What a workspace is
 
-Step 6 made a **workspace**, OpenShell's tenant. It has two halves: a record in the gateway (its providers, its members, and its sandboxes with their policies) and, in operator mode, a Kubernetes namespace of the same name, where those sandboxes actually run. The setup also made `lab` the default for `openshell` commands (`OPENSHELL_WORKSPACE=lab`); you'll make your own workspace in [1.4](/learn/build-an-agent).
+Step 6 made a **workspace**, OpenShell's tenant. It has two halves: a record in the gateway (its providers, its members, and its sandboxes with their policies) and, in operator mode, a Kubernetes namespace of the same name, where those sandboxes actually run. The setup also made `lab` the default for `openshell` commands (`OPENSHELL_WORKSPACE=lab`); you'll make your own workspace in [1.3](/learn/inference).
 
 <Diagram id="workspace" n="1.2" caption="Workspace lab: the gateway's record of it (providers, members, sandboxes) and the namespace lab, labelled as a workspace, with the chart's objects and the sandbox pods the gateway creates there." />
 

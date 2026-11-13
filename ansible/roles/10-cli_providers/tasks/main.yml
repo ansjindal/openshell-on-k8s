@@ -79,22 +79,19 @@
       register: _profile
       changed_when: true
 
-    # The platform workspace, the way the lessons create one: a labelled
-    # namespace, the openshell-workspace chart in it, then the gateway record.
-    - name: Namespace for the {{ openshell_workspace }} workspace
-      ansible.builtin.shell: |
-        set -euo pipefail
-        kubectl create namespace {{ openshell_workspace }} --dry-run=client -o yaml | kubectl apply -f -
-        kubectl label namespace {{ openshell_workspace }} {{ openshell_workspace_label }} --overwrite
-      args: { executable: /bin/bash }
-      changed_when: false
-
+    # The platform workspace, the way the lessons create one: the
+    # openshell-workspace chart creates the namespace, the label puts it on the
+    # gateway's allowlist (the chart can't), then the gateway record.
     - name: openshell-workspace chart in {{ openshell_workspace }}
       ansible.builtin.shell: |
         helm upgrade --install openshell-workspace {{ openshell_workspace_chart }} \
-          --version {{ openshell_chart_version }} --namespace {{ openshell_workspace }} --wait
+          --version {{ openshell_chart_version }} --namespace {{ openshell_workspace }} --create-namespace --wait
       args: { executable: /bin/bash }
       changed_when: true
+
+    - name: Label {{ openshell_workspace }} as a workspace namespace
+      ansible.builtin.command: kubectl label namespace {{ openshell_workspace }} {{ openshell_workspace_label }} --overwrite
+      changed_when: false
 
     - name: Workspace record {{ openshell_workspace }}
       ansible.builtin.shell: |
