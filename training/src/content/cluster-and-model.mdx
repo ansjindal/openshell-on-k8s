@@ -7,8 +7,6 @@ Before you build an agent, look at what it will run on: a Kubernetes cluster on 
 
 <FigRead id="cluster" n="0.1" caption="Your cluster: the model behind LiteLLM, and in red the pi agent you deploy in 0.4, with everything it can reach." />
 
-Now look at it for real.
-
 **Open the Cluster shell** at the bottom of the page if you want to type along: it's a real bash shell on the VM, with `kubectl` pointed at the cluster.
 
 <Section n="1" title="The cluster" goal="See the node, and what runs on it.">
@@ -19,7 +17,6 @@ Now look at it for real.
 kubectl get nodes -o wide
 ```
 <Output summary="One node, Ready: k3s, a full Kubernetes API on one VM.">
-<LiveDiagram id="cluster-tour" layer={1} />
 <ExpectedOutput>
 {`NAME             STATUS   ROLES           AGE   VERSION        INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION           CONTAINER-RUNTIME
 brev-abc123xyz   Ready    control-plane   22h   v1.37.2+k3s1   10.160.1.113   <none>        Ubuntu 22.04.5 LTS   6.8.0-1073-gcp (amd64)   containerd://2.3.7-k3s1`}
@@ -62,7 +59,6 @@ This lab uses **[LiteLLM](https://www.litellm.ai/)**, an open-source gateway tha
 kubectl -n litellm get deploy,svc
 ```
 <Output summary="One deployment, one Service: litellm.litellm.svc.cluster.local, port 4000.">
-<LiveDiagram id="cluster-tour" layer={2} />
 <ExpectedOutput>
 {`NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/litellm   1/1     1            1           22h
@@ -82,7 +78,6 @@ LiteLLM's configuration is a ConfigMap. Read the model list:
 kubectl -n litellm get configmap litellm-config -o jsonpath='{.data.config\.yaml}' | sed -n '/^model_list/,$p'
 ```
 <Output summary="Your inference endpoint, behind one model name and the alias default.">
-<LiveDiagram id="cluster-tour" layer={3} />
 <ExpectedOutput>
 {`model_list:
 - litellm_params:
@@ -122,7 +117,6 @@ curl -s localhost:4000/v1/chat/completions -H "Authorization: Bearer $KEY" -H "C
 kill $PF
 ```
 <Output summary="The alias and your model, and an answer from it.">
-<LiveDiagram id="cluster-tour" layer={4} />
 <ExpectedOutput>
 {`"id":"default"
 "id":"<MODEL_NAME>"

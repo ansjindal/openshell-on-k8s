@@ -64,7 +64,7 @@ export const FIGURE_TOURS: Record<string, TourPath[]> = {
 // A figure read as a scroll flow (<FigRead>): each step lights its boxes
 // (data-node names) and puts its number at x, y (the SVG's own coordinates).
 export type ReadStep = { title: string; where?: string; text: string; nodes: string[]; x: number; y: number };
-export type FigureRead = { title: string; intro: string; steps: ReadStep[] };
+export type FigureRead = { title: string; intro: string; steps: ReadStep[]; outro?: { title: string; text: string } };
 
 export const FIGURE_READS: Record<string, FigureRead> = {
   cluster: {
@@ -92,5 +92,9 @@ export const FIGURE_READS: Record<string, FigureRead> = {
       { title: "Your agent", where: "agents (red)", nodes: ["pi-agent pod", "Secret litellm-key", "What it can do", "Any host on the internet"], x: 238, y: 763,
         text: "Not there yet: you deploy it in the next lab, the way agents are usually deployed, with an API key from a Secret. The red arrows show everything it will be able to reach." },
     ],
+    outro: {
+      title: "The whole stack, together",
+      text: "One VM, one Kubernetes cluster, and on it everything an agent needs: a way in, a model behind LiteLLM, sign-in, monitoring, and something to work on. Now look at it for real with kubectl, then deploy the agent into it.",
+    },
   },
 };

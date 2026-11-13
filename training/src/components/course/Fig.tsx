@@ -202,14 +202,15 @@ export function FigRead({ id, n, caption }: { id: string; n?: string; caption?: 
     return { s: sc, tx, ty, mx: x0, my: y0 };
   }, [f, cur, rects]);
   if (!f || !read) return null;
-  const blocks = [{ title: read.title, text: read.intro }, ...read.steps];
+  const blocks: { title: string; text: string; where?: string; outro?: boolean }[] =
+    [{ title: read.title, text: read.intro }, ...read.steps, ...(read.outro ? [{ ...read.outro, outro: true }] : [])];
   return (
     <figure className="not-prose my-8 grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
       <div>
         {blocks.map((b, i) => (
           <div key={i} data-n={i} ref={(el) => { items.current[i] = el; }} onClick={() => setActive(i)}
             className={`cursor-pointer border-l-2 py-4 pl-4 transition-all duration-300 ${i === active ? "border-[var(--color-nv)] opacity-100" : "border-[var(--color-line)] opacity-55 hover:opacity-80"}`}>
-            {i > 0 && <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-nv-bright)]">{i} of {blocks.length - 1}{"where" in b && b.where ? <span className="ml-2 font-mono normal-case tracking-normal text-[var(--color-fg-mut)]">{b.where}</span> : null}</div>}
+            {i > 0 && <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-nv-bright)]">{b.outro ? "All together" : <>{i} of {read.steps.length}</>}{b.where ? <span className="ml-2 font-mono normal-case tracking-normal text-[var(--color-fg-mut)]">{b.where}</span> : null}</div>}
             <div className={`font-bold text-[var(--color-fg)] ${i === 0 ? "text-[18px]" : "text-[16px]"}`}>{b.title}</div>
             <p className="mt-1.5 text-[15px] leading-[25px] text-[var(--color-fg-dim)]">{b.text}</p>
           </div>
