@@ -1,71 +1,59 @@
-A sandbox's network is governed by its **policy**. Every connection the agent opens goes to its **supervisor**, which allows it only if a `network_policies` entry says so: deny by default, with a short allow-list you control.
+In [1.4](/learn/build-an-agent) you opened one door for `pi-agent` with a policy file. Real agents need more than npm: an API to read, a database to query. Here you open the network rule by rule, **while the sandbox runs**, and see how narrow each rule can be: one host, one HTTP method, one program.
 
 <BeforeYouStart
-  will="read agent-0's policy, prove it is sealed, open one endpoint while it runs, and watch an L7 rule refuse a POST."
-  time="about ten minutes. Each step has a Run button that runs its command on your lab VM; nothing outside agent-0 changes."
+  will="read pi-agent's effective policy, open GitHub's API for GET only and watch a POST refused at L7, add a plain TCP rule and test its host and program limits, then read the policy's revisions."
+  time="about fifteen minutes. Only pi-agent's network rules change; you delete it at the end."
 />
 
-## The policy file
+## How network rules work
 
-### The supervisor pod: what the agent can reach
+The workload pod has no network of its own (the NetworkPolicy from 1.4 lets it reach only its supervisor), and the supervisor decides everything else:
 
-The workload pod has no network of its own. A Kubernetes **NetworkPolicy** lets it talk only to its supervisor, and the supervisor decides everything else:
+- **Deny by default.** Nothing leaves unless a `network_policies` entry allows it. Each entry opens one door.
+- **L4**: which host and port, from which program (`curl` may reach a host, `python3` may not).
+- **L7**: for `protocol: rest`, which HTTP method and path, even inside TLS.
+- **Live**: network rules are **dynamic**; a new revision loads into a running sandbox without a restart. Files and process stay as they were at creation.
 
-- **Deny by default.** Nothing leaves unless a `network_policies` entry allows it.
-- **L4**: which host and port, from which binary (`curl` may reach GitHub, `python3` may not).
-- **L7**: for `protocol: rest`, which HTTP method and path, even inside TLS. `GET /repos/**` allowed, `DELETE` refused with `403 policy_denied`.
-- **Live**: network rules are **dynamic**; a new revision loads into a running sandbox without a restart.
+A few details the steps below rely on:
 
-### The policy file, line by line
-
-Every layer of a sandbox is configured by one short YAML file: its **policy**. You'll edit policies in almost every lab, so here it is line by line. Scroll down to step through it: the lines that matter light up, and beside them you see what they let through and what they stop.
-
-<ReadScene scene="policy" />
-
-| Part | Controls | Enforced by | Changes on a running sandbox? |
-|---|---|---|---|
-| `filesystem_policy` | paths readable / writable | Landlock, in the kernel | no, fixed at creation |
-| `landlock` | how strict if the kernel lacks a Landlock feature | the sandbox runtime | no |
-| `process` | the user and group the agent runs as | the sandbox runtime | no |
-| `network_policies` | hosts, ports, methods, paths, programs | the supervisor | **yes**: `openshell policy update` / `policy set` |
-
-A few details the labs rely on:
-
-- **Deny by default.** An empty `network_policies` means no network at all. Each entry opens one door.
 - **`enforcement`** defaults to `audit` (log, but allow). Write `enforce` to block.
-- **`access`** presets: `read-only` (GET, HEAD, OPTIONS), `read-write`, `full`. For finer control, L7 rules name methods and paths.
+- **`access`** presets: `read-only` (GET, HEAD, OPTIONS), `read-write`, `full`. For finer control, rules name methods and paths.
 - **Providers** add their own entry, such as `_provider_litellm`, when you attach them; you don't write it.
 - **Hosts are full names** (`litellm.litellm.svc.cluster.local`), because the sandbox resolves names without search domains.
 
-<Callout type="warn" title="Defense in depth, not a silver bullet">
-No single layer is the answer. Landlock and seccomp bound the process, the supervisor bounds the network, providers bound the secrets, identities bound the control plane, and the audit trail tells you what happened. Together they make a compromised agent a contained problem instead of a cluster-wide one.
-</Callout>
+<Section n="1" title="Read what pi-agent may reach today">
 
+<Step n="1" title="The policy's version and status">
 
-<Section n="1" title="What the sandbox may reach today" goal="Read the effective policy, including what providers added.">
-
-<Step n="1" title="The policy and its version">
-
-Ask the gateway for `agent-0`'s policy: its version, hash and status.
+**`openshell policy get`** asks the gateway for a sandbox's current policy:
 
 ```bash
-openshell policy get agent-0
+openshell policy get pi-agent
 ```
-
+<Output summary="Version 2: the file you applied in 1.4.">
+<ExpectedOutput>
+{`Version:      2
+Hash:         f4d66064ffbcc41230824b1a10bea94909c6af4903e3c8616b9d745a234b889c
+Status:       Effective
+Source:       sandbox
+Config rev:   15209562269842545252`}
+</ExpectedOutput>
+</Output>
 
 </Step>
 
 <Step n="2" title="The full effective policy">
 
-The **effective** policy includes what attached providers added. Under `network_policies` you'll find `_provider_litellm`, merged in from the `litellm` provider's profile: its endpoint, its L7 rules and the binaries allowed to use them. Anything not listed is denied, and every decision is audited.
+`--full` prints the **effective** policy: your file plus what attached providers added. Under `network_policies` there are two entries: `_provider_litellm`, merged in from the provider (LiteLLM, model calls only, for any program), and your `npm_registry`. Anything not listed is denied.
 
 ```bash
-openshell policy get agent-0 --full
+openshell policy get pi-agent --full
 ```
 <Output>
 <ExpectedOutput>
 {`network_policies:
   _provider_litellm:
+    name: _provider_litellm
     endpoints:
       - host: litellm.litellm.svc.cluster.local
         port: 4000
@@ -76,7 +64,18 @@ openshell policy get agent-0 --full
           - allow: {method: POST, path: /v1/chat/completions}
           ...
     binaries:
-      - path: /**`}
+      - path: /**
+  npm_registry:
+    name: npm_registry
+    endpoints:
+      - host: registry.npmjs.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+        allow_encoded_slash: true
+    binaries:
+      - path: /usr/bin/node`}
 </ExpectedOutput>
 </Output>
 
@@ -84,70 +83,66 @@ openshell policy get agent-0 --full
 
 </Section>
 
-<Section n="2" title="Deny by default, in practice" goal="Prove the internet is closed to the agent.">
+<Section n="2" title="Open GitHub's API for GET only, while it runs">
 
-<Step n="1" title="Try GitHub from inside the sandbox">
+<Step n="1" title="Try GitHub first">
+
+`-w 'HTTP %{http_code}'` makes curl print the status code; `000` means there was no HTTP response at all:
 
 ```bash
-openshell sandbox exec -n agent-0 -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/zen
+openshell sandbox exec -n pi-agent -- curl -s -m 8 -o /dev/null -w 'HTTP %{http_code}\n' https://api.github.com/zen
 ```
-<Output>
+<Output summary="No response: no rule allows api.github.com.">
 <ExpectedOutput>
 {`HTTP 000`}
 </ExpectedOutput>
 </Output>
 
-`000` means no HTTP response at all: the supervisor refused the connection. No cluster API, no internet, nothing you didn't grant.
-
 </Step>
 
-</Section>
+<Step n="2" title="Add a read-only rule for curl">
 
-<Section n="3" title="Grant one endpoint, live" goal="Open GitHub's API for GET only, while the sandbox runs.">
-
-<Step n="1" title="Add a read-only endpoint">
-
-The endpoint format is `host:port[:access[:protocol[:enforcement]]]`, and the rule applies only to the binaries you name with `--binary`:
+**`openshell policy update`** changes one part of the policy instead of replacing the file. `--add-endpoint` takes `host:port[:access[:protocol[:enforcement]]]`, and the rule applies only to the programs you name with `--binary`:
 
 ```bash
-openshell policy update agent-0 --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --wait
+openshell policy update pi-agent --add-endpoint 'api.github.com:443:read-only:rest:enforce' --binary /usr/bin/curl --wait
 ```
-<Output>
+<Output summary="Revision 3, loaded into the running sandbox.">
 <ExpectedOutput>
-{`✓ Policy version 2 submitted (hash: ae09c7816c51)
-✓ Policy version 2 loaded (active version: 2)`}
+{`✓ Policy version 3 submitted (hash: 80d45453fd59)
+✓ Policy version 3 loaded (active version: 3)`}
 </ExpectedOutput>
 </Output>
 
-The new revision loaded into the **running** sandbox, with no restart. The parts of the rule:
+The parts of the rule:
 
-- `read-only`: an access preset: `GET`, `HEAD` and `OPTIONS` only.
-- `rest`: inspect requests at **L7** (method and path), even inside TLS.
-- `enforce`: block what breaks the rule. The default is `audit`, which only logs.
+- `read-only`: the access preset, `GET`, `HEAD` and `OPTIONS` only.
+- `rest`: inspect each request at **L7** (method and path), even inside TLS.
+- `enforce`: block what breaks the rule, instead of only logging it.
 
 </Step>
 
-<Step n="2" title="GET now works">
+<Step n="3" title="GET now works">
 
 ```bash
-openshell sandbox exec -n agent-0 -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
+openshell sandbox exec -n pi-agent -- curl -s -m 10 -w ' HTTP %{http_code}\n' https://api.github.com/zen
 ```
 <Output>
 <ExpectedOutput>
-{`Responsive is better than fast. HTTP 200`}
+{`Mind your words, they are important. HTTP 200`}
 </ExpectedOutput>
 </Output>
 
 </Step>
 
-<Step n="3" title="POST is refused at L7">
+<Step n="4" title="POST is refused at L7">
 
-A `POST` to the same host is refused by the supervisor, with the reason:
+A `POST` to the same host, from the same program, is refused by the supervisor, which says exactly why:
 
 ```bash
-openshell sandbox exec -n agent-0 -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{http_code}\n' https://api.github.com/markdown
+openshell sandbox exec -n pi-agent -- curl -s -m 10 -X POST -d '{}' -w '\nHTTP %{http_code}\n' https://api.github.com/markdown
 ```
-<Output>
+<Output summary="403 from the supervisor: POST /markdown matches no rule.">
 <ExpectedOutput>
 {`{"error":"policy_denied","policy":"allow_api_github_com_443","rule":"POST /markdown","detail":"POST /markdown not permitted by policy","layer":"l7",...}
 HTTP 403`}
@@ -158,42 +153,144 @@ HTTP 403`}
 
 </Section>
 
-<Section n="4" title="Revisions" goal="See every change as a numbered revision.">
+<Section n="3" title="A non-HTTP door: a plain TCP rule">
 
-<Step n="1" title="List the policy history">
+Not everything is HTTP: a database, an MQTT broker, any raw TCP service has no methods or paths to inspect. For those the policy has a plainer endpoint: **host and port only**, an L4 allow.
+
+<Step n="1" title="Preview the rule before applying it">
+
+The bare form of `--add-endpoint` is just `host:port`. `--dry-run` prints the merged policy and sends nothing:
 
 ```bash
-openshell policy list agent-0
+openshell policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/bin/curl --dry-run | grep -A7 'allow_example_com_443:'
 ```
 <Output>
 <ExpectedOutput>
-{`VERSION  HASH           STATUS       CREATED                  ERROR
-2        ae09c7816c51   Loaded       1794324512476
-1        76a21cf40933   Superseded   1794324384281`}
+{`allow_example_com_443:
+  name: allow_example_com_443
+  endpoints:
+    - host: example.com
+      port: 443
+  binaries:
+    - path: /usr/bin/curl`}
 </ExpectedOutput>
 </Output>
 
-`openshell policy get agent-0 --rev 1 --full` shows an older one. To write a whole policy at once, keep it in a YAML file and apply it with `openshell policy set agent-0 --policy <file> --wait`; the [Skills](/learn/skills) lesson does that.
+Compare it with the GitHub rule: no `protocol`, `enforcement` or `access`. No request parsing, no method or path filtering: one host, one port, the named programs.
 
-<Callout type="note" title="Only the network part is live">
-Network rules are <strong>dynamic</strong>: they change on a running sandbox. The filesystem and process sections are <strong>static</strong>: fixed at creation, because Landlock and the sandbox user are applied before the agent starts.
-</Callout>
+</Step>
+
+<Step n="2" title="Apply it">
+
+```bash
+openshell policy update pi-agent --add-endpoint 'example.com:443' --binary /usr/bin/curl --wait
+```
+<Output>
+<ExpectedOutput>
+{`✓ Policy version 4 submitted (hash: 57ae5fc61fa7)
+✓ Policy version 4 loaded (active version: 4)`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="3" title="curl reaches example.com">
+
+The same request pi's tool made in 1.4, which got `000` then:
+
+```bash
+openshell sandbox exec -n pi-agent -- curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://example.com/
+```
+<Output>
+<ExpectedOutput>
+{`HTTP 200`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="4" title="Every other host is still closed">
+
+```bash
+openshell sandbox exec -n pi-agent -- sh -c 'curl -s -m 8 -o /dev/null https://example.org/ || echo "blocked (curl exit $?)"'
+```
+<Output>
+<ExpectedOutput>
+{`blocked (curl exit 7)`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+<Step n="5" title="Another program is refused">
+
+The rule is **per program**: Python, going to the very same host, is refused:
+
+```bash
+openshell sandbox exec -n pi-agent -- python3 -c 'import urllib.request; print(urllib.request.urlopen("https://example.com").status)'
+```
+<Output>
+<ExpectedOutput>
+{`urllib.error.URLError: <urlopen error [Errno 13] Permission denied>`}
+</ExpectedOutput>
+</Output>
+
+That program check is what stops an agent from sending data out through an unexpected tool, even to a host it's allowed to reach.
 
 </Step>
 
 </Section>
 
-<Callout type="rh" title="The policy is the contract">
-The policy says <em>what the agent may reach</em>, down to the method and path, and every decision is on the audit log. That's what makes a sandbox something you can hand untrusted agent code and <em>prove</em> what it can and cannot do.
+<Section n="4" title="Every change is a numbered revision">
+
+<Step n="1" title="List the policy history">
+
+```bash
+openshell policy list pi-agent
+```
+<Output summary="Four revisions: the baseline, your file, GitHub, example.com.">
+<ExpectedOutput>
+{`VERSION  HASH           STATUS       CREATED                  ERROR
+4        57ae5fc61fa7   Loaded       1794564342481
+3        80d45453fd59   Superseded   1794564334082
+2        6750e23ab498   Superseded   1794564295055
+1        76a21cf40933   Superseded   1794564268489`}
+</ExpectedOutput>
+</Output>
+
+`openshell policy get pi-agent --rev 1 --full` shows an older one. Small changes go through `policy update`; a whole policy you keep in a YAML file and apply with `policy set`, as in 1.4.
+
+</Step>
+
+<Step n="2" title="Clean up">
+
+`pi-agent` has done its job. Delete it; the gateway removes both pods, the Sandbox resource and its NetworkPolicy:
+
+```bash
+openshell sandbox delete pi-agent
+```
+<Output>
+<ExpectedOutput>
+{`✓ Deleted sandbox pi-agent`}
+</ExpectedOutput>
+</Output>
+
+</Step>
+
+</Section>
+
+<Callout type="warn" title="Defense in depth, not a silver bullet">
+No single layer is the answer. Landlock and seccomp bound the process, the supervisor bounds the network, providers bound the secrets, identities bound the control plane, and the audit trail tells you what happened. Together they make a compromised agent a contained problem instead of a cluster-wide one.
 </Callout>
 
 ## What you learned
 
-<Learned next="/learn/tcp-egress" nextLabel="TCP egress">
+<Learned next="/learn/os-check" nextLabel="Summary & knowledge check">
 
-- **What the sandbox may reach today.** Read the effective policy, including what providers added.
-- **Deny by default, in practice.** Prove the internet is closed to the agent.
-- **Grant one endpoint, live.** Open GitHub's API for GET only, while the sandbox runs.
-- **Revisions.** See every change as a numbered revision.
+- **The effective policy** is your file plus what providers add; anything not listed is denied.
+- **Rules change live.** `policy update --add-endpoint` loads a new revision into the running sandbox.
+- **L7 rules filter by method and path**: GET allowed, POST refused with the reason.
+- **L4 rules** allow one host and port for the named programs only, for traffic that isn't HTTP.
+- **Every change is a revision** you can list and read back.
 
 </Learned>

@@ -1,21 +1,30 @@
-A quick look back at Module 2 before you move on.
+A quick look back at Module 2 before the capstone: customizing agents, then operating them.
 
 ## What you learned
 
-- Agents reach a model through LiteLLM via the `litellm` provider: the sandbox holds only a placeholder, and the supervisor injects the real key on model calls the profile allows.
-- A provider profile is the access contract: which variable the sandbox gets, where the credential may go, and which requests are allowed there. Anything else, like LiteLLM's admin API, is refused at L7.
 - You can build your own provider, attach it to a running sandbox, rotate its token and detach it, all without a restart.
 - An agent's persona is plain Markdown in its workspace (`IDENTITY.md`, `SOUL.md`, `BOOTSTRAP.md`), re-read each session.
 - Skills are governed three ways: the registry they come from, whether they are enabled, and what they can reach.
 - `./scripts/fleet task` hands a prompt to one agent or the whole fleet, each working in its own sandbox.
+- Every supervisor decision (connections, HTTP requests, refused DNS names, policy loads) is written as an OCSF event you can read with `openshell logs`.
+- Alloy ships the supervisors' logs to Loki, so the same events for every sandbox are queryable with LogQL and in Grafana Explore; agent OpenTelemetry spans go to Tempo.
+- The OpenShell Console forwards your Keycloak token to the same gateway as the CLI: it has no privileges of its own.
+- Proposals turn denied traffic into draft rules; nothing changes until a person approves or rejects them.
+- A user's Keycloak realm role (`openshell-admin` or `openshell-user`) and their workspace memberships decide what they can see and do.
+- Workspaces are tenants with their own sandboxes, providers and members; members are added by their OIDC subject.
 
 ## Check your understanding
 
 <Quiz title="Test your knowledge: Module 2">
-<Q q="What does a sandbox see in LITELLM_API_KEY?" options={["The real nvapi- key from .env", "A placeholder such as openshell:resolve:env:..._LITELLM_API_KEY", "Nothing: the variable is empty", "A short-lived copy of the key that expires after one call"]} answer={1} why="The sandbox only holds a placeholder; the supervisor swaps in the real key on requests that match the provider's rules, so there is no key in the sandbox to steal." />
-<Q q="What happens when agent-0 sends POST /key/generate to LiteLLM with its key?" options={["LiteLLM creates a new key", "LiteLLM answers 401 because the placeholder is not a valid key", "The supervisor refuses it with policy_denied at L7, before anything leaves the sandbox", "The connection hangs and returns HTTP 000"]} answer={2} why="The litellm profile only allows model calls. The admin API is not in its rules, so the supervisor refuses the request at L7." />
 <Q q="After openshell provider update rotates the echo token, what does agent-0 need to use the new value?" options={["Nothing: it picks it up without a restart, and its placeholder stays the same", "A restart of the sandbox", "Detaching and re-attaching the provider", "Re-importing the provider profile"]} answer={0} why="Every sandbox with the provider attached picks up the new credential without a restart; only the value behind the placeholder changes." />
 <Q q="Why does the skills lesson grant the registry with a policy YAML and openshell policy set, not policy update --add-endpoint?" options={["policy update cannot change a running sandbox", "policy set is faster to load", "--add-endpoint does not support port 4873", "Scoped npm names are fetched with an encoded slash, and allow_encoded_slash only lives in policy YAML"]} answer={3} why={"Scoped names like @workshop/x are fetched as /@workshop%2Fx, and the proxy rejects %2F unless the endpoint sets allow_encoded_slash: true, a field that only exists in policy YAML."} />
 <Q q="Which workspace file is the closest thing to an editable system prompt?" options={["IDENTITY.md", "BOOTSTRAP.md", "SOUL.md", "openclaw.json"]} answer={2} why="SOUL.md holds how the agent behaves: its values, boundaries and tone. IDENTITY.md is who it is, and BOOTSTRAP.md is what it does on first run." />
 <Q q="What does the target all do in ./scripts/fleet task?" options={["Brings up every agent before running the task", "Fans the prompt out to every agent in the fleet", "Sends the prompt to agent-0 and prints all logs", "Runs the task in every namespace of the cluster"]} answer={1} why="fleet task takes a prompt and an optional target; all fans it out to every agent, and each works on it independently in its own sandbox." />
+<Q q="An OCSF line shows NET:REFUSE for example.org with reason policy_dns_ineligible. What happened?" options={["The supervisor opened the connection and logged it", "example.org returned a DNS error", "example.org is in no rule, so the supervisor did not even resolve it", "The gateway was unreachable"]} answer={2} why="example.org isn't in any rule, so the supervisor didn't even resolve it: DNS is part of the seal." />
+<Q q={"In an OCSF line, what does engine:l7 tell you?"} options={["The decision was made at the connection level", "The decision was made at the request level (method and path)", "The event came from the gateway, not the supervisor", "The request was allowed"]} answer={1} why="The engine is the layer that decided: opa means the connection, l7 means the request." />
+<Q q="What ships the supervisors' logs to Loki?" options={["Alloy", "Tempo", "The OpenShell Console", "Kyverno"]} answer={0} why="The supervisors' logs are shipped to Loki by Alloy, so the events for every sandbox are queryable with LogQL." />
+<Q q="OpenClaw tried to reach telemetry.openclaw.ai:443 and a pending proposal appeared. What is the right call in this lab?" options={["Approve it, so the agent stops being denied", "Ignore it: it is applied automatically after a while", "Approve it in audit mode", "Reject it: the agent has no business sending telemetry from a sealed lab"]} answer={3} why="Nothing changes until a person decides, and here the right call is reject." />
+<Q q="How are workspace members identified?" options={["By their Keycloak username", "By their email address", "By their OIDC subject, the token's sub claim", "By their client certificate"]} answer={2} why="Members are identified by their OIDC subject (Keycloak's user id), not their name." />
+<Q q="Where do the sandboxes of workspace team-a run?" options={["In their own namespace, openshell-lab-team-a, created by the gateway", "In a separate Kubernetes cluster", "In the gateway's namespace, openshell", "In the same namespace as every other workspace"]} answer={0} why="The lab runs the gateway in managed workspace mode: one namespace per workspace, openshell-<gateway id>-<workspace>, with its own ServiceAccount and NetworkPolicies." />
 </Quiz>
+

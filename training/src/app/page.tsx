@@ -62,11 +62,11 @@ export default function Home() {
         <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-stretch">
           {[
             ["Deploy", "what-is-an-agent", "Module 0", "Learn what an agent is, build one with pi, and deploy it on Kubernetes the usual way: then see everything it can reach."],
+            ["Inject", "inference", "Module 1", "Give it a model and an API key it never actually holds: the sandbox only sees a placeholder."],
             ["Seal", "build-an-agent", "Module 1", "Build an agent, then put it in an OpenShell sandbox: nothing gets out by default, and you test that from inside."],
             ["Grant", "policy", "Module 1", "Open exactly one door while it runs: one host, one HTTP method, one path, one program."],
-            ["Inject", "m2-overview", "Module 2", "Give it a model and an API key it never actually holds: the sandbox only sees a placeholder."],
-            ["Audit", "m3-overview", "Module 3", "Follow every allow and deny in Grafana, use the web console, and give people their own roles and workspaces."],
-            ["Operate", "m4-overview", "Module 4", "Run five sealed agents that each read one telemetry source, find a real outage's root cause, and propose a fix you approve."],
+            ["Audit", "audit", "Module 2", "Follow every allow and deny in Grafana, use the web console, and give people their own roles and workspaces."],
+            ["Operate", "m4-overview", "Module 3", "Run five sealed agents that each read one telemetry source, find a real outage's root cause, and propose a fix you approve."],
           ].map(([t, slug, mod, d], i, all) => (
             <div key={t} className="flex flex-1 items-stretch gap-2">
               <Link href={`/learn/${slug}`} className="group flex flex-1 flex-col rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-3.5 py-3 transition hover:border-[var(--color-nv-dim)]">

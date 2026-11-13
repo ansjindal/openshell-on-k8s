@@ -9,10 +9,13 @@ const nextConfig: NextConfig = {
   // land on the page that now holds their content instead of a 404.
   async redirects() {
     const moved: [string, string][] = [
-      ["os-architecture", "/learn/openshell#t-4"], ["os-kernel", "/learn/openshell#t-6"],
-      ["security", "/learn/openshell#t-7"], ["policy-file", "/learn/openshell#t-7"],
-      ["request-flow", "/learn/openshell#t-8"], ["audit-signals", "/learn/openshell#t-10"],
-      ["big-picture", "/learn/openshell#t-12"], ["sentry", "/learn/openshell#t-13"],
+      ["os-architecture", "/learn/openshell#t-3"], ["os-kernel", "/learn/build-an-agent"],
+      ["security", "/learn/build-an-agent"], ["policy-file", "/learn/build-an-agent"],
+      ["request-flow", "/learn/inference"], ["audit-signals", "/learn/audit"],
+      ["big-picture", "/learn/deploy"], ["sentry", "/learn/openshell#t-4"],
+      ["create-sandbox", "/learn/build-an-agent"], ["into-the-sandbox", "/learn/build-an-agent"],
+      ["tcp-egress", "/learn/policy"], ["lab-keys", "/learn/inference"], ["lab-audit", "/learn/audit"],
+      ["m3-overview", "/learn/m2-overview"], ["m3-check", "/learn/m2-check"],
       ["m1-overview", "/learn/openshell"], ["m1-check", "/learn/os-check"], ["m0-check", "/learn/os-check"], ["pi-agent", "/learn/agent-on-k8s"],
     ];
     return moved.map(([from, to]) => ({ source: `/learn/${from}`, destination: to, permanent: false }));

@@ -1,13 +1,30 @@
-You have an isolated agent that can reach a model. Time to put it to work. The fleet helper lets you hand a prompt to one agent or the whole fleet at once.
+You have sealed an agent, given it a persona and skills. Time to put agents to work: the **fleet helper** creates several sandboxes at once and hands a prompt to one agent or the whole fleet.
 
 <BeforeYouStart
   will="check the fleet, hand a prompt to every agent and to one agent, and read what they did."
   time="about five minutes. Each step has a Run button that runs its command on your lab VM."
 />
 
-<Section n="1" title="Make sure you have agents" goal="Have at least one agent running.">
+<Section n="1" title="Meet the fleet helper, and make sure you have agents">
 
-<Step n="1" title="Check the fleet">
+<Step n="1" title="What the fleet helper does">
+
+Running one agent, you used `openshell` directly. For several at once, the lab has a helper: `./scripts/fleet` is a thin wrapper around the same `openshell sandbox create`, `exec` and `logs` commands, for a fleet of sandboxes named `agent-0`, `agent-1`, …:
+
+```bash-ref
+fleet up [N]                          # create sandboxes agent-0 … agent-(N-1)
+fleet down                            # delete every fleet sandbox
+fleet status                          # sandboxes + the pods behind them
+fleet task "<prompt>" [agent-i|all]   # run a prompt across the fleet, in parallel
+fleet shell <agent-i>                 # interactive shell inside one sandbox
+fleet logs <agent-i>                  # OpenShell logs for one sandbox
+```
+
+`fleet up` runs, for each new agent, the same `openshell sandbox create` you used in [1.4](/learn/build-an-agent), with `--provider litellm`, the baseline policy and `--memory 3Gi` (one OpenClaw turn peaks near 2 GB). The agent in each sandbox is **OpenClaw**, the default image's agent.
+
+</Step>
+
+<Step n="2" title="Check the fleet">
 
 ```bash
 ./scripts/fleet status
@@ -15,13 +32,39 @@ You have an isolated agent that can reach a model. Time to put it to work. The f
 
 </Step>
 
-<Step n="2" title="Bring some up if needed">
+<Step n="3" title="Bring the fleet to two">
 
-If the list is empty, bring some up:
+`agent-0` was made at setup. Add a second agent, `agent-1` (an agent that already exists is left alone):
 
 ```bash
 ./scripts/fleet up 2
 ```
+<Output>
+<ExpectedOutput>
+{`Scaling fleet to 2 sandbox(es)...
+  agent-0 (already exists)
+  created agent-1
+
+== openshell sandboxes ==
+NAME     CREATED              PHASE
+agent-0  2026-11-11 13:19:44  Ready
+agent-1  2026-11-11 13:20:46  Ready
+
+== Kubernetes (openshell-lab-default): one workload pod + one supervisor pod per sandbox ==
+NAME      READY   REASON              AGE
+agent-0   True    DependenciesReady   75s
+agent-1   True    DependenciesReady   13s
+NAME                                                 READY   STATUS    RESTARTS   AGE
+agent-0                                              1/1     Running   0          75s
+agent-1                                              1/1     Running   0          13s
+os-supervisor-593394eb-6dd0-4be8-a33c-e07a89f40f9b   0/1     Running   0          13s
+os-supervisor-bb5457b5-93bf-40d1-8421-7ce92d1984cf   1/1     Running   0          75s
+
+Fleet ready: 2/2`}
+</ExpectedOutput>
+</Output>
+
+A new sandbox is `Ready` in about fifteen seconds: the same pair of pods as `pi-agent` in 1.4.
 
 </Step>
 
@@ -99,7 +142,7 @@ With multiple agents on one prompt, `status` gives you the bird's-eye view while
 Each task ran inside its own sandbox, reached the model without ever holding the key, and was bounded by the sandbox's policy. That's the entire point of the stack — useful, autonomous, and contained — demonstrated in one command.
 </Callout>
 
-Keep the fleet up — it's what the rest of the course (the console, [the Module 4 capstone](/learn/m4-overview)) drives too. `./scripts/fleet down` is for when you're done with the whole launchable, not this lesson.
+Keep the fleet up — it's what the rest of the course (the console, [the Module 3 capstone](/learn/m4-overview)) drives too. `./scripts/fleet down` is for when you're done with the whole launchable, not this lesson.
 
 ## What you learned
 

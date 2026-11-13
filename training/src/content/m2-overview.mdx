@@ -1,21 +1,23 @@
-In this module **you are the agent developer**. Your sandbox gets a model and credentials it can never read, a persona written in Markdown, skills installed from a registry you control, and then a real task.
+In Module 1 you sealed one agent. This module makes agents your own and then runs them like a platform: **first as the agent developer**, you give an agent credentials it never sees, a persona, skills from a registry you control and real tasks; **then as the security reviewer**, you follow every decision into the audit trail, drive the same gateway from the web console, and give people roles and workspaces.
 
 <BeforeYouStart
-  learn="how providers inject a real key on allowed calls only, how to write and rotate your own provider profile, how workspace files shape an agent, and how skills stay governed."
-  prereq="Module 1: agent-0 is running and you know how its policy is updated."
-  start="Models through a provider."
+  learn="how to write, attach and rotate your own provider, how workspace files shape an agent, how skills stay governed, how the fleet helper runs tasks, where OCSF events go and how to query them, what the OpenShell Console shows, and how Keycloak users map to gateway roles and workspaces."
+  prereq="Module 1: you know how a sandbox, its provider and its policy work. agent-0 is running. The Console and Grafana links are in the top bar."
+  start="Your own provider."
 />
 
-<Section n="1" title="A model, keys it never sees, skills and a task">
+<Section n="1" title="Customize agents, then operate them">
 
 Each card is one lesson of this module. Scroll through them, or click one: the picture builds as you read.
 
 <ScrollBuild diagram="m2" items={[
-  { title: "Models through a provider", text: "The litellm provider puts a placeholder in the sandbox. The supervisor swaps in the real key only on requests its profile allows." },
   { title: "Your own provider", text: "Write a profile for an echo API, attach it to a running sandbox, watch the real token arrive upstream, then rotate it with one command." },
   { title: "Give it a soul: workspace files", text: "IDENTITY, SOUL and BOOTSTRAP Markdown files set who the agent is and how it works." },
   { title: "Skills: governed capabilities", text: "Skills come only from the in-cluster registry, through a policy scoped to npm." },
-  { title: "Run a task", text: "Hand the agent a prompt and read what it did, step by step." },
+  { title: "Run a task", text: "The fleet helper creates several sandboxes at once; hand them a prompt and read what they did." },
+  { title: "The audit trail", text: "Each supervisor writes one OCSF event per decision. Alloy ships them to Loki, and Grafana queries them across every workspace." },
+  { title: "The OpenShell Console", text: "The web console signs you in with OIDC and talks to the same gateway as the CLI: sandboxes, logs, a terminal, policy revisions, proposals." },
+  { title: "Users, roles & workspaces", text: "Keycloak users get a gateway role. Each workspace gets its own namespace, openshell-lab-<workspace>, and its own members." },
 ]} />
 
 </Section>
@@ -27,7 +29,3 @@ Each lab follows **Read → Run → Output**: read the step, press Run to run it
 <ModuleLessons module="m2" />
 
 </Section>
-
-<Optional title="Why not just set an environment variable?">
-An agent that can read its token can also send it anywhere: in a URL, a log line, or a request a prompt injection asked for. With a provider the sandbox only ever holds a placeholder, and the real value exists only inside the supervisor, on requests that match the profile.
-</Optional>
