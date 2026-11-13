@@ -24,6 +24,7 @@ function write(s: Store) {
 export function setStepDone(id: string, done: boolean) { const s = read(); s.steps[id] = done; write(s); }
 export function setLessonDone(slug: string, done: boolean) { const s = read(); s.lessons[slug] = done; write(s); }
 export function setQuizAnswer(id: string, choice: number) { const s = read(); s.quiz[id] = choice; write(s); }
+export function clearQuiz(slug: string) { const s = read(); for (const k of Object.keys(s.quiz)) if (k.startsWith(`${slug}:`)) delete s.quiz[k]; write(s); }
 // The output of a successful run, kept per step (and per command within the
 // step) so live diagrams can draw what your commands actually found.
 export function setStepOutput(stepId: string, cmdKey: string, text: string) {

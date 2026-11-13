@@ -2,21 +2,10 @@ Check what you took away from Modules 0 and 1: agents, OpenShell, the provider, 
 
 ## What you learned
 
-- An agent is a model in a ReAct loop (reason, act, observe), plus the knowledge it reads, the tools it calls, the skills it loads and the harness that runs it. The model only suggests; the harness acts, with your access.
-- One hidden instruction in ordinary input can steer the whole agent: nothing is hacked, every part does its job, and your access is the blast radius.
-- The guardrail has to sit outside the agent's process, where it can't be argued with or switched off. OpenShell puts the whole agent in a sandbox governed by a YAML policy.
-- The gateway governs (sandboxes, policies, credentials, who may do what); a supervisor per sandbox decides every connection, and fails closed.
-- The policy has two lifetimes: files, Landlock and process lock at startup; network rules change while the sandbox runs.
-- The agent only ever holds placeholders; the supervisor adds the real credential last, and only for endpoints the provider allows.
-- Every decision is an OCSF event, joined with traces and metrics on the sandbox ID.
-
-- A healthy lab has one Ready k3s node, the gateway (openshell-0), the console, LiteLLM and Keycloak Running, and agent-0 Ready.
-- A **provider** holds a credential in the gateway: a sandbox attached to `litellm` gets a placeholder `LITELLM_API_KEY`, and the supervisor puts the real key only on the model calls the provider's profile allows.
-- `openshell sandbox create` asks the gateway for a sandbox; it writes a Sandbox resource and starts a supervisor pod, and the controller creates the workload pod.
-- Inside the sandbox the agent runs as an unprivileged user, Landlock enforces the filesystem policy, and the cluster network is out of reach.
-- NetworkPolicy lets each workload pod talk only to its paired supervisor, which applies the policy.
-- Network rules are deny by default and live-updatable: REST endpoints filter by method and path at L7, and each change is a numbered revision.
-- A bare `host:port` endpoint is an L4 allow for one host, one port and the named binaries only.
+- **An agent is a model plus a harness that acts with your access.** One poisoned input can steer it, so the guardrail has to sit outside the agent's process, where it can't be argued with.
+- **OpenShell puts the agent in a sandbox: a workload pod and a supervisor pod.** The gateway stores workspaces, providers and policies; the supervisor decides every connection and holds the real keys, so the agent only ever sees placeholders.
+- **The policy is deny by default.** Files, Landlock and the user are fixed at start; network rules change live, per host, port and program (L4) and per method and path (L7), and each change is a numbered revision.
+- **Every decision is on the record**, as an OCSF event in the sandbox's log.
 
 ## Check your understanding
 
