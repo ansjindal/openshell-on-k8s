@@ -1,6 +1,6 @@
-# Module 0 lab: the pi agent as an ordinary Kubernetes workload, with no
-# OpenShell around it. It gets the LiteLLM key as an environment variable,
-# installs pi from npm at start, and points it at LiteLLM in the cluster.
+# Module 0 lab: the pi agent as an ordinary Kubernetes workload. It gets the
+# LiteLLM key as an environment variable, installs pi from npm at start, and
+# points it at LiteLLM in the cluster.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

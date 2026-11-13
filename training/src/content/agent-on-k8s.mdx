@@ -1,4 +1,4 @@
-An **agent** is a model plus a **harness**: the program that sends your prompt to the model, runs the tools the model asks for, and feeds the results back until the model answers. Here you deploy one built with **pi**, a small open-source harness, the way agents usually reach production: a container, a Deployment, a Secret with an API key. Then you use it, and look at what it can reach from inside the cluster. There is **no OpenShell** around it yet.
+An **agent** is a model plus a **harness**: the program that sends your prompt to the model, runs the tools the model asks for, and feeds the results back until the model answers. Here you deploy one built with **pi**, a small open-source harness, the way agents usually reach production: a container, a Deployment, a Secret with an API key. Then you use it, and look at what it can reach from inside the cluster.
 
 <BeforeYouStart
   will="deploy the pi agent as a Kubernetes Deployment, connected to the model through LiteLLM, use it, and check what it holds and can reach."
@@ -55,9 +55,9 @@ secret/litellm-key created`}
 <Optional title="Show the whole manifest">
 
 ```yaml
-# Module 0 lab: the pi agent as an ordinary Kubernetes workload, with no
-# OpenShell around it. It gets the LiteLLM key as an environment variable,
-# installs pi from npm at start, and points it at LiteLLM in the cluster.
+# Module 0 lab: the pi agent as an ordinary Kubernetes workload. It gets the
+# LiteLLM key as an environment variable, installs pi from npm at start, and
+# points it at LiteLLM in the cluster.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

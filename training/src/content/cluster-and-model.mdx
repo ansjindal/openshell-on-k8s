@@ -1,4 +1,4 @@
-Before you build an agent, look at what it will run on: a Kubernetes cluster on your VM, and **LiteLLM**, the one place in the cluster that knows how to reach your model. Everything in this module runs **without OpenShell**: you'll see agents as they are usually deployed today.
+Before you build an agent, look at what it will run on: a Kubernetes cluster on your VM, and **LiteLLM**, the one place in the cluster that knows how to reach your model.
 
 <BeforeYouStart
   will="tour the cluster with kubectl, read how LiteLLM is configured with your inference endpoint, and call the model through it."
@@ -22,8 +22,6 @@ Everything in the figure runs on **one Brev VM**. From the bottom up:
 | **Guardrails and plumbing** | `cert-manager`, `kyverno`, `kube-system` | TLS certificates, admission rules for pods, cluster DNS and metrics. |
 | **A demo app** | `demo` | A small shop (`shop-app` calling `payments`, with `loadgen` traffic) that the capstone breaks on purpose. |
 | **Your agent** | `agents` (red) | Not there yet: you deploy it in the next lab, the way agents are usually deployed, and see everything it can reach. |
-
-The cluster also runs OpenShell, in its own namespaces; you'll meet it in Module 1. In this module you work around it.
 
 Now look at it for real.
 
@@ -55,7 +53,7 @@ What runs on that node, one namespace per component:
 | `envoy-gateway-system` | routes the lab's web pages |
 | `cert-manager`, `kyverno` | certificates and admission rules |
 | `demo` | a small shop app the capstone breaks on purpose |
-| `openshell`, `openshell-lab-*`, `agent-sandbox-system` | OpenShell and its sandboxes: Module 1. Leave them for now. |
+| `openshell`, `openshell-lab-*`, `agent-sandbox-system` | used from Module 1 on |
 
 </Step>
 

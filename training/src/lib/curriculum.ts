@@ -11,7 +11,7 @@ const L = (slug: string, title: string, blurb: string, minutes: number, kind: Le
 export const CURRICULUM: Part[] = [
   {
     id: "m0", n: 0, title: "Agents", accent: "nv",
-    subtitle: "What an agent is, then build one and deploy it on Kubernetes the usual way, without OpenShell, and see what it can reach.",
+    subtitle: "What an agent is, then build one and deploy it on Kubernetes the usual way, and see what it can reach.",
     lessons: [
       L("welcome", "Overview", "What you'll learn, how the labs work, and the one command that builds the stack.", 5),
       L("what-is-an-agent", "What is an agent?", "A model in a ReAct loop, plus the knowledge it reads, the tools it calls, the skills it loads and the harness that runs it all.", 6),
