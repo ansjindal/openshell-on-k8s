@@ -33,19 +33,31 @@ export const YAML_READS: Record<string, YamlReadSpec> = {
     ],
   },
 
-  "pi-agent-policy": {
-    title: "The sandbox policy, part by part",
-    file: "manifests/policies/pi-agent.yaml",
-    intro: "The lab's baseline policy plus one grant. Scroll down: each part lights up in the file as you read about it.",
+  "baseline-policy": {
+    title: "The baseline policy, part by part",
+    file: "manifests/policies/baseline.yaml",
+    intro: "The policy pi-agent was created with in 1.4. Scroll down: each part lights up in the file as you read about it.",
     parts: [
       { title: "Files the agent may touch", at: [["filesystem_policy:", "read_write:"]],
         text: "`read_only` lists the system directories the agent may read; `read_write` the few it may write: `/sandbox` (its home), `/tmp` and `/dev/null`. `include_workdir` adds the working directory. Everything else on the filesystem is out of reach." },
       { title: "How the kernel enforces it", at: [["landlock:", "compatibility"]],
-        text: "The file rules are applied with **Landlock**, a Linux kernel feature. `best_effort` uses whatever this kernel supports instead of refusing to start." },
+        text: "The file rules are applied with **Landlock**, a Linux kernel feature. `best_effort` uses whatever this kernel supports instead of refusing to start. These first three parts are fixed when the sandbox starts." },
       { title: "Who the agent runs as", at: [["process:", "run_as_group"]],
         text: "The agent runs as the unprivileged user and group `sandbox`, never root." },
-      { title: "The network allow-list", at: [["network_policies:", "name: npm_registry"]],
-        text: "Every connection the agent opens is checked against `network_policies`; anything not listed is **denied**. This file adds one entry, `npm_registry`. The name shows up in the audit log whenever the rule allows something." },
+      { title: "No network at all", at: [["# No direct network access", "=network_policies: {}"]],
+        text: "`network_policies` is the allow-list for every connection the agent opens, and here it is empty: **everything is denied**. The model still works because the attached `litellm` provider adds its own entry, `_provider_litellm`. This is the one part you can change on a running sandbox." },
+    ],
+  },
+
+  "pi-agent-policy": {
+    title: "What pi-agent.yaml changes",
+    file: "manifests/policies/pi-agent.yaml",
+    intro: "The baseline with one change: an entry in network_policies. Scroll down: each part lights up in the file as you read about it.",
+    parts: [
+      { title: "Unchanged: files, kernel, user", at: [["filesystem_policy:", "run_as_group"]],
+        text: "These lines are the baseline's, word for word. They couldn't change anyway: the filesystem, Landlock and process parts are fixed once the sandbox runs." },
+      { title: "The change: one entry in the allow-list", at: [["network_policies:", "name: npm_registry"]],
+        text: "Where the baseline had `network_policies: {}`, this file adds one entry, `npm_registry`. The name shows up in the audit log whenever the rule allows something." },
       { title: "Which host, and how it's checked", at: [["- host: registry.npmjs.org", "enforcement: enforce"]],
         text: "`registry.npmjs.org` on port 443. `protocol: rest` makes the supervisor look inside each HTTP request (layer 7), not just at the connection; `enforcement: enforce` refuses what doesn't match (`audit` would only log it)." },
       { title: "Read-only", at: [["access: read-only"]],

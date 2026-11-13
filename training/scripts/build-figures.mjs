@@ -68,6 +68,7 @@ console.log("figures:", NAMES.join(", "));
 // file the learner applies.
 const YAML_FILES = [
   "manifests/agents/pi-agent.yaml",
+  "manifests/policies/baseline.yaml",
   "manifests/policies/pi-agent.yaml",
   "manifests/tools/sre-tools.yaml",
   "manifests/policies/mcp-agent.yaml",

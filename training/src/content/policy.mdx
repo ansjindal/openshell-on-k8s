@@ -70,7 +70,11 @@ Every layer of a sandbox is set by one short YAML file: its **policy**. It has f
 | `process` | the user and group the agent runs as | the sandbox runtime | no |
 | `network_policies` | hosts, ports, methods, paths, programs | the supervisor | **yes**: `openshell policy set` / `policy update` |
 
-The file you'll apply, `manifests/policies/pi-agent.yaml`, is the baseline you created `pi-agent` with plus one grant: the npm registry, **read-only**, for **`/usr/bin/node` only**. Scroll through it, part by part:
+First the policy `pi-agent` has now, the baseline you created it with in 1.4 (`manifests/policies/baseline.yaml`):
+
+<YamlRead id="baseline-policy" />
+
+The file you'll apply, `manifests/policies/pi-agent.yaml`, keeps all of that and changes one thing: it adds an entry to `network_policies` for the npm registry, **read-only**, for **`/usr/bin/node` only**:
 
 <YamlRead id="pi-agent-policy" />
 
